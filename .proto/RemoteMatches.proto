@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+
+message RemoteMatches {
+
+  message field1_type {
+
+    message field2_type {
+
+      message field1_type {
+        bytes sha1_hash = 1;
+      }
+
+      field1_type field1 = 1;
+
+      message field2_type {
+        string media_key = 1;
+
+        message field6_type {
+          string media_key = 1;
+
+          message field2_type {
+            string field1 = 1;
+            string field3 = 3;
+          }
+
+          field2_type field2 = 2;
+        }
+
+        field6_type field6 = 6;
+      }
+
+      field2_type field2 = 2;
+    }
+
+    field2_type field2 = 2;
+  }
+
+  field1_type field1 = 1;
+}
+

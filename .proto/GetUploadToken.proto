@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+message GetUploadToken {
+  int32 f1 = 1;
+  int32 f2 = 2;
+  int32 f3 = 3;
+  int32 f4 = 4;
+  int64 file_size_bytes = 7;
+}

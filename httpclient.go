@@ -1,0 +1,46 @@
+package main
+
+import (
+	"crypto/tls"
+	"net/http"
+	"net/url"
+	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
+)
+
+func NewClient(proxyURLStr string) (*http.Client, error) {
+	// Create the base transport with default values
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: false,
+		},
+		// Additional recommended settings
+		MaxIdleConns:        100,
+		IdleConnTimeout:     90 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+
+	// Configure proxy if provided
+	if proxyURLStr != "" {
+		proxyURL, err := url.Parse(proxyURLStr)
+		if err != nil {
+			return nil, err
+		}
+		transport.Proxy = http.ProxyURL(proxyURL)
+		transport.TLSClientConfig.InsecureSkipVerify = true
+	}
+
+	// Create retryable client with proper configuration
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 3
+	retryClient.RetryWaitMin = 1 * time.Second   // Start with 1 second
+	retryClient.RetryWaitMax = 30 * time.Second  // Maximum wait time
+	retryClient.HTTPClient.Transport = transport // Set transport here
+
+	// Important: Configure the retry policy to retry on connection errors
+	retryClient.CheckRetry = retryablehttp.ErrorPropagatedRetryPolicy
+	retryClient.HTTPClient.Timeout = 15 * time.Second
+
+	return retryClient.StandardClient(), nil
+}

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+
+message HashCheck {
+
+  message field1_type {
+
+    message field1_type {
+      bytes sha1Hash = 1;
+    }
+
+    field1_type field1 = 1;
+
+    message field2_type {
+    }
+
+    field2_type field2 = 2;
+  }
+
+  field1_type field1 = 1;
+}
+

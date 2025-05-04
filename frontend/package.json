@@ -1,0 +1,37 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:dev": "vue-tsc && vite build --minify false --mode development",
+    "build": "vue-tsc && vite build --mode production",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.4",
+    "@vueuse/core": "^13.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.503.0",
+    "reka-ui": "^2.2.0",
+    "tailwind-merge": "^3.2.0",
+    "tw-animate-css": "^1.2.8",
+    "vue": "^3.2.45",
+    "vue-sonner": "^1.3.2"
+  },
+  "devDependencies": {
+    "@iconify-json/radix-icons": "^1.2.2",
+    "@iconify/vue": "^4.3.0",
+    "@types/node": "^22.15.3",
+    "@vitejs/plugin-vue": "^4.0.0",
+    "@wailsio/runtime": "latest",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^4.9.5",
+    "vite": "^5.0.0",
+    "vue-tsc": "^1.0.11"
+  }
+}

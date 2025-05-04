@@ -1,0 +1,644 @@
+syntax = "proto3";
+
+message CommitUpload {
+
+  message field1_type {
+
+    message field1_type {
+      int64 field1 = 1;
+      bytes field2 = 2;
+    }
+
+    field1_type field1 = 1;
+    string file_name = 2;
+    bytes sha1_hash = 3;
+
+    message field4_type {
+      int64 file_last_modified_timestamp = 1;
+      int64 field2 = 2;
+    }
+
+    field4_type field4 = 4;
+    int64 quality = 7;
+
+    message field8_type {
+
+      message field1_type {
+
+        message field1_type {
+        }
+
+        field1_type field1 = 1;
+
+        message field3_type {
+        }
+
+        field3_type field3 = 3;
+
+        message field4_type {
+        }
+
+        field4_type field4 = 4;
+
+        message field5_type {
+
+          message field1_type {
+          }
+
+          field1_type field1 = 1;
+
+          message field2_type {
+          }
+
+          field2_type field2 = 2;
+
+          message field3_type {
+          }
+
+          field3_type field3 = 3;
+
+          message field4_type {
+          }
+
+          field4_type field4 = 4;
+
+          message field5_type {
+          }
+
+          field5_type field5 = 5;
+
+          message field7_type {
+          }
+
+          field7_type field7 = 7;
+        }
+
+        field5_type field5 = 5;
+
+        message field6_type {
+        }
+
+        field6_type field6 = 6;
+
+        message field7_type {
+
+          message field2_type {
+          }
+
+          field2_type field2 = 2;
+        }
+
+        field7_type field7 = 7;
+
+        message field15_type {
+        }
+
+        field15_type field15 = 15;
+
+        message field16_type {
+        }
+
+        field16_type field16 = 16;
+
+        message field17_type {
+        }
+
+        field17_type field17 = 17;
+
+        message field19_type {
+        }
+
+        field19_type field19 = 19;
+
+        message field20_type {
+        }
+
+        field20_type field20 = 20;
+
+        message field21_type {
+
+          message field5_type {
+
+            message field3_type {
+            }
+
+            field3_type field3 = 3;
+          }
+
+          field5_type field5 = 5;
+
+          message field6_type {
+          }
+
+          field6_type field6 = 6;
+        }
+
+        field21_type field21 = 21;
+
+        message field25_type {
+        }
+
+        field25_type field25 = 25;
+
+        message field30_type {
+
+          message field2_type {
+          }
+
+          field2_type field2 = 2;
+        }
+
+        field30_type field30 = 30;
+
+        message field31_type {
+        }
+
+        field31_type field31 = 31;
+
+        message field32_type {
+        }
+
+        field32_type field32 = 32;
+
+        message field33_type {
+
+          message field1_type {
+          }
+
+          field1_type field1 = 1;
+        }
+
+        field33_type field33 = 33;
+
+        message field34_type {
+        }
+
+        field34_type field34 = 34;
+
+        message field36_type {
+        }
+
+        field36_type field36 = 36;
+
+        message field37_type {
+        }
+
+        field37_type field37 = 37;
+
+        message field38_type {
+        }
+
+        field38_type field38 = 38;
+
+        message field39_type {
+        }
+
+        field39_type field39 = 39;
+
+        message field40_type {
+        }
+
+        field40_type field40 = 40;
+
+        message field41_type {
+        }
+
+        field41_type field41 = 41;
+      }
+
+      field1_type field1 = 1;
+
+      message field5_type {
+
+        message field2_type {
+
+          message field2_type {
+
+            message field3_type {
+
+              message field2_type {
+              }
+
+              field2_type field2 = 2;
+            }
+
+            field3_type field3 = 3;
+
+            message field4_type {
+
+              message field2_type {
+              }
+
+              field2_type field2 = 2;
+            }
+
+            field4_type field4 = 4;
+          }
+
+          field2_type field2 = 2;
+
+          message field4_type {
+
+            message field2_type {
+              int64 field2 = 2;
+            }
+
+            field2_type field2 = 2;
+          }
+
+          field4_type field4 = 4;
+
+          message field5_type {
+
+            message field2_type {
+            }
+
+            field2_type field2 = 2;
+          }
+
+          field5_type field5 = 5;
+          int64 field6 = 6;
+        }
+
+        field2_type field2 = 2;
+
+        message field3_type {
+
+          message field2_type {
+
+            message field3_type {
+            }
+
+            field3_type field3 = 3;
+
+            message field4_type {
+            }
+
+            field4_type field4 = 4;
+          }
+
+          field2_type field2 = 2;
+
+          message field3_type {
+
+            message field2_type {
+            }
+
+            field2_type field2 = 2;
+
+            message field3_type {
+              int64 field2 = 2;
+            }
+
+            field3_type field3 = 3;
+          }
+
+          field3_type field3 = 3;
+
+          message field4_type {
+          }
+
+          field4_type field4 = 4;
+
+          message field5_type {
+
+            message field2_type {
+              int64 field2 = 2;
+            }
+
+            field2_type field2 = 2;
+          }
+
+          field5_type field5 = 5;
+
+          message field7_type {
+          }
+
+          field7_type field7 = 7;
+        }
+
+        field3_type field3 = 3;
+
+        message field4_type {
+
+          message field2_type {
+
+            message field2_type {
+            }
+
+            field2_type field2 = 2;
+          }
+
+          field2_type field2 = 2;
+        }
+
+        field4_type field4 = 4;
+
+        message field5_type {
+
+          message field1_type {
+
+            message field2_type {
+
+              message field3_type {
+              }
+
+              field3_type field3 = 3;
+
+              message field4_type {
+              }
+
+              field4_type field4 = 4;
+            }
+
+            field2_type field2 = 2;
+
+            message field3_type {
+
+              message field2_type {
+              }
+
+              field2_type field2 = 2;
+
+              message field3_type {
+                int64 field2 = 2;
+              }
+
+              field3_type field3 = 3;
+            }
+
+            field3_type field3 = 3;
+          }
+
+          field1_type field1 = 1;
+          int64 field3 = 3;
+        }
+
+        field5_type field5 = 5;
+      }
+
+      field5_type field5 = 5;
+
+      message field8_type {
+      }
+
+      field8_type field8 = 8;
+
+      message field9_type {
+
+        message field2_type {
+        }
+
+        field2_type field2 = 2;
+
+        message field3_type {
+
+          message field1_type {
+          }
+
+          field1_type field1 = 1;
+
+          message field2_type {
+          }
+
+          field2_type field2 = 2;
+        }
+
+        field3_type field3 = 3;
+
+        message field4_type {
+
+          message field1_type {
+
+            message field3_type {
+
+              message field1_type {
+
+                message field1_type {
+
+                  message field5_type {
+
+                    message field1_type {
+                    }
+
+                    field1_type field1 = 1;
+                  }
+
+                  field5_type field5 = 5;
+
+                  message field6_type {
+                  }
+
+                  field6_type field6 = 6;
+                }
+
+                field1_type field1 = 1;
+
+                message field2_type {
+                }
+
+                field2_type field2 = 2;
+
+                message field3_type {
+
+                  message field1_type {
+
+                    message field5_type {
+
+                      message field1_type {
+                      }
+
+                      field1_type field1 = 1;
+                    }
+
+                    field5_type field5 = 5;
+
+                    message field6_type {
+                    }
+
+                    field6_type field6 = 6;
+                  }
+
+                  field1_type field1 = 1;
+
+                  message field2_type {
+                  }
+
+                  field2_type field2 = 2;
+                }
+
+                field3_type field3 = 3;
+              }
+
+              field1_type field1 = 1;
+            }
+
+            field3_type field3 = 3;
+
+            message field4_type {
+
+              message field1_type {
+
+                message field2_type {
+                }
+
+                field2_type field2 = 2;
+              }
+
+              field1_type field1 = 1;
+            }
+
+            field4_type field4 = 4;
+          }
+
+          field1_type field1 = 1;
+        }
+
+        field4_type field4 = 4;
+      }
+
+      field9_type field9 = 9;
+
+      message field11_type {
+
+        message field2_type {
+        }
+
+        field2_type field2 = 2;
+
+        message field3_type {
+        }
+
+        field3_type field3 = 3;
+
+        message field4_type {
+
+          message field2_type {
+            int64 field1 = 1;
+            int64 field2 = 2;
+          }
+
+          field2_type field2 = 2;
+        }
+
+        field4_type field4 = 4;
+      }
+
+      field11_type field11 = 11;
+
+      message field12_type {
+      }
+
+      field12_type field12 = 12;
+
+      message field14_type {
+
+        message field2_type {
+        }
+
+        field2_type field2 = 2;
+
+        message field3_type {
+        }
+
+        field3_type field3 = 3;
+
+        message field4_type {
+
+          message field2_type {
+            int64 field1 = 1;
+            int64 field2 = 2;
+          }
+
+          field2_type field2 = 2;
+        }
+
+        field4_type field4 = 4;
+      }
+
+      field14_type field14 = 14;
+
+      message field15_type {
+
+        message field1_type {
+        }
+
+        field1_type field1 = 1;
+
+        message field4_type {
+        }
+
+        field4_type field4 = 4;
+      }
+
+      field15_type field15 = 15;
+
+      message field17_type {
+
+        message field1_type {
+        }
+
+        field1_type field1 = 1;
+
+        message field4_type {
+        }
+
+        field4_type field4 = 4;
+      }
+
+      field17_type field17 = 17;
+
+      message field19_type {
+
+        message field2_type {
+        }
+
+        field2_type field2 = 2;
+
+        message field3_type {
+        }
+
+        field3_type field3 = 3;
+
+        message field4_type {
+
+          message field2_type {
+            int64 field1 = 1;
+            int64 field2 = 2;
+          }
+
+          field2_type field2 = 2;
+        }
+
+        field4_type field4 = 4;
+      }
+
+      field19_type field19 = 19;
+
+      message field22_type {
+      }
+
+      field22_type field22 = 22;
+
+      message field23_type {
+      }
+
+      field23_type field23 = 23;
+    }
+
+    field8_type field8 = 8;
+    int64 field10 = 10;
+    int64 field17 = 17;
+  }
+
+  field1_type field1 = 1;
+
+  message field2_type {
+    string model = 3;
+    string make = 4;
+    int64 android_api_version = 5;
+  }
+
+  field2_type field2 = 2;
+  bytes field3 = 3;
+}
