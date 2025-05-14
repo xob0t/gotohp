@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"net/http"
 	"net/url"
 	"time"
@@ -11,15 +10,8 @@ import (
 
 func NewClient(proxyURLStr string) (*http.Client, error) {
 	// Create the base transport with default values
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: false,
-		},
-		// Additional recommended settings
-		MaxIdleConns:        100,
-		IdleConnTimeout:     90 * time.Second,
-		TLSHandshakeTimeout: 10 * time.Second,
-	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig.InsecureSkipVerify = false
 
 	// Configure proxy if provided
 	if proxyURLStr != "" {

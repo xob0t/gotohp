@@ -4,17 +4,17 @@
         <key>CFBundlePackageType</key>
         <string>APPL</string>
         <key>CFBundleName</key>
-        <string>My Product</string>
+        <string>Gotohs</string>
         <key>CFBundleExecutable</key>
-        <string>gotohs.exe</string>
+        <string>gotohs</string>
         <key>CFBundleIdentifier</key>
-        <string>com.wails.gotohs</string>
+        <string>com.xob0t.gotohs</string>
         <key>CFBundleVersion</key>
-        <string>0.1.0</string>
+        <string>v0.0.1</string>
         <key>CFBundleGetInfoString</key>
-        <string>This is a comment</string>
+        <string></string>
         <key>CFBundleShortVersionString</key>
-        <string>0.1.0</string>
+        <string>v0.0.1</string>
         <key>CFBundleIconFile</key>
         <string>icons</string>
         <key>LSMinimumSystemVersion</key>
@@ -22,6 +22,6 @@
         <key>NSHighResolutionCapable</key>
         <string>true</string>
         <key>NSHumanReadableCopyright</key>
-        <string>© now, My Company</string>
+        <string></string>
     </dict>
 </plist>

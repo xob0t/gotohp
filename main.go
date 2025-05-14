@@ -2,11 +2,11 @@ package main
 
 import (
 	"embed"
-	_ "embed"
 	"log"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -16,6 +16,8 @@ import (
 
 //go:embed all:frontend/dist
 var assets embed.FS
+
+var App *application.App
 
 // main function serves as the application's entry point. It initializes the application, creates a window,
 // and starts a goroutine that emits a time-based event every second. It subsequently runs the application and
@@ -27,11 +29,12 @@ func main() {
 	// 'Assets' configures the asset server with the 'FS' variable pointing to the frontend files.
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
-	app := application.New(application.Options{
+	App = application.New(application.Options{
 		Name:        "gotohs",
 		Description: "Google Photos unofficial client",
 		Services: []application.Service{
-			application.NewService(&GreetService{}),
+			application.NewService(&ConfigService{}),
+			application.NewService(&UploadService{}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -46,11 +49,12 @@ func main() {
 	// 'Mac' options tailor the window when running on macOS.
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
-	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
-		Title:     "gotohs",
-		Frameless: true,
-		Width:     1000,
-		Height:    900,
+	window := App.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+		Title:             "gotohs",
+		Frameless:         false,
+		Width:             1000,
+		Height:            900,
+		EnableDragAndDrop: true,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 0,
 			Backdrop:                application.MacBackdropTranslucent,
@@ -65,13 +69,47 @@ func main() {
 	go func() {
 		for {
 			now := time.Now().Format(time.RFC1123)
-			app.EmitEvent("time", now)
+			App.EmitEvent("time", now)
 			time.Sleep(time.Second)
 		}
 	}()
 
+	App.OnEvent("mergeSettingsChanged", func(e *application.CustomEvent) {
+		App.Logger.Info("mergeSettingsChanged")
+		App.Logger.Info("[Go] WailsEvent received", "name", e.Name, "data", e.Data, "sender", e.Sender, "cancelled", e.Cancelled)
+	})
+
+	window.OnWindowEvent(events.Common.WindowFilesDropped, func(event *application.WindowEvent) {
+		if ActionRunning {
+			return
+		}
+		ActionRunning = true
+		paths := event.Context().DroppedFiles()
+		targetPaths, err := Filter(paths)
+		if err != nil {
+			App.EmitEvent("uploadStatus", UploadStatus{
+				IsError: true,
+				Error:   err,
+			})
+		}
+		for _, path := range targetPaths {
+			err := Upload(path)
+			if err != nil {
+				App.EmitEvent("uploadStatus", UploadStatus{
+					IsError: true,
+					Error:   err,
+				})
+			} else {
+				App.EmitEvent("uploadStatus", UploadStatus{
+					IsError: false,
+				})
+			}
+		}
+		ActionRunning = false
+	})
+
 	// Run the application. This blocks until the application has been exited.
-	err := app.Run()
+	err := App.Run()
 
 	// If an error occurred while running the application, log it and exit.
 	if err != nil {
