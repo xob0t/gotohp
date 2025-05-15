@@ -43,6 +43,7 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Wails3
         run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
@@ -111,6 +112,7 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Wails3
         shell: cmd
@@ -141,7 +143,7 @@ jobs:
           wails3 task common:update:build-assets
 
           # Build the application directly (skip installer for now)
-          ttask package
+          task package
 
           # Debug - list files
           Write-Host "📂 Finding gotohp files..."
@@ -185,6 +187,7 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install System Dependencies
         run: |
