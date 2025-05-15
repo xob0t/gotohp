@@ -6,7 +6,7 @@
 name: "gotohp"
 arch: ${GOARCH}
 platform: "linux"
-version: "v0.0.1"
+version: "0.1.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
