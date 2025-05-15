@@ -5,6 +5,17 @@ on:
     branches: [main]
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      os:
+        description: "OS to build (macos, windows, linux, all)"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - macos
+          - windows
+          - linux
+          - all
 
 permissions:
   contents: write
@@ -13,6 +24,7 @@ jobs:
   build-macos:
     name: Build macOS
     runs-on: macos-latest
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.os == 'macos' || inputs.os == 'all')) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -80,6 +92,7 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.os == 'windows' || inputs.os == 'all')) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -128,7 +141,7 @@ jobs:
           wails3 task common:update:build-assets
 
           # Build the application directly (skip installer for now)
-          task windows:production
+          ttask package
 
           # Debug - list files
           Write-Host "📂 Finding gotohp files..."
@@ -153,6 +166,7 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.os == 'linux' || inputs.os == 'all')) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -188,8 +202,7 @@ jobs:
           # Update build assets
           wails3 task common:update:build-assets
 
-          # Build directly using Go
-          task linux:production
+          task package
 
           # Debug - find the binary
           echo "📂 Finding gotohp binary..."
@@ -201,10 +214,10 @@ jobs:
             cp "$BINARY_PATH" release/gotohp-linux
             chmod +x release/gotohp-linux
             echo "✅ Copied binary to release/gotohp-linux"
-          else
+          else {
             echo "❌ Could not find gotohp binary"
             exit 1
-          fi
+          }
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
@@ -215,6 +228,7 @@ jobs:
   create-release:
     name: Create Release
     needs: [build-macos, build-windows, build-linux]
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.os == 'all' && needs.build-macos.result == 'success' && needs.build-windows.result == 'success' && needs.build-linux.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -229,7 +243,6 @@ jobs:
           ls -la final_release/
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |
