@@ -50,7 +50,8 @@ jobs:
 
       - name: Build macOS App
         run: |
-          mkdir -p release
+          mkdir -p darwinBinaries
+          wails3 doctor
 
           # Update build assets
           wails3 task common:update:build-assets
@@ -58,37 +59,26 @@ jobs:
           # Build the app package
           task darwin:package:universal
 
-          # Debug directory structure
-          find . -name "*.app" -o -name "gotohp*"
-
-          # Create DMG - fix the directory path
           npm install --global create-dmg
-
-          # Locate the app bundle
-          APP_PATH=$(find . -name "gotohp.app" -type d)
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ Could not find gotohp.app"
-            exit 1
-          fi
-
-          APP_DIR=$(dirname "$APP_PATH")
-          echo "📂 Found app at: $APP_PATH"
-          echo "📂 App directory: $APP_DIR"
-
-          cd "$APP_DIR"
+          cd bin
           create-dmg gotohp.app --dmg-title "gotohp"
 
-          # Move the DMG to the release directory
-          DMG_PATH=$(find . -name "*.dmg")
-          mkdir -p ../../release
-          mv "$DMG_PATH" ../../release/gotohp-macos.dmg
-          cd ../..
+          # Move any .dmg file found to darwinBinaries with the correct name
+          for dmg in *.dmg; do
+            mv "$dmg" "../darwinBinaries/gotohp-universal.dmg"
+            break
+          done
+
+          echo "universalDMGPath=darwinBinaries/gotohp-universal.dmg" >> $GITHUB_ENV
+
+          cd ..
+          ls -alh darwinBinaries
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos
-          path: release/gotohp-macos.dmg
+          path: ${{ env.universalDMGPath }}
 
   build-windows:
     name: Build Windows
@@ -114,24 +104,17 @@ jobs:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          # Install NSIS via Chocolatey
+          choco install nsis -y --no-progress
+          refreshenv
+          Write-Host "NSIS version: $(makensis -VERSION)"
+
       - name: Install Wails3
         shell: cmd
         run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
-
-      - name: Fix NSIS Script
-        shell: pwsh
-        run: |
-          # Find and fix the project.nsi file
-          $nsiFile = Get-ChildItem -Path . -Filter "project.nsi" -Recurse | Select-Object -First 1
-          if ($nsiFile) {
-            $content = Get-Content -Path $nsiFile.FullName
-            # Replace invalid file version with a valid one (X.X.X.X format)
-            $content = $content -replace '(VIFileVersion\s+")[^"]+(")','$1 1.0.0.0$2'
-            Set-Content -Path $nsiFile.FullName -Value $content
-            Write-Host "✅ Fixed NSIS file at $($nsiFile.FullName)"
-          } else {
-            Write-Host "⚠️ Could not find project.nsi file"
-          }
 
       - name: Build Windows App
         shell: pwsh
@@ -143,27 +126,16 @@ jobs:
           wails3 task common:update:build-assets
 
           # Build the application directly (skip installer for now)
-          task package
+          task production
 
-          # Debug - list files
-          Write-Host "📂 Finding gotohp files..."
-          Get-ChildItem -Path . -Filter "gotohp.exe" -Recurse | ForEach-Object { Write-Host "Found: $($_.FullName)" }
-
-          # Find and copy the binary
-          $exePath = Get-ChildItem -Path . -Filter "gotohp.exe" -Recurse | Select-Object -First 1
-          if ($exePath) {
-            Copy-Item $exePath.FullName -Destination "release\gotohp-windows.exe"
-            Write-Host "✅ Copied binary to release\gotohp-windows.exe"
-          } else {
-            Write-Host "❌ Could not find gotohp.exe"
-            exit 1
-          }
+          Move-Item -Path "bin\gotohp-amd64-installer.exe" -Destination "windowsBinaries\gotohp-x64.exe"
+          echo "WINDOWS_EXE_PATH=windowsBinaries/gotohp-x64.exe" >> $env:GITHUB_ENV
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: release/gotohp-windows.exe
+          path: ${{ env.WINDOWS_EXE_PATH }}
 
   build-linux:
     name: Build Linux
@@ -192,14 +164,14 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev gcc libgtk-3-dev pkg-config
+          sudo apt-get install -y build-essential libwebkit2gtk-4.1-dev gcc libgtk-3-dev pkg-config
 
       - name: Install Wails3
         run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
 
       - name: Build Linux App
         run: |
-          mkdir -p release
+          mkdir -p linuxAppImage
           wails3 doctor
 
           # Update build assets
@@ -207,26 +179,16 @@ jobs:
 
           task package
 
-          # Debug - find the binary
-          echo "📂 Finding gotohp binary..."
-          find . -name "gotohp" -type f
+          mv bin/gotohp-x86_64.AppImage "linuxAppImage/gotohp_amd64.AppImage"
+          echo "LINUX_APP_PATH=linuxAppImage/gotohp_amd64.AppImage" >> $GITHUB_ENV
 
-          # Find and copy the binary
-          BINARY_PATH=$(find . -name "gotohp" -type f | head -n 1)
-          if [ -n "$BINARY_PATH" ]; then
-            cp "$BINARY_PATH" release/gotohp-linux
-            chmod +x release/gotohp-linux
-            echo "✅ Copied binary to release/gotohp-linux"
-          else {
-            echo "❌ Could not find gotohp binary"
-            exit 1
-          }
+          ls -alh linuxAppImage
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: release/gotohp-linux
+          path: ${{ env.LINUX_APP_PATH }}
 
   create-release:
     name: Create Release
