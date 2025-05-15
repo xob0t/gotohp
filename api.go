@@ -19,7 +19,6 @@ import (
 )
 
 type Api struct {
-	proxy             string
 	androidAPIVersion int64
 	model             string
 	make              string
@@ -36,21 +35,33 @@ type AuthResponse struct {
 	Auth   string
 }
 
-func NewApi(authData, proxy, language string) (*Api, error) {
+func NewApi() (*Api, error) {
+	selectedEmail := GlobalSettingsConfig.Selected
+	credentials := ""
+	language := ""
+	for _, c := range GlobalSettingsConfig.Credentials {
+		params, err := url.ParseQuery(c)
+		if err != nil {
+			continue
+		}
+		if params.Get("Email") == selectedEmail {
+			credentials = c
+			language = params.Get("lang")
+		}
+	}
 
-	client, err := NewClient(proxy)
+	client, err := NewClient(GlobalSettingsConfig.Proxy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
 
 	api := &Api{
-		proxy:             proxy,
 		androidAPIVersion: 28,
 		model:             "Pixel XL",
 		make:              "Google",
 		clientVersionCode: 49029607,
 		language:          language,
-		authData:          strings.TrimSpace(authData),
+		authData:          strings.TrimSpace(credentials),
 		client:            client,
 		authResponseCache: map[string]string{
 			"Expiry": "0",
@@ -404,30 +415,20 @@ func (a *Api) CommitUpload(
 	uploadResponseDecoded *generated.CommitToken,
 	fileName string,
 	sha1Hash []byte,
-	quality string,
-	make string,
-	model string,
 	uploadTimestamp int64,
 ) (string, error) {
-	// Set default values if not provided
-	if make == "" {
-		make = a.make
-	}
-	if model == "" {
-		model = a.model
-	}
 	if uploadTimestamp == 0 {
 		uploadTimestamp = time.Now().Unix()
 	}
 
-	// Quality mapping
-	qualityMap := map[string]int64{
-		"saver":    1,
-		"original": 3,
+	var qualityVal int64 = 3
+	if GlobalSettingsConfig.Saver {
+		qualityVal = 1
+		a.model = "Pixel 2"
 	}
-	qualityVal, ok := qualityMap[quality]
-	if !ok {
-		return "", fmt.Errorf("invalid quality value: %s", quality)
+
+	if GlobalSettingsConfig.UseQuota {
+		a.model = "Pixel 8"
 	}
 
 	unknownInt := int64(46000000)
@@ -449,8 +450,8 @@ func (a *Api) CommitUpload(
 			Field10: 1,
 		},
 		Field2: &generated.CommitUploadField2Type{
-			Model:             model,
-			Make:              make,
+			Model:             a.model,
+			Make:              a.make,
 			AndroidApiVersion: a.androidAPIVersion,
 		},
 		Field3: []byte{1, 3},

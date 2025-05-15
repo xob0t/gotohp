@@ -5,13 +5,13 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "gotohs"
+    !define INFO_PROJECTNAME "gotohp"
 !endif
 !ifndef INFO_COMPANYNAME
     !define INFO_COMPANYNAME "xob0t"
 !endif
 !ifndef INFO_PRODUCTNAME
-    !define INFO_PRODUCTNAME "Gotohs"
+    !define INFO_PRODUCTNAME "gotohp"
 !endif
 !ifndef INFO_PRODUCTVERSION
     !define INFO_PRODUCTVERSION "v0.0.1"

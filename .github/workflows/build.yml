@@ -1,0 +1,238 @@
+name: Build Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
+      - name: Install Wails3
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Build macOS App
+        run: |
+          mkdir -p release
+
+          # Update build assets
+          wails3 task common:update:build-assets
+
+          # Build the app package
+          task darwin:package:universal
+
+          # Debug directory structure
+          find . -name "*.app" -o -name "gotohp*"
+
+          # Create DMG - fix the directory path
+          npm install --global create-dmg
+
+          # Locate the app bundle
+          APP_PATH=$(find . -name "gotohp.app" -type d)
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Could not find gotohp.app"
+            exit 1
+          fi
+
+          APP_DIR=$(dirname "$APP_PATH")
+          echo "📂 Found app at: $APP_PATH"
+          echo "📂 App directory: $APP_DIR"
+
+          cd "$APP_DIR"
+          create-dmg gotohp.app --dmg-title "gotohp"
+
+          # Move the DMG to the release directory
+          DMG_PATH=$(find . -name "*.dmg")
+          mkdir -p ../../release
+          mv "$DMG_PATH" ../../release/gotohp-macos.dmg
+          cd ../..
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: release/gotohp-macos.dmg
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
+      - name: Install Wails3
+        shell: cmd
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Fix NSIS Script
+        shell: pwsh
+        run: |
+          # Find and fix the project.nsi file
+          $nsiFile = Get-ChildItem -Path . -Filter "project.nsi" -Recurse | Select-Object -First 1
+          if ($nsiFile) {
+            $content = Get-Content -Path $nsiFile.FullName
+            # Replace invalid file version with a valid one (X.X.X.X format)
+            $content = $content -replace '(VIFileVersion\s+")[^"]+(")','$1 1.0.0.0$2'
+            Set-Content -Path $nsiFile.FullName -Value $content
+            Write-Host "✅ Fixed NSIS file at $($nsiFile.FullName)"
+          } else {
+            Write-Host "⚠️ Could not find project.nsi file"
+          }
+
+      - name: Build Windows App
+        shell: pwsh
+        run: |
+          mkdir -p release
+          wails3 doctor
+
+          # Update build assets
+          wails3 task common:update:build-assets
+
+          # Build the application directly (skip installer for now)
+          task windows:production
+
+          # Debug - list files
+          Write-Host "📂 Finding gotohp files..."
+          Get-ChildItem -Path . -Filter "gotohp.exe" -Recurse | ForEach-Object { Write-Host "Found: $($_.FullName)" }
+
+          # Find and copy the binary
+          $exePath = Get-ChildItem -Path . -Filter "gotohp.exe" -Recurse | Select-Object -First 1
+          if ($exePath) {
+            Copy-Item $exePath.FullName -Destination "release\gotohp-windows.exe"
+            Write-Host "✅ Copied binary to release\gotohp-windows.exe"
+          } else {
+            Write-Host "❌ Could not find gotohp.exe"
+            exit 1
+          }
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: release/gotohp-windows.exe
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev gcc libgtk-3-dev pkg-config
+
+      - name: Install Wails3
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Build Linux App
+        run: |
+          mkdir -p release
+          wails3 doctor
+
+          # Update build assets
+          wails3 task common:update:build-assets
+
+          # Build directly using Go
+          task linux:production
+
+          # Debug - find the binary
+          echo "📂 Finding gotohp binary..."
+          find . -name "gotohp" -type f
+
+          # Find and copy the binary
+          BINARY_PATH=$(find . -name "gotohp" -type f | head -n 1)
+          if [ -n "$BINARY_PATH" ]; then
+            cp "$BINARY_PATH" release/gotohp-linux
+            chmod +x release/gotohp-linux
+            echo "✅ Copied binary to release/gotohp-linux"
+          else
+            echo "❌ Could not find gotohp binary"
+            exit 1
+          fi
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: release/gotohp-linux
+
+  create-release:
+    name: Create Release
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+
+      - name: Prepare release files
+        run: |
+          mkdir -p final_release
+          find release -type f -not -path "*/\.*" -exec cp {} final_release/ \;
+          ls -la final_release/
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            final_release/*
+          tag_name: ${{ github.ref }}
+          draft: true

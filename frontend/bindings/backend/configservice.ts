@@ -9,8 +9,13 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
-export function GetConfig($0: {}): Promise<$models.GlobalSettings> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2320765359, $0) as any;
+export function AddCredentials(newAuthString: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4112064016, newAuthString) as any;
+    return $resultPromise;
+}
+
+export function GetConfig(): Promise<$models.GlobalSettings> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2320765359) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType0($result);
     }) as any;
@@ -18,13 +23,53 @@ export function GetConfig($0: {}): Promise<$models.GlobalSettings> & { cancel():
     return $typingPromise;
 }
 
-export function SetPropxy(proxy: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1355477567, proxy) as any;
+export function RemoveCredentials(email: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4137237855, email) as any;
     return $resultPromise;
 }
 
-export function SetSelected(selected: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4003107648, selected) as any;
+export function SetDeleteFromHost(deleteFromHost: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2373131628, deleteFromHost) as any;
+    return $resultPromise;
+}
+
+export function SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4257123739, disableUnsupportedFilesFilter) as any;
+    return $resultPromise;
+}
+
+export function SetForceUpload(forceUpload: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4251250465, forceUpload) as any;
+    return $resultPromise;
+}
+
+export function SetProxy(proxy: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2108748199, proxy) as any;
+    return $resultPromise;
+}
+
+export function SetRecursive(recursive: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3531888315, recursive) as any;
+    return $resultPromise;
+}
+
+export function SetSaver(saver: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3363899554, saver) as any;
+    return $resultPromise;
+}
+
+export function SetSelected(email: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4003107648, email) as any;
+    return $resultPromise;
+}
+
+export function SetUploadThreads(uploadThreads: number): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2611642865, uploadThreads) as any;
+    return $resultPromise;
+}
+
+export function SetUseQuota(useQuota: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3225773856, useQuota) as any;
     return $resultPromise;
 }
 

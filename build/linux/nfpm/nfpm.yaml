@@ -3,7 +3,7 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "gotohs"
+name: "gotohp"
 arch: ${GOARCH}
 platform: "linux"
 version: "v0.0.1"
@@ -17,12 +17,12 @@ license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/gotohs"
-    dst: "/usr/local/bin/gotohs"
+  - src: "./bin/gotohp"
+    dst: "/usr/local/bin/gotohp"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/gotohs.png"
-  - src: "./build/linux/gotohs.desktop"
-    dst: "/usr/share/applications/gotohs.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/gotohp.png"
+  - src: "./build/linux/gotohp.desktop"
+    dst: "/usr/share/applications/gotohp.desktop"
 
 depends:
   - gtk3

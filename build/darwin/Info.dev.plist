@@ -4,11 +4,11 @@
         <key>CFBundlePackageType</key>
         <string>APPL</string>
         <key>CFBundleName</key>
-        <string>Gotohs</string>
+        <string>gotohp</string>
         <key>CFBundleExecutable</key>
-        <string>gotohs</string>
+        <string>gotohp</string>
         <key>CFBundleIdentifier</key>
-        <string>com.xob0t.gotohs</string>
+        <string>com.xob0t.gotohp</string>
         <key>CFBundleVersion</key>
         <string>v0.0.1</string>
         <key>CFBundleGetInfoString</key>

@@ -190,3 +190,7 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.527 0.154 150.069);
 }
+
+* {
+  scrollbar-color: #454a4d #202324;
+}

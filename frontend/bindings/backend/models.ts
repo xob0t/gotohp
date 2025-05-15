@@ -9,6 +9,13 @@ export class GlobalSettings {
     "credentials": string[];
     "selected": string;
     "proxy": string;
+    "useQuota": boolean;
+    "saver": boolean;
+    "recursive": boolean;
+    "forceUpload": boolean;
+    "uploadThreads": number;
+    "deleteFromHost": boolean;
+    "disableUnsupportedFilesFilter": boolean;
 
     /** Creates a new GlobalSettings instance. */
     constructor($$source: Partial<GlobalSettings> = {}) {
@@ -20,6 +27,27 @@ export class GlobalSettings {
         }
         if (!("proxy" in $$source)) {
             this["proxy"] = "";
+        }
+        if (!("useQuota" in $$source)) {
+            this["useQuota"] = false;
+        }
+        if (!("saver" in $$source)) {
+            this["saver"] = false;
+        }
+        if (!("recursive" in $$source)) {
+            this["recursive"] = false;
+        }
+        if (!("forceUpload" in $$source)) {
+            this["forceUpload"] = false;
+        }
+        if (!("uploadThreads" in $$source)) {
+            this["uploadThreads"] = 0;
+        }
+        if (!("deleteFromHost" in $$source)) {
+            this["deleteFromHost"] = false;
+        }
+        if (!("disableUnsupportedFilesFilter" in $$source)) {
+            this["disableUnsupportedFilesFilter"] = false;
         }
 
         Object.assign(this, $$source);
