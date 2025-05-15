@@ -39,35 +39,30 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install Task
-        uses: arduino/setup-task@v2
-        with:
-          version: 3.x
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install Wails3
         run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
 
       - name: Build macOS App
         run: |
-          mkdir -p darwinBinaries
+          mkdir -p release
           wails3 doctor
 
           # Update build assets
           wails3 task common:update:build-assets
 
           # Build the app package
-          task darwin:package:universal
+          wails3 task darwin:package:universal
 
-          echo "universalDMGPath=darwinBinaries/gotohp-universal.app" >> $GITHUB_ENV
-
-          ls -alh darwinBinaries
+          # Create zip file of the .app bundle
+          cd bin
+          zip -r ../release/gotohp-macos-universal.zip gotohp.app
+          cd ..
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos
-          path: ${{ env.universalDMGPath }}
+          path: release/gotohp-macos-universal.zip
 
   build-windows:
     name: Build Windows
@@ -87,16 +82,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install Task
-        uses: arduino/setup-task@v2
-        with:
-          version: 3.x
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install NSIS
         shell: pwsh
         run: |
-          # Install NSIS via Chocolatey
           choco install nsis -y --no-progress
           refreshenv
           Write-Host "NSIS version: $(makensis -VERSION)"
@@ -108,23 +96,22 @@ jobs:
       - name: Build Windows App
         shell: pwsh
         run: |
-          mkdir -p windowsBinaries
+          mkdir -p release
           wails3 doctor
 
           # Update build assets
           wails3 task common:update:build-assets
 
-          # Build the application directly (skip installer for now)
-          task production
-
-          Move-Item -Path "bin\gotohp.exe" -Destination "windowsBinaries\gotohp-x64.exe"
-          echo "WINDOWS_EXE_PATH=windowsBinaries/gotohp-x64.exe" >> $env:GITHUB_ENV
+          # Build the application
+          wails3 task production
+          Move-Item -Path "bin\gotohp.exe" -Destination "release\gotohp-x64.exe"
+          Remove-Item -Path "bin\gotohp.exe" -ErrorAction SilentlyContinue
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: ${{ env.WINDOWS_EXE_PATH }}
+          path: release/gotohp-x64.exe
 
   build-linux:
     name: Build Linux
@@ -144,12 +131,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install Task
-        uses: arduino/setup-task@v2
-        with:
-          version: 3.x
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install System Dependencies
         run: |
           sudo apt-get update
@@ -160,29 +141,40 @@ jobs:
 
       - name: Build Linux App
         run: |
-          mkdir -p linuxAppImage
+          mkdir -p release
           wails3 doctor
 
           # Update build assets
           wails3 task common:update:build-assets
 
-          task package
+          # Build the application
+          wails3 task package
 
-          mv bin/gotohp-x86_64.AppImage "linuxAppImage/gotohp_amd64.AppImage"
-          echo "LINUX_APP_PATH=linuxAppImage/gotohp_amd64.AppImage" >> $GITHUB_ENV
+          # Generate deb package
+          wails3 tool package -name gotohp -format deb -config ./build/linux/nfpm/nfpm.yaml -out ./release
 
-          ls -alh linuxAppImage
+          # Generate AppImage
+          wails3 package
+          mv bin/gotohp-x86_64.AppImage "release/gotohp_amd64.AppImage"
+          rm -f bin/gotohp-x86_64.AppImage
+
+          # Rename .deb file if needed
+          if [ -f "release/gotohp.deb" ]; then
+            mv "release/gotohp.deb" "release/gotohp_amd64.deb"
+          fi
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: ${{ env.LINUX_APP_PATH }}
+          path: |
+            release/gotohp_amd64.deb
+            release/gotohp_amd64.AppImage
 
   create-release:
     name: Create Release
     needs: [build-macos, build-windows, build-linux]
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.os == 'all' && needs.build-macos.result == 'success' && needs.build-windows.result == 'success' && needs.build-linux.result == 'success') }}
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -190,16 +182,13 @@ jobs:
         with:
           path: release
 
-      - name: Prepare release files
-        run: |
-          mkdir -p final_release
-          find release -type f -not -path "*/\.*" -exec cp {} final_release/ \;
-          ls -la final_release/
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            final_release/*
+            release/macos/gotohp-macos-universal.zip
+            release/windows/gotohp-x64.exe
+            release/linux/gotohp_amd64.deb
+            release/linux/gotohp_amd64.AppImage
           tag_name: ${{ github.ref }}
           draft: true
