@@ -15,8 +15,6 @@ tasks:
     cmds:
       - task: generate:syso
       - go build {{.BUILD_FLAGS}} -o {{.BIN_DIR}}/{{.APP_NAME}}.exe
-      - cmd: powershell Remove-item *.syso
-        platforms: [windows]
       - cmd: rm -f *.syso
         platforms: [linux, darwin]
     vars:
