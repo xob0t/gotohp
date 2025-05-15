@@ -59,19 +59,8 @@ jobs:
           # Build the app package
           task darwin:package:universal
 
-          npm install --global create-dmg
-          cd bin
-          create-dmg gotohp.app --dmg-title "gotohp"
+          echo "universalDMGPath=darwinBinaries/gotohp-universal.app" >> $GITHUB_ENV
 
-          # Move any .dmg file found to darwinBinaries with the correct name
-          for dmg in *.dmg; do
-            mv "$dmg" "../darwinBinaries/gotohp-universal.dmg"
-            break
-          done
-
-          echo "universalDMGPath=darwinBinaries/gotohp-universal.dmg" >> $GITHUB_ENV
-
-          cd ..
           ls -alh darwinBinaries
 
       - name: Upload macOS Artifact
@@ -119,7 +108,7 @@ jobs:
       - name: Build Windows App
         shell: pwsh
         run: |
-          mkdir -p release
+          mkdir -p windowsBinaries
           wails3 doctor
 
           # Update build assets
@@ -128,7 +117,7 @@ jobs:
           # Build the application directly (skip installer for now)
           task production
 
-          Move-Item -Path "bin\gotohp-amd64-installer.exe" -Destination "windowsBinaries\gotohp-x64.exe"
+          Move-Item -Path "bin\gotohp.exe" -Destination "windowsBinaries\gotohp-x64.exe"
           echo "WINDOWS_EXE_PATH=windowsBinaries/gotohp-x64.exe" >> $env:GITHUB_ENV
 
       - name: Upload Windows Artifact
