@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"path/filepath"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -29,7 +30,8 @@ type ConfigService struct{}
 
 var GlobalSettingsConfig GlobalSettings
 var UploadRunning bool = false
-var GlobalSettingsPath string = "./config.yaml"
+var ConfigDir string = filepath.Join(GetUserDir(), "/.config/gotohp")
+var ConfigPath string = filepath.Join(ConfigDir, "config.yaml")
 var DefaultConfig = GlobalSettings{
 	UploadThreads: 3,
 }
@@ -175,12 +177,12 @@ func (g *ConfigService) RemoveCredentials(email string) error {
 }
 
 func (g *ConfigService) GetConfig() GlobalSettings {
-	configExists := Exists(GlobalSettingsPath)
+	configExists := Exists(ConfigPath)
 	if !configExists {
 		fmt.Println("Created a new user settings config")
 		GlobalSettingsConfig = DefaultConfig
 	}
-	file, _ := os.ReadFile(GlobalSettingsPath)
+	file, _ := os.ReadFile(ConfigPath)
 	if len(file) == 0 {
 		fmt.Println("config file is empty")
 		GlobalSettingsConfig = DefaultConfig
@@ -203,6 +205,14 @@ func Exists(path string) bool {
 	return false
 }
 
+func GetUserDir() string {
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return dirname
+}
+
 func SaveGlobalConfig() error {
 	k := koanf.New(".")
 
@@ -211,13 +221,14 @@ func SaveGlobalConfig() error {
 		fmt.Println(err)
 		return err
 	}
+	os.MkdirAll(ConfigDir, 0666)
 	b, err := k.Marshal(yaml.Parser())
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	err = os.WriteFile(GlobalSettingsPath, b, os.ModePerm)
+	err = os.WriteFile(ConfigPath, b, os.ModePerm)
 
 	if err != nil {
 		fmt.Println(err)
@@ -230,7 +241,7 @@ func SaveGlobalConfig() error {
 func parseGlobalConfig() (GlobalSettings, error) {
 	var c GlobalSettings
 	var k = koanf.New(".")
-	if err := k.Load(file.Provider(GlobalSettingsPath), yaml.Parser()); err != nil {
+	if err := k.Load(file.Provider(ConfigPath), yaml.Parser()); err != nil {
 		log.Printf("error loading global config: %v", err)
 		return DefaultConfig, err
 	}
