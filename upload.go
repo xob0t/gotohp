@@ -44,6 +44,8 @@ func isGooglePhotosSupported(filename string) bool {
 	photoFormats := []string{
 		"avif", "bmp", "gif", "heic", "ico",
 		"jpg", "jpeg", "png", "tiff", "webp",
+		"cr2", "cr3", "nef", "arw", "orf",
+		"raf", "rw2", "pef", "sr2", "dng",
 	}
 
 	// Supported video formats
@@ -51,7 +53,7 @@ func isGooglePhotosSupported(filename string) bool {
 		"3gp", "3g2", "asf", "avi", "divx",
 		"m2t", "m2ts", "m4v", "mkv", "mmv",
 		"mod", "mov", "mp4", "mpg", "mpeg",
-		"mts", "tod", "wmv",
+		"mts", "tod", "wmv", "ts",
 	}
 
 	// Check if extension is in either supported format
