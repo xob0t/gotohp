@@ -23,7 +23,7 @@ const isUploading = ref(false)
 
 // Add tracking for file paths and their status
 const uploadResults = ref<{
-  success: string[];
+  success: { path: string; mediaKey: string }[];
   fail: string[];
 }>({
   success: [],
@@ -147,12 +147,13 @@ function copyResultsAsJson() {
 }
 
 onMounted(() => {
-  Events.On('FileStatus', (event: { data: Array<{ IsError: boolean, Path: string }> }) => {
-    const { IsError, Path } = event.data[0]
+  Events.On('FileStatus', (event: { data: Array<{ IsError: boolean, Path: string, MediaKey: string }> }) => {
+    const { IsError, Path, MediaKey } = event.data[0]
 
     if (!IsError) {
+      debugger
       uploadedFiles.value += 1
-      uploadResults.value.success.push(Path)
+      uploadResults.value.success.push({ path: Path, mediaKey: MediaKey })
     } else {
       uploadResults.value.fail.push(Path)
     }
