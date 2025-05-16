@@ -1,4 +1,4 @@
-# gotohs
+# gotohp
 
 ![demo](readme_assets/app_demo.webp)
 
