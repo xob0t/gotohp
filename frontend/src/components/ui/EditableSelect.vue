@@ -72,7 +72,18 @@ const removeOption = (index: number) => {
 </script>
 
 <template>
-    <Select v-model="selectedValue">
+    <!-- Show only the Add input when there are no options -->
+    <div v-if="internalOptions.length === 0" class="flex gap-2">
+        <Input v-model="newOption" placeholder="Add credentials" @keydown.enter="addOption" class="h-9 flex-1" />
+        <button type="button" @click="addOption"
+            class="px-3 text-sm rounded-md bg-primary text-primary-foreground cursor-pointer transition-colors h-9 flex items-center"
+            :disabled="!newOption.trim()">
+            Add
+        </button>
+    </div>
+
+    <!-- Show the Select dropdown when there are options -->
+    <Select v-else v-model="selectedValue">
         <SelectTrigger class="select-none">
             <SelectValue placeholder="Select Account" />
         </SelectTrigger>
@@ -93,13 +104,12 @@ const removeOption = (index: number) => {
                         </button>
                     </div>
                 </template>
-
             </SelectGroup>
             <div class="p-2 flex gap-2">
                 <Input v-model="newOption" placeholder="Add credentials" @keydown.enter="addOption"
                     class="h-8 flex-1" />
                 <button type="button" @click="addOption"
-                    class="px-2 text-sm rounded-md bg-primary cursor-pointer transition-colors h-8 flex items-center"
+                    class="px-2 text-sm rounded-md bg-primary text-primary-foreground cursor-pointer transition-colors h-8 flex items-center"
                     :disabled="!newOption.trim()">
                     Add
                 </button>
