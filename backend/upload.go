@@ -42,9 +42,10 @@ type UploadBatchStart struct {
 }
 
 type FileUploadResult struct {
-	IsError bool
-	Error   error
-	Path    string
+	MediaKey string
+	IsError  bool
+	Error    error
+	Path     string
 }
 
 func (m *UploadManager) Upload(app *application.App, paths []string) {
@@ -218,14 +219,11 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	return supportedFiles, nil
 }
 
-func UploadFile(ctx context.Context, filePath string) error {
-	api, _ := NewApi()
-
+func UploadFile(ctx context.Context, api *Api, filePath string) (string, error) {
 	mediakey := ""
-
 	sha1_hash_bytes, err := CalculateSHA1(ctx, filePath)
 	if err != nil {
-		return fmt.Errorf("error calculating hash file: %w", err)
+		return "", fmt.Errorf("error calculating hash file: %w", err)
 	}
 
 	sha1_hash_b64 := base64.StdEncoding.EncodeToString([]byte(sha1_hash_bytes))
@@ -242,46 +240,46 @@ func UploadFile(ctx context.Context, filePath string) error {
 					fmt.Println("Error deleting file:", err)
 				}
 			}
-			return nil
+			return mediakey, nil
 		}
 	}
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("error opening file: %w", err)
+		return "", fmt.Errorf("error opening file: %w", err)
 	}
 	fileInfo, err := file.Stat()
 	file.Close()
 
 	if err != nil {
-		return fmt.Errorf("error getting file info: %w", err)
+		return "", fmt.Errorf("error getting file info: %w", err)
 	}
 
 	token, err := api.GetUploadToken(sha1_hash_b64, fileInfo.Size())
 	if err != nil {
-		return fmt.Errorf("error uploading file: %w", err)
+		return "", fmt.Errorf("error uploading file: %w", err)
 	}
 
 	CommitToken, err := api.UploadFile(ctx, filePath, token)
 	if err != nil {
-		return fmt.Errorf("error uploading file: %w", err)
+		return "", fmt.Errorf("error uploading file: %w", err)
 
 	}
 
 	mediaKey, err := api.CommitUpload(CommitToken, fileInfo.Name(), sha1_hash_bytes, fileInfo.ModTime().Unix())
 	if err != nil {
-		return fmt.Errorf("error commiting file: %w", err)
+		return "", fmt.Errorf("error commiting file: %w", err)
 	}
 
 	if len(mediaKey) == 0 {
-		return fmt.Errorf("media key not received")
+		return "", fmt.Errorf("media key not received")
 	}
 
 	if AppConfig.DeleteFromHost {
 		os.Remove(filePath)
 	}
 
-	return nil
+	return mediaKey, nil
 
 }
 
@@ -298,11 +296,15 @@ func startUploadWorker(workChan <-chan string, results chan<- FileUploadResult, 
 				cancelUpload()
 			}()
 
-			err := UploadFile(ctx, path)
+			api, err := NewApi()
+			if err != nil {
+				results <- FileUploadResult{IsError: true, Error: err, Path: path}
+			}
+			mediaKey, err := UploadFile(ctx, api, path)
 			if err != nil {
 				results <- FileUploadResult{IsError: true, Error: err, Path: path}
 			} else {
-				results <- FileUploadResult{IsError: false, Path: path}
+				results <- FileUploadResult{IsError: false, Path: path, MediaKey: mediaKey}
 			}
 			cancelUpload()
 		}
