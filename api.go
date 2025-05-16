@@ -4,6 +4,7 @@ import (
 	"backend/generated"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -353,7 +354,7 @@ func (a *Api) FindRemoteMediaByHash(shaHash []byte) (string, error) {
 	return mediaKey, nil
 }
 
-func (a *Api) UploadFile(filePath string, uploadToken string) (*generated.CommitToken, error) {
+func (a *Api) UploadFile(ctx context.Context, filePath string, uploadToken string) (*generated.CommitToken, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %w", err)
@@ -362,7 +363,7 @@ func (a *Api) UploadFile(filePath string, uploadToken string) (*generated.Commit
 
 	uploadURL := "https://photos.googleapis.com/data/upload/uploadmedia/interactive?upload_id=" + uploadToken
 
-	req, err := http.NewRequest("PUT", uploadURL, file)
+	req, err := http.NewRequestWithContext(ctx, "PUT", uploadURL, file)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}

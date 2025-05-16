@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"log"
@@ -87,7 +88,7 @@ func main() {
 		results := make(chan UploadStatus, len(targetPaths))
 
 		// Start workers
-		for i := 0; i < GlobalSettingsConfig.UploadThreads; i++ {
+		for range GlobalSettingsConfig.UploadThreads {
 			uploadWG.Add(1)
 			go uploadWorker(workChan, results, uploadCancel, &uploadWG)
 		}
@@ -139,21 +140,21 @@ func uploadWorker(workChan <-chan string, results chan<- UploadStatus, cancel <-
 	for path := range workChan {
 		select {
 		case <-cancel:
-			return
+			return // Stop if cancellation is requested
 		default:
-			err := Upload(path)
+			ctx, cancelUpload := context.WithCancel(context.Background())
+			go func() {
+				<-cancel // If global cancel happens, cancel this upload
+				cancelUpload()
+			}()
+
+			err := Upload(ctx, path)
 			if err != nil {
-				results <- UploadStatus{
-					IsError: true,
-					Error:   err,
-					Path:    path,
-				}
+				results <- UploadStatus{IsError: true, Error: err, Path: path}
 			} else {
-				results <- UploadStatus{
-					IsError: false,
-					Path:    path,
-				}
+				results <- UploadStatus{IsError: false, Path: path}
 			}
+			cancelUpload()
 		}
 	}
 }

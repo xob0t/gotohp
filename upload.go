@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -119,12 +120,12 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	return supportedFiles, nil
 }
 
-func Upload(filePath string) error {
+func Upload(ctx context.Context, filePath string) error {
 	api, _ := NewApi()
 
 	mediakey := ""
 
-	sha1_hash_bytes, err := CalculateSHA1WithProgress(filePath)
+	sha1_hash_bytes, err := CalculateSHA1(ctx, filePath)
 	if err != nil {
 		return fmt.Errorf("error calculating hash file: %w", err)
 	}
@@ -163,7 +164,7 @@ func Upload(filePath string) error {
 		return fmt.Errorf("error uploading file: %w", err)
 	}
 
-	CommitToken, err := api.UploadFile(filePath, token)
+	CommitToken, err := api.UploadFile(ctx, filePath, token)
 	if err != nil {
 		return fmt.Errorf("error uploading file: %w", err)
 
