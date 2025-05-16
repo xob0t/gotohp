@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
 import {
   SwitchRoot,
@@ -7,34 +8,45 @@ import {
   SwitchThumb,
   useForwardPropsEmits,
 } from 'reka-ui'
-import { computed, type HTMLAttributes } from 'vue'
+import { computed } from 'vue'
+import { type SwitchVariants, type SwitchThumbVariants, switchVariants, switchThumbVariants } from '.'
 
-const props = defineProps<SwitchRootProps & { class?: HTMLAttributes['class'] }>()
+interface Props extends SwitchRootProps {
+  variant?: SwitchVariants['variant']
+  size?: SwitchVariants['size']
+  thumbVariant?: SwitchThumbVariants['variant']
+  thumbSize?: SwitchThumbVariants['size']
+  class?: HTMLAttributes['class']
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  variant: 'default',
+  size: 'default',
+})
 
 const emits = defineEmits<SwitchRootEmits>()
 
 const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
+  const { class: _, variant: __, size: ___, thumbVariant: ____, thumbSize: _____, ...delegated } = props
 
   return delegated
 })
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
+
+// If thumbVariant or thumbSize not specified, they will default to matching the switch variant and size
+const effectiveThumbVariant = computed(() => props.thumbVariant || props.variant)
+const effectiveThumbSize = computed(() => props.thumbSize || props.size)
 </script>
 
 <template>
-  <SwitchRoot
-    data-slot="switch"
-    v-bind="forwarded"
-    :class="cn(
-      'peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
-      props.class,
-    )"
-  >
-    <SwitchThumb
-      data-slot="switch-thumb"
-      :class="cn('bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0')"
-    >
+  <SwitchRoot data-slot="switch" v-bind="forwarded" :class="cn(
+    switchVariants({ variant, size }),
+    props.class,
+  )">
+    <SwitchThumb data-slot="switch-thumb" :class="cn(
+      switchThumbVariants({ variant: effectiveThumbVariant, size: effectiveThumbSize })
+    )">
       <slot name="thumb" />
     </SwitchThumb>
   </SwitchRoot>

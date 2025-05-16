@@ -120,7 +120,7 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
         </div>
         <div class="flex items-center justify-between">
             <Label for="delete-host" class="size-full">Delete From Host After Upload</Label>
-            <Switch id="delete-host" v-model="settings.deleteFromHost" />
+            <Switch id="delete-host" variant="destructive" v-model="settings.deleteFromHost" />
         </div>
         <div class="flex items-center space-x-2 mt-4">
             <Input v-model="settings.proxy" type="text" placeholder="Proxy URL (optional)" class="flex-1" />
