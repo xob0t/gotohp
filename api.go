@@ -37,10 +37,10 @@ type AuthResponse struct {
 }
 
 func NewApi() (*Api, error) {
-	selectedEmail := GlobalSettingsConfig.Selected
+	selectedEmail := AppConfig.Selected
 	credentials := ""
 	language := ""
-	for _, c := range GlobalSettingsConfig.Credentials {
+	for _, c := range AppConfig.Credentials {
 		params, err := url.ParseQuery(c)
 		if err != nil {
 			continue
@@ -51,7 +51,7 @@ func NewApi() (*Api, error) {
 		}
 	}
 
-	client, err := NewClient(GlobalSettingsConfig.Proxy)
+	client, err := NewHTTPClientWithProxy(AppConfig.Proxy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
@@ -423,12 +423,12 @@ func (a *Api) CommitUpload(
 	}
 
 	var qualityVal int64 = 3
-	if GlobalSettingsConfig.Saver {
+	if AppConfig.Saver {
 		qualityVal = 1
 		a.model = "Pixel 2"
 	}
 
-	if GlobalSettingsConfig.UseQuota {
+	if AppConfig.UseQuota {
 		a.model = "Pixel 8"
 	}
 

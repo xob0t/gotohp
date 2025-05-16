@@ -24,7 +24,7 @@ func main() {
 		Name:        title,
 		Description: "Google Photos unofficial client",
 		Services: []application.Service{
-			application.NewService(&ConfigService{}),
+			application.NewService(&ConfigManager{}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -63,16 +63,16 @@ func main() {
 		}
 
 		paths := event.Context().DroppedFiles()
-		targetPaths, err := GetFiles(paths)
+		targetPaths, err := FilterSupportedFiles(paths)
 		if err != nil {
-			App.EmitEvent("FileStatus", UploadStatus{
+			App.EmitEvent("FileStatus", FileUploadResult{
 				IsError: true,
 				Error:   err,
 			})
 			return
 		}
 
-		App.EmitEvent("uploadStart", UploadStarted{
+		App.EmitEvent("uploadStart", UploadBatchStart{
 			Total: len(targetPaths),
 		})
 
@@ -80,17 +80,17 @@ func main() {
 		uploadCancel = make(chan struct{})
 		uploadWG = sync.WaitGroup{}
 
-		if GlobalSettingsConfig.UploadThreads < 1 {
-			GlobalSettingsConfig.UploadThreads = 1
+		if AppConfig.UploadThreads < 1 {
+			AppConfig.UploadThreads = 1
 		}
 		// Create a worker pool for concurrent uploads
 		workChan := make(chan string, len(targetPaths))
-		results := make(chan UploadStatus, len(targetPaths))
+		results := make(chan FileUploadResult, len(targetPaths))
 
 		// Start workers
-		for range GlobalSettingsConfig.UploadThreads {
+		for range AppConfig.UploadThreads {
 			uploadWG.Add(1)
-			go uploadWorker(workChan, results, uploadCancel, &uploadWG)
+			go startUploadWorker(workChan, results, uploadCancel, &uploadWG)
 		}
 
 		// Send work to workers
@@ -135,7 +135,7 @@ func main() {
 	}
 }
 
-func uploadWorker(workChan <-chan string, results chan<- UploadStatus, cancel <-chan struct{}, wg *sync.WaitGroup) {
+func startUploadWorker(workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for path := range workChan {
 		select {
@@ -150,9 +150,9 @@ func uploadWorker(workChan <-chan string, results chan<- UploadStatus, cancel <-
 
 			err := Upload(ctx, path)
 			if err != nil {
-				results <- UploadStatus{IsError: true, Error: err, Path: path}
+				results <- FileUploadResult{IsError: true, Error: err, Path: path}
 			} else {
-				results <- UploadStatus{IsError: false, Path: path}
+				results <- FileUploadResult{IsError: false, Path: path}
 			}
 			cancelUpload()
 		}

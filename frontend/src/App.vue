@@ -4,7 +4,7 @@ import { ref, onMounted, watch } from 'vue'
 import EditableSelect from "./components/ui/EditableSelect.vue"
 import SettingsPanel from "./SettingsPanel.vue";
 import { Label } from '@/components/ui/label'
-import { ConfigService } from '../bindings/backend'
+import { ConfigManager } from '../bindings/backend'
 
 import './index.css'
 import { useColorMode } from '@vueuse/core'
@@ -47,7 +47,7 @@ function extractEmailFromCredential(credential: string): string | null {
 watch(selectedOption, async (newValue) => {
   if (newValue) {
     try {
-      await ConfigService.SetSelected(newValue)
+      await ConfigManager.SetSelected(newValue)
       console.log('Successfully updated selected value:', newValue)
     } catch (error) {
       console.error('Failed to update selected value:', error)
@@ -59,7 +59,7 @@ watch(selectedOption, async (newValue) => {
 async function addCredentials(authString: string) {
   try {
     // First validate and add via backend
-    await ConfigService.AddCredentials(authString)
+    await ConfigManager.AddCredentials(authString)
 
     // If successful, update frontend state
     const email = extractEmailFromCredential(authString)
@@ -80,7 +80,7 @@ async function addCredentials(authString: string) {
 async function removeCredentials(email: string) {
   try {
     // First remove via backend
-    await ConfigService.RemoveCredentials(email)
+    await ConfigManager.RemoveCredentials(email)
 
     // If successful, update frontend state
     if (credentialMap.value[email]) {
@@ -176,7 +176,7 @@ onMounted(() => {
 
 
 onMounted(async () => {
-  const config = await ConfigService.GetConfig()
+  const config = await ConfigManager.GetConfig()
   if (config.credentials?.length) {
     // Initialize both the dropdown options and credential map
     credentialMap.value = {}

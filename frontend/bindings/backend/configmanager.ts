@@ -10,12 +10,12 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as $models from "./models.js";
 
 export function AddCredentials(newAuthString: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4112064016, newAuthString) as any;
+    let $resultPromise = $Call.ByID(3014521668, newAuthString) as any;
     return $resultPromise;
 }
 
-export function GetConfig(): Promise<$models.GlobalSettings> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2320765359) as any;
+export function GetConfig(): Promise<$models.Config> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3070176483) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType0($result);
     }) as any;
@@ -24,54 +24,54 @@ export function GetConfig(): Promise<$models.GlobalSettings> & { cancel(): void 
 }
 
 export function RemoveCredentials(email: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4137237855, email) as any;
+    let $resultPromise = $Call.ByID(10563107, email) as any;
     return $resultPromise;
 }
 
 export function SetDeleteFromHost(deleteFromHost: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2373131628, deleteFromHost) as any;
+    let $resultPromise = $Call.ByID(4158709680, deleteFromHost) as any;
     return $resultPromise;
 }
 
 export function SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4257123739, disableUnsupportedFilesFilter) as any;
+    let $resultPromise = $Call.ByID(3432422871, disableUnsupportedFilesFilter) as any;
     return $resultPromise;
 }
 
 export function SetForceUpload(forceUpload: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4251250465, forceUpload) as any;
+    let $resultPromise = $Call.ByID(3810674797, forceUpload) as any;
     return $resultPromise;
 }
 
 export function SetProxy(proxy: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2108748199, proxy) as any;
+    let $resultPromise = $Call.ByID(1808893219, proxy) as any;
     return $resultPromise;
 }
 
 export function SetRecursive(recursive: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3531888315, recursive) as any;
+    let $resultPromise = $Call.ByID(1696968831, recursive) as any;
     return $resultPromise;
 }
 
 export function SetSaver(saver: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3363899554, saver) as any;
+    let $resultPromise = $Call.ByID(3559214982, saver) as any;
     return $resultPromise;
 }
 
 export function SetSelected(email: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4003107648, email) as any;
+    let $resultPromise = $Call.ByID(3110129196, email) as any;
     return $resultPromise;
 }
 
 export function SetUploadThreads(uploadThreads: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2611642865, uploadThreads) as any;
+    let $resultPromise = $Call.ByID(2895202045, uploadThreads) as any;
     return $resultPromise;
 }
 
 export function SetUseQuota(useQuota: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3225773856, useQuota) as any;
+    let $resultPromise = $Call.ByID(785395124, useQuota) as any;
     return $resultPromise;
 }
 
 // Private type creation functions
-const $$createType0 = $models.GlobalSettings.createFrom;
+const $$createType0 = $models.Config.createFrom;

@@ -5,7 +5,7 @@
 // @ts-ignore: Unused imports
 import {Create as $Create} from "@wailsio/runtime";
 
-export class GlobalSettings {
+export class Config {
     "credentials": string[];
     "selected": string;
     "proxy": string;
@@ -17,8 +17,8 @@ export class GlobalSettings {
     "deleteFromHost": boolean;
     "disableUnsupportedFilesFilter": boolean;
 
-    /** Creates a new GlobalSettings instance. */
-    constructor($$source: Partial<GlobalSettings> = {}) {
+    /** Creates a new Config instance. */
+    constructor($$source: Partial<Config> = {}) {
         if (!("credentials" in $$source)) {
             this["credentials"] = [];
         }
@@ -54,15 +54,15 @@ export class GlobalSettings {
     }
 
     /**
-     * Creates a new GlobalSettings instance from a string or object.
+     * Creates a new Config instance from a string or object.
      */
-    static createFrom($$source: any = {}): GlobalSettings {
+    static createFrom($$source: any = {}): Config {
         const $$createField0_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("credentials" in $$parsedSource) {
             $$parsedSource["credentials"] = $$createField0_0($$parsedSource["credentials"]);
         }
-        return new GlobalSettings($$parsedSource as Partial<GlobalSettings>);
+        return new Config($$parsedSource as Partial<Config>);
     }
 }
 

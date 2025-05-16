@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { ConfigService } from '../bindings/backend'
+import { ConfigManager } from '../bindings/backend'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -36,7 +36,7 @@ const settings = ref<Settings>({
 })
 
 onMounted(async () => {
-    const config = await ConfigService.GetConfig()
+    const config = await ConfigManager.GetConfig()
     settings.value = {
         proxy: config.proxy || '',
         useQuota: config.useQuota || false,
@@ -51,39 +51,39 @@ onMounted(async () => {
 
 // Watch for changes to proxy value and update backend
 watch(() => settings.value.proxy, async (newValue) => {
-    await ConfigService.SetProxy(newValue)
+    await ConfigManager.SetProxy(newValue)
 })
 
 // Create individual watchers for each boolean setting
 watch(() => settings.value.useQuota, async (newValue) => {
-    await ConfigService.SetUseQuota(newValue)
+    await ConfigManager.SetUseQuota(newValue)
 })
 
 watch(() => settings.value.saver, async (newValue) => {
-    await ConfigService.SetSaver(newValue)
+    await ConfigManager.SetSaver(newValue)
 })
 
 watch(() => settings.value.recursive, async (newValue) => {
-    await ConfigService.SetRecursive(newValue)
+    await ConfigManager.SetRecursive(newValue)
 })
 
 watch(() => settings.value.forceUpload, async (newValue) => {
-    await ConfigService.SetForceUpload(newValue)
+    await ConfigManager.SetForceUpload(newValue)
 })
 
 watch(() => settings.value.deleteFromHost, async (newValue) => {
-    await ConfigService.SetDeleteFromHost(newValue)
+    await ConfigManager.SetDeleteFromHost(newValue)
 })
 
 watch(() => settings.value.disableUnsupportedFilesFilter, async (newValue) => {
-    await ConfigService.SetDisableUnsupportedFilesFilter(newValue)
+    await ConfigManager.SetDisableUnsupportedFilesFilter(newValue)
 })
 
 watch(() => settings.value.uploadThreads, async (newValue) => {
     if (newValue < 1) {
         settings.value.uploadThreads = 1
     } else {
-        await ConfigService.SetUploadThreads(newValue)
+        await ConfigManager.SetUploadThreads(newValue)
     }
 })
 </script>

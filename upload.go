@@ -10,17 +10,17 @@ import (
 	"strings"
 )
 
-type UploadStarted struct {
+type UploadBatchStart struct {
 	Total int
 }
 
-type UploadStatus struct {
+type FileUploadResult struct {
 	IsError bool
 	Error   error
 	Path    string
 }
 
-func GetFiles(targetPaths []string) ([]string, error) {
+func FilterSupportedFiles(targetPaths []string) ([]string, error) {
 	supportedFiles, err := filterGooglePhotosFiles(targetPaths)
 	if err != nil {
 		return []string{}, err
@@ -29,8 +29,8 @@ func GetFiles(targetPaths []string) ([]string, error) {
 	return supportedFiles, nil
 }
 
-// isGooglePhotosSupported checks if a file extension is supported by Google Photos
-func isGooglePhotosSupported(filename string) bool {
+// isSupportedByGooglePhotos checks if a file extension is supported by Google Photos
+func isSupportedByGooglePhotos(filename string) bool {
 	// Convert to lowercase for case-insensitive comparison
 	ext := strings.ToLower(filepath.Ext(filename))
 	if ext == "" {
@@ -60,7 +60,7 @@ func isGooglePhotosSupported(filename string) bool {
 	return slices.Contains(photoFormats, ext) || slices.Contains(videoFormats, ext)
 }
 
-func scanDirectory(path string, recursive bool) ([]string, error) {
+func scanDirectoryForFiles(path string, recursive bool) ([]string, error) {
 	var files []string
 
 	entries, err := os.ReadDir(path)
@@ -72,7 +72,7 @@ func scanDirectory(path string, recursive bool) ([]string, error) {
 		fullPath := filepath.Join(path, entry.Name())
 		if entry.IsDir() {
 			if recursive {
-				subFiles, err := scanDirectory(fullPath, recursive)
+				subFiles, err := scanDirectoryForFiles(fullPath, recursive)
 				if err != nil {
 					return nil, err
 				}
@@ -97,22 +97,22 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 		}
 
 		if fileInfo.IsDir() {
-			files, err := scanDirectory(path, GlobalSettingsConfig.Recursive)
+			files, err := scanDirectoryForFiles(path, AppConfig.Recursive)
 			if err != nil {
 				return nil, fmt.Errorf("error scanning directory %s: %v", path, err)
 			}
 
 			for _, file := range files {
-				if GlobalSettingsConfig.DisableUnsupportedFilesFilter {
+				if AppConfig.DisableUnsupportedFilesFilter {
 					supportedFiles = append(supportedFiles, file)
-				} else if isGooglePhotosSupported(file) {
+				} else if isSupportedByGooglePhotos(file) {
 					supportedFiles = append(supportedFiles, file)
 				}
 			}
 		} else {
-			if !GlobalSettingsConfig.DisableUnsupportedFilesFilter {
+			if !AppConfig.DisableUnsupportedFilesFilter {
 				supportedFiles = append(supportedFiles, path)
-			} else if isGooglePhotosSupported(path) {
+			} else if isSupportedByGooglePhotos(path) {
 				supportedFiles = append(supportedFiles, path)
 			}
 
@@ -134,13 +134,13 @@ func Upload(ctx context.Context, filePath string) error {
 
 	sha1_hash_b64 := base64.StdEncoding.EncodeToString([]byte(sha1_hash_bytes))
 
-	if !GlobalSettingsConfig.ForceUpload {
+	if !AppConfig.ForceUpload {
 		mediakey, err = api.FindRemoteMediaByHash(sha1_hash_bytes)
 		if err != nil {
 			fmt.Println("Error checking for remote matches:", err)
 		}
 		if len(mediakey) > 0 {
-			if GlobalSettingsConfig.DeleteFromHost {
+			if AppConfig.DeleteFromHost {
 				err = os.Remove(filePath)
 				if err != nil {
 					fmt.Println("Error deleting file:", err)
@@ -181,7 +181,7 @@ func Upload(ctx context.Context, filePath string) error {
 		return fmt.Errorf("media key not received")
 	}
 
-	if GlobalSettingsConfig.DeleteFromHost {
+	if AppConfig.DeleteFromHost {
 		os.Remove(filePath)
 	}
 
