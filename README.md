@@ -1,59 +1,84 @@
-# Welcome to Your New Wails3 Project!
+# gotohs
 
-Congratulations on generating your Wails3 application! This README will guide you through the next steps to get your project up and running.
+![demo](readme_assets/app_demo.webp)
 
-## Getting Started
+Unofficial Google Photos Desktop GUI Client
 
-1. Navigate to your project directory in the terminal.
+- Unlimited uploads (can be disabled)
+- Drag-and-drop file upload interface
+- Credential management
+- Real-time upload progress tracking
+- Configurable upload threads
+- Individual files or directories uploads, with optional recursive scanning
+- Skips files already present in your account
+- Configurable, presistent upload settings (stored in "%homepath%/.config/gotohp")
 
-2. To run your application in development mode, use the following command:
+## [Download](https://github.com/xob0t/gotohp/releases/latest)
 
-   ```
-   wails3 dev
-   ```
+## Requires mobile app credentials to work
 
-   This will start your application and enable hot-reloading for both frontend and backend changes.
+You only need to do this once.
 
-3. To build your application for production, use:
+### Option 1 - ReVanced. No root required
 
-   ```
-   wails3 build
-   ```
+1. Install Google Photos ReVanced on your android device/emulator.
+    - Install GmsCore [https://github.com/ReVanced/GmsCore/releases](https://github.com/ReVanced/GmsCore/releases)
+    - Install patched apk [https://github.com/j-hc/revanced-magisk-module/releases](https://github.com/j-hc/revanced-magisk-module/releases) or patch it yourself
+2. Connect the device to your PC via ADB.
+3. Open the terminal on your PC and execute
 
-   This will create a production-ready executable in the `build` directory.
+    Windows
 
-## Exploring Wails3 Features
+    ```cmd
+    adb logcat | FINDSTR "auth%2Fphotos.native"
+    ```
 
-Now that you have your project set up, it's time to explore the features that Wails3 offers:
+    Linux/Mac
 
-1. **Check out the examples**: The best way to learn is by example. Visit the `examples` directory in the `v3/examples` directory to see various sample applications.
+    ```shell
+    adb logcat | grep "auth%2Fphotos.native"
+    ```
 
-2. **Run an example**: To run any of the examples, navigate to the example's directory and use:
+4. If you are already using ReVanced - remove Google Account from GmsCore.
+5. Open Google Photos ReVanced on your device and log into your account.
+6. One or more identical GmsCore logs should appear in the terminal.
+7. Copy text from `androidId=` to the end of the line from any log.
+8. That's it! 🎉
 
-   ```
-   go run .
-   ```
+### Option 2 - Official apk. Root required
 
-   Note: Some examples may be under development during the alpha phase.
+<details>
+  <summary><strong>Click to expand</strong></summary>
 
-3. **Explore the documentation**: Visit the [Wails3 documentation](https://v3alpha.wails.io/) for in-depth guides and API references.
+1. Get a rooted android device or an emulator. Recommended Android versions 9-13
+2. Connect the device to your PC via ADB.
+3. Install [HTTP Toolkit](https://httptoolkit.com)
+4. In HTTP Toolkit, select Intercept - `Android Device via ADB`. Filter traffic with
 
-4. **Join the community**: Have questions or want to share your progress? Join the [Wails Discord](https://discord.gg/JDdSxwjhGf) or visit the [Wails discussions on GitHub](https://github.com/wailsapp/wails/discussions).
+    ```text
+    contains(https://www.googleapis.com/auth/photos.native)
+    ```
 
-## Project Structure
+    Or if you have an older version of Google Photos, try
 
-Take a moment to familiarize yourself with your project structure:
+    ```text
+    contains(www.googleapis.com%2Fauth%2Fplus.photos.readwrite)
+    ```
 
-- `frontend/`: Contains your frontend code (HTML, CSS, JavaScript/TypeScript)
-- `main.go`: The entry point of your Go backend
-- `app.go`: Define your application structure and methods here
-- `wails.json`: Configuration file for your Wails project
+5. Open Google Photos app and login with your account.
+6. A single request should appear.  
+   Copy request body as text.
 
-## Next Steps
+#### Troubleshooting
 
-1. Modify the frontend in the `frontend/` directory to create your desired UI.
-2. Add backend functionality in `main.go`.
-3. Use `wails3 dev` to see your changes in real-time.
-4. When ready, build your application with `wails3 build`.
+- __No Auth Request Intercepted__  
+  1. Log out of your Google account.
+  2. Log in again.
+  3. Try `Android App via Frida` interception method in HTTP Toolkit.
 
-Happy coding with Wails3! If you encounter any issues or have questions, don't hesitate to consult the documentation or reach out to the Wails community.
+</details>
+
+## Build
+
+Follow official wails3 guide
+[https://v3alpha.wails.io/getting-started/installation/](https://v3alpha.wails.io/getting-started/installation/)
