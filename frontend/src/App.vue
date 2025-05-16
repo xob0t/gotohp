@@ -4,7 +4,7 @@ import { ref, onMounted, watch } from 'vue'
 import EditableSelect from "./components/ui/EditableSelect.vue"
 import SettingsPanel from "./SettingsPanel.vue";
 import { Label } from '@/components/ui/label'
-import { ConfigManager } from '../bindings/backend'
+import { ConfigManager } from '../bindings/app/backend'
 
 import './index.css'
 import { useColorMode } from '@vueuse/core'

@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"context"
@@ -8,7 +8,34 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
+
+type UploadManager struct {
+	wg      sync.WaitGroup
+	cancel  chan struct{}
+	running bool
+	app     *application.App
+}
+
+func NewUploadManager(app *application.App) *UploadManager {
+	return &UploadManager{
+		app: app,
+	}
+}
+
+func (m *UploadManager) IsRunning() bool {
+	return m.running
+}
+
+func (m *UploadManager) Cancel() {
+	if m.cancel != nil {
+		close(m.cancel)
+		m.cancel = nil
+	}
+}
 
 type UploadBatchStart struct {
 	Total int
@@ -18,6 +45,75 @@ type FileUploadResult struct {
 	IsError bool
 	Error   error
 	Path    string
+}
+
+func (m *UploadManager) Upload(app *application.App, paths []string) {
+	if m.running {
+		return
+	}
+
+	m.running = true
+	m.cancel = make(chan struct{})
+
+	targetPaths, err := FilterSupportedFiles(paths)
+	if err != nil {
+		app.EmitEvent("FileStatus", FileUploadResult{
+			IsError: true,
+			Error:   err,
+		})
+		return
+	}
+
+	app.EmitEvent("uploadStart", UploadBatchStart{
+		Total: len(targetPaths),
+	})
+
+	if AppConfig.UploadThreads < 1 {
+		AppConfig.UploadThreads = 1
+	}
+	// Create a worker pool for concurrent uploads
+	workChan := make(chan string, len(targetPaths))
+	results := make(chan FileUploadResult, len(targetPaths))
+
+	// Start workers
+	for range AppConfig.UploadThreads {
+		m.wg.Add(1)
+		go startUploadWorker(workChan, results, m.cancel, &m.wg)
+	}
+
+	// Send work to workers
+	go func() {
+		for _, path := range targetPaths {
+			select {
+			case <-m.cancel:
+				break
+			case workChan <- path:
+			}
+		}
+		close(workChan)
+	}()
+
+	// Handle results and wait for completion
+	go func() {
+		m.wg.Wait()
+		close(results)
+		app.EmitEvent("uploadStop")
+		m.running = false
+	}()
+
+	// Process results
+	go func() {
+		for result := range results {
+			app.EmitEvent("FileStatus", result)
+			if result.IsError {
+				s := fmt.Sprintf("upload error: %v", result.Error)
+				app.Logger.Error(s)
+			} else {
+				s := fmt.Sprintf("upload success: %v", result.Path)
+				app.Logger.Info(s)
+			}
+		}
+	}()
 }
 
 func FilterSupportedFiles(targetPaths []string) ([]string, error) {
@@ -122,7 +218,7 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	return supportedFiles, nil
 }
 
-func Upload(ctx context.Context, filePath string) error {
+func UploadFile(ctx context.Context, filePath string) error {
 	api, _ := NewApi()
 
 	mediakey := ""
@@ -187,4 +283,28 @@ func Upload(ctx context.Context, filePath string) error {
 
 	return nil
 
+}
+
+func startUploadWorker(workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for path := range workChan {
+		select {
+		case <-cancel:
+			return // Stop if cancellation is requested
+		default:
+			ctx, cancelUpload := context.WithCancel(context.Background())
+			go func() {
+				<-cancel // If global cancel happens, cancel this upload
+				cancelUpload()
+			}()
+
+			err := UploadFile(ctx, path)
+			if err != nil {
+				results <- FileUploadResult{IsError: true, Error: err, Path: path}
+			} else {
+				results <- FileUploadResult{IsError: false, Path: path}
+			}
+			cancelUpload()
+		}
+	}
 }

@@ -1,7 +1,7 @@
-package main
+package backend
 
 import (
-	"backend/generated"
+	"app/generated"
 	"bytes"
 	"compress/gzip"
 	"context"

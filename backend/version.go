@@ -1,12 +1,9 @@
-package main
+package backend
 
 import (
 	"embed"
 	"encoding/json"
 )
-
-//go:embed build/windows/info.json
-var content embed.FS
 
 type VersionInfo struct {
 	Fixed struct {
@@ -14,7 +11,7 @@ type VersionInfo struct {
 	} `json:"fixed"`
 }
 
-func GetVersion() string {
+func GetVersion(content embed.FS) string {
 	// Read the embedded file
 	data, err := content.ReadFile("build/windows/info.json")
 	if err != nil {

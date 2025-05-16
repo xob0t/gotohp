@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"fmt"
@@ -30,61 +30,61 @@ type ConfigManager struct{}
 
 var AppConfig Config
 var UploadRunning bool = false
-var ConfigDir string = filepath.Join(GetUserDir(), "/.config/gotohp")
+var ConfigDir string = filepath.Join(getUserDir(), "/.config/gotohp")
 var ConfigPath string = filepath.Join(ConfigDir, "config.yaml")
-var DefaultAppConfig = Config{
+var DefaultConfig = Config{
 	UploadThreads: 3,
 }
 
-func (m *ConfigManager) SetProxy(proxy string) {
+func (g *ConfigManager) SetProxy(proxy string) {
 	AppConfig.Proxy = proxy
-	AppConfig.Save()
+	saveAppConfig()
 }
 
-func (m *ConfigManager) SetSelected(email string) {
+func (g *ConfigManager) SetSelected(email string) {
 	// Parse the auth string
 	AppConfig.Selected = email
-	AppConfig.Save()
+	saveAppConfig()
 }
 
-func (m *ConfigManager) SetUseQuota(useQuota bool) {
+func (g *ConfigManager) SetUseQuota(useQuota bool) {
 	AppConfig.UseQuota = useQuota
-	AppConfig.Save()
+	saveAppConfig()
 }
 
-func (m *ConfigManager) SetSaver(saver bool) {
+func (g *ConfigManager) SetSaver(saver bool) {
 	AppConfig.Saver = saver
-	AppConfig.Save()
+	saveAppConfig()
 }
 
-func (m *ConfigManager) SetRecursive(recursive bool) {
+func (g *ConfigManager) SetRecursive(recursive bool) {
 	AppConfig.Recursive = recursive
-	AppConfig.Save()
+	saveAppConfig()
 }
 
-func (m *ConfigManager) SetForceUpload(forceUpload bool) {
+func (g *ConfigManager) SetForceUpload(forceUpload bool) {
 	AppConfig.ForceUpload = forceUpload
-	AppConfig.Save()
+	saveAppConfig()
 }
 
-func (m *ConfigManager) SetDeleteFromHost(deleteFromHost bool) {
+func (g *ConfigManager) SetDeleteFromHost(deleteFromHost bool) {
 	AppConfig.DeleteFromHost = deleteFromHost
-	AppConfig.Save()
+	saveAppConfig()
 }
 
-func (m *ConfigManager) SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter bool) {
+func (g *ConfigManager) SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter bool) {
 	AppConfig.DisableUnsupportedFilesFilter = disableUnsupportedFilesFilter
-	AppConfig.Save()
+	saveAppConfig()
 }
 
-func (m *ConfigManager) SetUploadThreads(uploadThreads int) {
-	if uploadThreads >= 1 {
+func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
+	if uploadThreads < 1 {
 		AppConfig.UploadThreads = uploadThreads
-		AppConfig.Save()
+		saveAppConfig()
 	}
 }
 
-func (m *ConfigManager) AddCredentials(newAuthString string) error {
+func (g *ConfigManager) AddCredentials(newAuthString string) error {
 	// Required fields that must be present in the auth string
 	requiredFields := []string{
 		"androidId",
@@ -133,11 +133,11 @@ func (m *ConfigManager) AddCredentials(newAuthString string) error {
 	// If validation passed, add the new credentials
 	AppConfig.Credentials = append(AppConfig.Credentials, newAuthString)
 	AppConfig.Selected = email
-	AppConfig.Save()
+	saveAppConfig()
 	return nil
 }
 
-func (m *ConfigManager) RemoveCredentials(email string) error {
+func (g *ConfigManager) RemoveCredentials(email string) error {
 	if email == "" {
 		return fmt.Errorf("email cannot be empty")
 	}
@@ -172,42 +172,29 @@ func (m *ConfigManager) RemoveCredentials(email string) error {
 		AppConfig.Selected = ""
 	}
 
-	AppConfig.Save()
+	saveAppConfig()
 	return nil
 }
 
-func (m *ConfigManager) GetConfig() Config {
-	if !Exists(ConfigPath) {
+func (g *ConfigManager) GetConfig() Config {
+	configexists := exists(ConfigPath)
+	if !configexists {
 		fmt.Println("Created a new user settings config")
-		AppConfig = DefaultAppConfig
-		return AppConfig
+		AppConfig = DefaultConfig
 	}
-
-	file, err := os.ReadFile(ConfigPath)
-	if err != nil {
-		fmt.Println("Error reading config file:", err)
-		AppConfig = DefaultAppConfig
-		return AppConfig
-	}
-
+	file, _ := os.ReadFile(ConfigPath)
 	if len(file) == 0 {
-		fmt.Println("Config file is empty")
-		AppConfig = DefaultAppConfig
-		return AppConfig
-	}
-
-	AppConfig, err := AppConfig.Load()
-	if err != nil {
-		fmt.Println("Error loading config:", err)
-		AppConfig = DefaultAppConfig
-		return AppConfig
+		fmt.Println("config file is empty")
+		AppConfig = DefaultConfig
+	} else {
+		AppConfig, _ = loadAppConfig()
 	}
 
 	log.Println("Config", AppConfig)
 	return AppConfig
 }
 
-func Exists(path string) bool {
+func exists(path string) bool {
 	_, err := os.Stat(path)
 	if err == nil {
 		return true
@@ -218,7 +205,7 @@ func Exists(path string) bool {
 	return false
 }
 
-func GetUserDir() string {
+func getUserDir() string {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -226,7 +213,7 @@ func GetUserDir() string {
 	return dirname
 }
 
-func (m *Config) Save() error {
+func saveAppConfig() error {
 	k := koanf.New(".")
 
 	err := k.Load(structs.Provider(AppConfig, "koanf"), nil)
@@ -251,20 +238,21 @@ func (m *Config) Save() error {
 	return nil
 }
 
-func (m *Config) Load() (Config, error) {
+func loadAppConfig() (Config, error) {
 	var c Config
-	k := koanf.New(".")
-
+	var k = koanf.New(".")
 	if err := k.Load(file.Provider(ConfigPath), yaml.Parser()); err != nil {
-		return c, fmt.Errorf("error loading config file: %w", err)
+		log.Printf("error loading global config: %v", err)
+		return DefaultConfig, err
 	}
-
-	if err := k.Unmarshal("", &c); err != nil {
-		return c, fmt.Errorf("error unmarshaling config: %w", err)
+	err := k.Unmarshal("", &c)
+	if err != nil {
+		log.Printf("error Unmarshaling global config: %v", err)
+		return DefaultConfig, err
 	}
 
 	if c.UploadThreads < 1 {
-		c.UploadThreads = DefaultAppConfig.UploadThreads
+		c.UploadThreads = DefaultConfig.UploadThreads
 	}
 
 	return c, nil
