@@ -38,6 +38,9 @@ type AuthResponse struct {
 
 func NewApi() (*Api, error) {
 	selectedEmail := AppConfig.Selected
+	if len(selectedEmail) == 0 {
+		return nil, fmt.Errorf("no account is selected")
+	}
 	credentials := ""
 	language := ""
 	for _, c := range AppConfig.Credentials {
@@ -49,6 +52,10 @@ func NewApi() (*Api, error) {
 			credentials = c
 			language = params.Get("lang")
 		}
+	}
+
+	if len(credentials) == 0 {
+		return nil, fmt.Errorf("no credentials with matching selcted email found")
 	}
 
 	client, err := NewHTTPClientWithProxy(AppConfig.Proxy)
