@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { Events, Clipboard } from "@wailsio/runtime";
+import './index.css'
 import { ref, onMounted, watch } from 'vue'
 import EditableSelect from "./components/ui/EditableSelect.vue"
 import SettingsPanel from "./SettingsPanel.vue";
+import { Events, Clipboard } from "@wailsio/runtime";
+
 import { Label } from '@/components/ui/label'
 import { ConfigManager } from '../bindings/app/backend'
-
-import './index.css'
-import { useColorMode } from '@vueuse/core'
+import Button from "./components/ui/button/Button.vue";
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet'
-import Button from "./components/ui/button/Button.vue";
+
+import { useColorMode } from '@vueuse/core'
 
 useColorMode().value = "dark"
 
@@ -21,7 +22,6 @@ const totalFiles = ref(0)
 const uploadedFiles = ref(0)
 const isUploading = ref(false)
 
-// Add tracking for file paths and their status
 const uploadResults = ref<{
   success: { path: string; mediaKey: string }[];
   fail: string[];
@@ -97,34 +97,6 @@ async function removeCredentials(email: string) {
   }
 }
 
-// Handle new option added from the EditableSelect component
-async function handleItemAdded(input: string) {
-  // Check if input is a full credential string or just an email
-  let credential: string;
-  let email: string | null;
-
-  // Try to extract email from the string to see if it's a credential
-  email = extractEmailFromCredential(input);
-
-  if (email) {
-    // It's a full credential string
-    credential = input;
-  } else {
-    // It's just an email, so we need to handle it accordingly
-    // In this case, we'll treat it as an email
-    email = input;
-    // You might want to create a proper credential string here if needed
-    // For now, I'll assume the email is the credential itself
-    credential = input;
-  }
-
-  // Proceed with adding the credential via the backend
-  const success = await addCredentials(credential);
-
-  // If the backend call succeeds, the options should already be updated
-  // If it fails, nothing happens in the dropdown
-  return success;
-}
 
 // Create a function to reset upload results
 function resetUploadResults() {
@@ -151,7 +123,6 @@ onMounted(() => {
     const { IsError, Path, MediaKey } = event.data[0]
 
     if (!IsError) {
-      debugger
       uploadedFiles.value += 1
       uploadResults.value.success.push({ path: Path, mediaKey: MediaKey })
     } else {
@@ -198,14 +169,7 @@ onMounted(async () => {
 })
 
 function CancelUpload() {
-  const event = new Events.WailsEvent(
-    "uploadCancel",
-    {
-      message: "Hello from the frontend!",
-      timestamp: new Date().toISOString()
-    }
-  );
-
+  const event = new Events.WailsEvent("uploadCancel");
   Events.Emit(event);
 }
 
@@ -214,33 +178,40 @@ function CancelUpload() {
 <template>
   <main class="p-20 size-full flex flex-col">
     <div v-if="!isUploading" class="flex-1 flex flex-col items-center justify-center gap-4">
-      <h1 class="text-xl font-semibold select-none">
-        Drop files to upload
-      </h1>
-      <EditableSelect v-model="selectedOption" :options="options" @update:options="(newOptions) => options = newOptions"
-        @item-added="handleItemAdded" @item-removed="removeCredentials" />
+      <template v-if="options.length === 0">
+        <EditableSelect v-model="selectedOption" :options="options"
+          @update:options="(newOptions) => options = newOptions" @item-added="addCredentials"
+          @item-removed="removeCredentials" />
+      </template>
 
-      <Sheet>
-        <SheetTrigger>
-          <Button variant="outline" class="cursor-pointer select-none">
-            Settings
+      <template v-else>
+        <h1 class="text-xl font-semibold select-none">
+          Drop files to upload
+        </h1>
+        <EditableSelect v-model="selectedOption" :options="options"
+          @update:options="(newOptions) => options = newOptions" @item-added="addCredentials"
+          @item-removed="removeCredentials" />
+
+        <Sheet>
+          <SheetTrigger>
+            <Button variant="outline" class="cursor-pointer select-none">
+              Settings
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom">
+            <SettingsPanel />
+          </SheetContent>
+        </Sheet>
+
+        <div v-if="uploadedFiles > 0" class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-10">
+          <h2 class="text-l font-semibold select-none ">Upload Results</h2>
+          <Label class="text-muted-foreground">Successful ({{ uploadResults.success.length }})</Label>
+          <Label class="text-muted-foreground">Failed ({{ uploadResults.fail.length }})</Label>
+          <Button variant="outline" class="cursor-pointer select-none" @click="copyResultsAsJson">
+            Copy as JSON
           </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom">
-          <SettingsPanel />
-        </SheetContent>
-      </Sheet>
-
-
-      <div v-if="uploadedFiles > 0" class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-10">
-        <h2 class="text-l font-semibold select-none ">Upload Results</h2>
-        <Label class="text-muted-foreground">Successful ({{ uploadResults.success.length }})</Label>
-        <Label class="text-muted-foreground">Failed ({{ uploadResults.fail.length }})</Label>
-        <Button variant="outline" class="cursor-pointer select-none" @click="copyResultsAsJson">
-          Copy as JSON
-        </Button>
-      </div>
-
+        </div>
+      </template>
     </div>
     <div v-if="isUploading" class="w-full mt-6 space-y-2 flex flex-col items-center gap-5">
       <div class="flex flex-col items-center text-sm">

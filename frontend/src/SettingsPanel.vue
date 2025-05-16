@@ -89,41 +89,41 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-2 m-4">
+    <div class="flex flex-col gap-2.5 m-4">
         <NumberField v-model="settings.uploadThreads" class="flex items-center justify-between">
             <Label for="upload-threads" class="size-full">Upload Threads</Label>
             <NumberFieldContent>
-                <NumberFieldDecrement />
+                <NumberFieldDecrement class="cursor-pointer" />
                 <NumberFieldInput />
-                <NumberFieldIncrement />
+                <NumberFieldIncrement class="cursor-pointer" />
             </NumberFieldContent>
         </NumberField>
         <div class="flex items-center justify-between">
-            <Label for="use-quota" class="size-full">Use Quota</Label>
+            <Label for="use-quota" class="size-full cursor-pointer">Use Quota</Label>
             <Switch id="use-quota" v-model="settings.useQuota" />
         </div>
         <div class="flex items-center justify-between">
-            <Label for="saver-mode" class="size-full">Storage Saver Quality</Label>
+            <Label for="saver-mode" class="size-full cursor-pointer">Storage Saver Quality</Label>
             <Switch id="saver-mode" v-model="settings.saver" />
         </div>
         <div class="flex items-center justify-between">
-            <Label for="recursive" class="size-full">Recursive Directory Upload</Label>
+            <Label for="recursive" class="size-full cursor-pointer">Recursive Directory Upload</Label>
             <Switch id="recursive" v-model="settings.recursive" />
         </div>
         <div class="flex items-center justify-between">
-            <Label for="force-upload" class="size-full">Force Upload</Label>
+            <Label for="force-upload" class="size-full cursor-pointer">Force Upload</Label>
             <Switch id="force-upload" v-model="settings.forceUpload" />
         </div>
         <div class="flex items-center justify-between">
-            <Label for="filter-unsupported" class="size-full">Disable Unsupported Files Filter</Label>
+            <Label for="filter-unsupported" class="size-full cursor-pointer">Disable Unsupported Files Filter</Label>
             <Switch id="filter-unsupported" v-model="settings.disableUnsupportedFilesFilter" />
         </div>
         <div class="flex items-center justify-between">
-            <Label for="delete-host" class="size-full">Delete From Host After Upload</Label>
+            <Label for="delete-host" class="size-full cursor-pointer">Delete From Host After Upload</Label>
             <Switch id="delete-host" variant="destructive" v-model="settings.deleteFromHost" />
         </div>
-        <div class="flex items-center space-x-2 mt-4">
-            <Input v-model="settings.proxy" type="text" placeholder="Proxy URL (optional)" class="flex-1" />
+        <div>
+            <Input v-model="settings.proxy" type="text" placeholder="Proxy URL (optional)" />
         </div>
     </div>
 
