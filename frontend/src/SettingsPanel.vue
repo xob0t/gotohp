@@ -93,7 +93,7 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
         <NumberField v-model="settings.uploadThreads" class="flex items-center justify-between">
             <Label for="upload-threads" class="size-full">Upload Threads</Label>
             <NumberFieldContent>
-                <NumberFieldDecrement class="cursor-pointer" />
+                <NumberFieldDecrement class="cursor-pointer" :disabled="settings.uploadThreads <= 1" />
                 <NumberFieldInput />
                 <NumberFieldIncrement class="cursor-pointer" />
             </NumberFieldContent>

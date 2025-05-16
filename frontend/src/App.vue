@@ -176,8 +176,8 @@ function CancelUpload() {
 </script>
 
 <template>
-  <main class="p-20 size-full flex flex-col">
-    <div v-if="!isUploading" class="flex-1 flex flex-col items-center justify-center gap-4">
+  <main class="w-screen h-screen flex flex-col items-center" style="--wails-draggable: drag">
+    <div v-if="!isUploading" class="flex flex-col items-center gap-4 w-full max-w-md mt-30 ">
       <template v-if="options.length === 0">
         <EditableSelect v-model="selectedOption" :options="options"
           @update:options="(newOptions) => options = newOptions" @item-added="addCredentials"
@@ -203,17 +203,17 @@ function CancelUpload() {
           </SheetContent>
         </Sheet>
 
-        <div v-if="uploadedFiles > 0" class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-10">
+        <div v-if="uploadedFiles > 0" class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-5">
           <h2 class="text-l font-semibold select-none ">Upload Results</h2>
-          <Label class="text-muted-foreground">Successful ({{ uploadResults.success.length }})</Label>
-          <Label class="text-muted-foreground">Failed ({{ uploadResults.fail.length }})</Label>
+          <Label class="text-muted-foreground">Successful: {{ uploadResults.success.length }}</Label>
+          <Label class="text-muted-foreground">Failed: {{ uploadResults.fail.length }}</Label>
           <Button variant="outline" class="cursor-pointer select-none" @click="copyResultsAsJson">
             Copy as JSON
           </Button>
         </div>
       </template>
     </div>
-    <div v-if="isUploading" class="w-full mt-6 space-y-2 flex flex-col items-center gap-5">
+    <div v-if="isUploading" class="flex flex-col items-center gap-5 w-full max-w-md mt-30 px-20">
       <div class="flex flex-col items-center text-sm">
         <span class="text-muted-foreground">Uploading...</span>
         <span class="text-muted-foreground">
@@ -221,7 +221,7 @@ function CancelUpload() {
         </span>
       </div>
       <div class="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
-        <div class="h-full w-full flex-1 bg-primary transition-all"
+        <div class="h-full bg-primary transition-all"
           :style="{ width: totalFiles > 0 ? `${(uploadedFiles / totalFiles) * 100}%` : '0%' }" />
       </div>
       <Button variant="destructive" class="cursor-pointer" @click="CancelUpload">
