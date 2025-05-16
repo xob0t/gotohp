@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
 import { Select, SelectContent, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 import SelectItem from '@/components/ui/CustomSelectItem.vue'
 import { Input } from '@/components/ui/input'
 
@@ -74,12 +75,10 @@ const removeOption = (index: number) => {
 <template>
     <!-- Show only the Add input when there are no options -->
     <div v-if="internalOptions.length === 0" class="flex gap-2">
-        <Input v-model="newOption" placeholder="Add credentials" @keydown.enter="addOption" class="h-9 flex-1" />
-        <button type="button" @click="addOption"
-            class="px-3 text-sm rounded-md bg-primary text-primary-foreground cursor-pointer transition-colors h-9 flex items-center"
-            :disabled="!newOption.trim()">
+        <Input v-model="newOption" placeholder="Add credentials" @keydown.enter="addOption" />
+        <Button type="button" @click="addOption" :disabled="!newOption.trim()">
             Add
-        </button>
+        </Button>
     </div>
 
     <!-- Show the Select dropdown when there are options -->
@@ -87,7 +86,7 @@ const removeOption = (index: number) => {
         <SelectTrigger class="select-none">
             <SelectValue placeholder="Select Account" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent align="center">
             <SelectGroup>
                 <template v-for="(option, index) in internalOptions" :key="index">
                     <div class="relative flex items-center">
@@ -106,13 +105,10 @@ const removeOption = (index: number) => {
                 </template>
             </SelectGroup>
             <div class="p-2 flex gap-2">
-                <Input v-model="newOption" placeholder="Add credentials" @keydown.enter="addOption"
-                    class="h-8 flex-1" />
-                <button type="button" @click="addOption"
-                    class="px-2 text-sm rounded-md bg-primary text-primary-foreground cursor-pointer transition-colors h-8 flex items-center"
-                    :disabled="!newOption.trim()">
+                <Input class="h-8 px-1" v-model="newOption" placeholder="Credentials" @keydown.enter="addOption" />
+                <Button size="sm" type="button" @click="addOption" :disabled="!newOption.trim()">
                     Add
-                </button>
+                </Button>
             </div>
         </SelectContent>
     </Select>
