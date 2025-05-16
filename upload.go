@@ -101,16 +101,16 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 			}
 
 			for _, file := range files {
-				if GlobalSettingsConfig.DisableUnsupportedFilesFilter && isGooglePhotosSupported(file) {
+				if GlobalSettingsConfig.DisableUnsupportedFilesFilter {
 					supportedFiles = append(supportedFiles, file)
-				} else {
+				} else if isGooglePhotosSupported(file) {
 					supportedFiles = append(supportedFiles, file)
 				}
 			}
 		} else {
-			if GlobalSettingsConfig.DisableUnsupportedFilesFilter && isGooglePhotosSupported(fileInfo.Name()) {
+			if !GlobalSettingsConfig.DisableUnsupportedFilesFilter {
 				supportedFiles = append(supportedFiles, path)
-			} else {
+			} else if isGooglePhotosSupported(path) {
 				supportedFiles = append(supportedFiles, path)
 			}
 
