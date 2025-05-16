@@ -79,9 +79,10 @@ func (g *ConfigManager) SetDisableUnsupportedFilesFilter(disableUnsupportedFiles
 
 func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
 	if uploadThreads < 1 {
-		AppConfig.UploadThreads = uploadThreads
-		saveAppConfig()
+		return
 	}
+	AppConfig.UploadThreads = uploadThreads
+	saveAppConfig()
 }
 
 func (g *ConfigManager) AddCredentials(newAuthString string) error {
