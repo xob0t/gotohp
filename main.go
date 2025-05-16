@@ -16,10 +16,11 @@ var assets embed.FS
 var App *application.App
 var uploadCancel chan struct{}
 var uploadWG sync.WaitGroup
+var title = "gotohp v" + GetVersion()
 
 func main() {
 	App = application.New(application.Options{
-		Name:        "gotohp",
+		Name:        title,
 		Description: "Google Photos unofficial client",
 		Services: []application.Service{
 			application.NewService(&ConfigService{}),
@@ -33,7 +34,7 @@ func main() {
 	})
 
 	window := App.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
-		Title:             "gotohp",
+		Title:             title,
 		Frameless:         false,
 		Width:             400,
 		Height:            600,
