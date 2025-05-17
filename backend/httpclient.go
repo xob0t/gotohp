@@ -32,7 +32,6 @@ func NewHTTPClientWithProxy(proxyURLStr string) (*http.Client, error) {
 
 	// Important: Configure the retry policy to retry on connection errors
 	retryClient.CheckRetry = retryablehttp.ErrorPropagatedRetryPolicy
-	retryClient.HTTPClient.Timeout = 15 * time.Second
 
 	return retryClient.StandardClient(), nil
 }
