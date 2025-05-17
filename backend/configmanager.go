@@ -30,8 +30,7 @@ type ConfigManager struct{}
 
 var AppConfig Config
 var UploadRunning bool = false
-var ConfigDir string = filepath.Join(getUserDir(), "/.config/gotohp")
-var ConfigPath string = filepath.Join(ConfigDir, "config.yaml")
+var ConfigPath string
 var DefaultConfig = Config{
 	UploadThreads: 3,
 }
@@ -177,33 +176,23 @@ func (g *ConfigManager) RemoveCredentials(email string) error {
 	return nil
 }
 
-func (g *ConfigManager) GetConfig() Config {
-	configexists := exists(ConfigPath)
-	if !configexists {
-		fmt.Println("Created a new user settings config")
-		AppConfig = DefaultConfig
-	}
-	file, _ := os.ReadFile(ConfigPath)
-	if len(file) == 0 {
-		fmt.Println("config file is empty")
-		AppConfig = DefaultConfig
-	} else {
-		AppConfig, _ = loadAppConfig()
-	}
-
-	log.Println("Config", AppConfig)
-	return AppConfig
-}
-
-func exists(path string) bool {
-	_, err := os.Stat(path)
+func initConfigPath() {
+	// First try portable config in executable directory
+	exePath, err := os.Executable()
 	if err == nil {
-		return true
+		exeDir := filepath.Dir(exePath)
+		portableConfigPath := filepath.Join(exeDir, "config.yaml")
+
+		// If config exists in executable directory, use it
+		if _, err := os.Stat(portableConfigPath); err == nil {
+			ConfigPath = portableConfigPath
+			return
+		}
 	}
-	if os.IsNotExist(err) {
-		return false
-	}
-	return false
+
+	// Fall back to default location
+	userConfigDir := filepath.Join(getUserDir(), "/.config/gotohp")
+	ConfigPath = filepath.Join(userConfigDir, "config.yaml")
 }
 
 func getUserDir() string {
@@ -214,7 +203,27 @@ func getUserDir() string {
 	return dirname
 }
 
+func (g *ConfigManager) GetConfig() Config {
+	initConfigPath()
+	if _, err := os.Stat(ConfigPath); err == nil {
+		fmt.Println("Created a new user settings config")
+		AppConfig = DefaultConfig
+	}
+
+	file, _ := os.ReadFile(ConfigPath)
+	if len(file) == 0 {
+		fmt.Println("config file is empty")
+		AppConfig = DefaultConfig
+	} else {
+		AppConfig = loadAppConfig()
+	}
+
+	log.Println("Config", AppConfig)
+	return AppConfig
+}
+
 func saveAppConfig() error {
+	initConfigPath()
 	k := koanf.New(".")
 
 	err := k.Load(structs.Provider(AppConfig, "koanf"), nil)
@@ -222,7 +231,7 @@ func saveAppConfig() error {
 		fmt.Println(err)
 		return err
 	}
-	os.MkdirAll(ConfigDir, 0666)
+	os.MkdirAll(filepath.Dir(ConfigPath), 0666)
 	b, err := k.Marshal(yaml.Parser())
 	if err != nil {
 		fmt.Println(err)
@@ -239,22 +248,22 @@ func saveAppConfig() error {
 	return nil
 }
 
-func loadAppConfig() (Config, error) {
+func loadAppConfig() Config {
 	var c Config
 	var k = koanf.New(".")
 	if err := k.Load(file.Provider(ConfigPath), yaml.Parser()); err != nil {
-		log.Printf("error loading global config: %v", err)
-		return DefaultConfig, err
+		log.Printf("error parsing app config: %v", err)
+		return DefaultConfig
 	}
 	err := k.Unmarshal("", &c)
 	if err != nil {
-		log.Printf("error Unmarshaling global config: %v", err)
-		return DefaultConfig, err
+		log.Printf("error unmarshaling app config: %v", err)
+		return DefaultConfig
 	}
 
 	if c.UploadThreads < 1 {
 		c.UploadThreads = DefaultConfig.UploadThreads
 	}
 
-	return c, nil
+	return c
 }
