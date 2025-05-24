@@ -2,12 +2,13 @@
 import './index.css'
 import { ref, onMounted, watch } from 'vue'
 import EditableSelect from "./components/ui/EditableSelect.vue"
-import SettingsPanel from "./SettingsPanel.vue";
-import { Events, Clipboard } from "@wailsio/runtime";
+import Upload from './Upload.vue'
+import SettingsPanel from "./SettingsPanel.vue"
+import { uploadManager } from './utils/UploadManager'
 
 import { Label } from '@/components/ui/label'
 import { ConfigManager } from '../bindings/app/backend'
-import Button from "./components/ui/button/Button.vue";
+import Button from "./components/ui/button/Button.vue"
 import {
   Sheet,
   SheetContent,
@@ -18,17 +19,8 @@ import { useColorMode } from '@vueuse/core'
 
 useColorMode().value = "dark"
 
-const totalFiles = ref(0)
-const uploadedFiles = ref(0)
-const isUploading = ref(false)
-
-const uploadResults = ref<{
-  success: { path: string; mediaKey: string }[];
-  fail: string[];
-}>({
-  success: [],
-  fail: []
-})
+// Access upload state from manager
+const { state: uploadState } = uploadManager
 
 const selectedOption = ref('')
 const options = ref<string[]>([]) // Only emails here
@@ -54,7 +46,6 @@ watch(selectedOption, async (newValue) => {
     }
   }
 })
-
 
 async function addCredentials(authString: string) {
   try {
@@ -97,56 +88,6 @@ async function removeCredentials(email: string) {
   }
 }
 
-
-// Create a function to reset upload results
-function resetUploadResults() {
-  uploadResults.value = {
-    success: [],
-    fail: []
-  }
-}
-
-// Function to copy upload results as JSON
-function copyResultsAsJson() {
-  const resultsJson = JSON.stringify(uploadResults.value, null, 2)
-  Clipboard.SetText(resultsJson)
-    .then(() => {
-      console.log('Upload results copied to clipboard')
-    })
-    .catch((error) => {
-      console.error('Failed to copy results:', error)
-    })
-}
-
-onMounted(() => {
-  Events.On('FileStatus', (event: { data: Array<{ IsError: boolean, Path: string, MediaKey: string }> }) => {
-    const { IsError, Path, MediaKey } = event.data[0]
-
-    if (!IsError) {
-      uploadedFiles.value += 1
-      uploadResults.value.success.push({ path: Path, mediaKey: MediaKey })
-    } else {
-      uploadResults.value.fail.push(Path)
-    }
-  });
-})
-
-onMounted(() => {
-  Events.On('uploadStart', (event: { data: Array<{ Total: number }> }) => {
-    totalFiles.value = event.data[0].Total
-    uploadedFiles.value = 0
-    isUploading.value = true
-    resetUploadResults()
-  });
-})
-
-onMounted(() => {
-  Events.On('uploadStop', () => {
-    isUploading.value = false
-  });
-})
-
-
 onMounted(async () => {
   const config = await ConfigManager.GetConfig()
   if (config.credentials?.length) {
@@ -168,16 +109,11 @@ onMounted(async () => {
   }
 })
 
-function CancelUpload() {
-  const event = new Events.WailsEvent("uploadCancel");
-  Events.Emit(event);
-}
-
 </script>
 
 <template>
   <main class="w-screen h-screen flex flex-col items-center" style="--wails-draggable: drag">
-    <div v-if="!isUploading" class="flex flex-col items-center gap-4 w-full max-w-md mt-30 ">
+    <div v-if="!uploadState.isUploading" class="flex flex-col items-center gap-4 w-full max-w-md mt-30 ">
       <template v-if="options.length === 0">
         <EditableSelect v-model="selectedOption" :options="options"
           @update:options="(newOptions) => options = newOptions" @item-added="addCredentials"
@@ -203,30 +139,18 @@ function CancelUpload() {
           </SheetContent>
         </Sheet>
 
-        <div v-if="uploadedFiles > 0" class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-5">
+        <div v-if="uploadState.uploadedFiles > 0" class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-5">
           <h2 class="text-l font-semibold select-none ">Upload Results</h2>
-          <Label class="text-muted-foreground">Successful: {{ uploadResults.success.length }}</Label>
-          <Label class="text-muted-foreground">Failed: {{ uploadResults.fail.length }}</Label>
           <Button variant="outline" class="cursor-pointer select-none" @click="copyResultsAsJson">
             Copy as JSON
+          <Label class="text-muted-foreground">Successful: {{ uploadState.results.success.length }}</Label>
+          <Label class="text-muted-foreground">Failed: {{ uploadState.results.fail.length }}</Label>
           </Button>
         </div>
       </template>
     </div>
-    <div v-if="isUploading" class="flex flex-col items-center gap-5 w-full max-w-md mt-30 px-20">
-      <div class="flex flex-col items-center text-sm">
-        <span class="text-muted-foreground">Uploading...</span>
-        <span class="text-muted-foreground">
-          {{ uploadedFiles }} of {{ totalFiles }}
-        </span>
-      </div>
-      <div class="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
-        <div class="h-full bg-primary transition-all"
-          :style="{ width: totalFiles > 0 ? `${(uploadedFiles / totalFiles) * 100}%` : '0%' }" />
-      </div>
-      <Button variant="destructive" class="cursor-pointer" @click="CancelUpload">
-        Cancel
-      </Button>
+    <div v-if="uploadState.isUploading" class="w-full">
+      <Upload />
     </div>
   </main>
 </template>
