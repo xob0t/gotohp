@@ -21,6 +21,7 @@ useColorMode().value = "dark"
 
 // Access upload state from manager
 const { state: uploadState } = uploadManager
+const copyButtonText = ref('Copy as JSON');
 
 const selectedOption = ref('')
 const options = ref<string[]>([]) // Only emails here
@@ -109,6 +110,11 @@ onMounted(async () => {
   }
 })
 
+const handleCopyClick = () => {
+  uploadManager.copyResultsAsJson();
+  copyButtonText.value = 'Copied!';
+  setTimeout(() => copyButtonText.value = 'Copy as JSON', 1000);
+};
 </script>
 
 <template>
@@ -141,10 +147,10 @@ onMounted(async () => {
 
         <div v-if="uploadState.uploadedFiles > 0" class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-5">
           <h2 class="text-l font-semibold select-none ">Upload Results</h2>
-          <Button variant="outline" class="cursor-pointer select-none" @click="copyResultsAsJson">
-            Copy as JSON
           <Label class="text-muted-foreground">Successful: {{ uploadState.results.success.length }}</Label>
           <Label class="text-muted-foreground">Failed: {{ uploadState.results.fail.length }}</Label>
+          <Button variant="outline" class="cursor-pointer select-none min-w-[125px]" @click="handleCopyClick">
+            {{ copyButtonText }}
           </Button>
         </div>
       </template>
