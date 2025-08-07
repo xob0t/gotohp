@@ -11,7 +11,8 @@ Unofficial Google Photos Desktop GUI Client
 - Configurable upload threads
 - Individual files or directories uploads, with optional recursive scanning
 - Skips files already present in your account
-- Configurable, presistent upload settings (stored in "%homepath%/.config/gotohp")
+- Configurable, presistent upload settings (stored in "%system config path%/gotohp/gotohp.config")  
+    You can force local config by creating empty gotohp.config next to executable.
 
 ## [Download](https://github.com/xob0t/gotohp/releases/latest)
 
