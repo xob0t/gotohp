@@ -181,7 +181,7 @@ func initConfigPath() {
 	exePath, err := os.Executable()
 	if err == nil {
 		exeDir := filepath.Dir(exePath)
-		portableConfigPath := filepath.Join(exeDir, "config.yaml")
+		portableConfigPath := filepath.Join(exeDir, "gotohp.config")
 
 		// If config exists in executable directory, use it
 		if _, err := os.Stat(portableConfigPath); err == nil {
@@ -191,12 +191,12 @@ func initConfigPath() {
 	}
 
 	// Fall back to default location
-	userConfigDir := filepath.Join(getUserDir(), "/.config/gotohp")
-	ConfigPath = filepath.Join(userConfigDir, "config.yaml")
+	userConfigDir := filepath.Join(getUserConfigDir(), "/gotohp")
+	ConfigPath = filepath.Join(userConfigDir, "gotohp.config")
 }
 
-func getUserDir() string {
-	dirname, err := os.UserHomeDir()
+func getUserConfigDir() string {
+	dirname, err := os.UserConfigDir()
 	if err != nil {
 		log.Fatal(err)
 	}
