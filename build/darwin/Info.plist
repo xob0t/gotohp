@@ -2,26 +2,26 @@
 <plist version="1.0">
     <dict>
         <key>CFBundlePackageType</key>
-        <string>APPL</string>
+            <string>APPL</string>
         <key>CFBundleName</key>
-        <string>gotohp</string>
+            <string>gotohp</string>
         <key>CFBundleExecutable</key>
-        <string>gotohp</string>
+            <string>gotohp</string>
         <key>CFBundleIdentifier</key>
-        <string>com.xob0t.gotohp</string>
+            <string>com.xob0t.gotohp</string>
         <key>CFBundleVersion</key>
-        <string>0.2.0</string>
+            <string>0.2.0</string>
         <key>CFBundleGetInfoString</key>
-        <string></string>
+            <string></string>
         <key>CFBundleShortVersionString</key>
-        <string>0.2.0</string>
+            <string>0.2.0</string>
         <key>CFBundleIconFile</key>
-        <string>icons</string>
+            <string>icons</string>
         <key>LSMinimumSystemVersion</key>
-        <string>10.13.0</string>
+            <string>10.15.0</string>
         <key>NSHighResolutionCapable</key>
-        <string>true</string>
+            <string>true</string>
         <key>NSHumanReadableCopyright</key>
-        <string></string>
+            <string></string>
     </dict>
 </plist>
