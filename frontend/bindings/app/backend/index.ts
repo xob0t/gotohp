@@ -6,4 +6,6 @@ export {
     ConfigManager
 };
 
-export * from "./models.js";
+export {
+    Config
+} from "./models.js";

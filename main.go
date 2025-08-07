@@ -32,7 +32,7 @@ func main() {
 		},
 	})
 
-	window := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:             title,
 		Frameless:         false,
 		Width:             400,
@@ -50,7 +50,7 @@ func main() {
 	uploadManager := backend.NewUploadManager(app)
 
 	// Listen for upload cancel event
-	app.OnEvent("uploadCancel", func(e *application.CustomEvent) {
+	app.Event.On("uploadCancel", func(e *application.CustomEvent) {
 		uploadManager.Cancel()
 	})
 

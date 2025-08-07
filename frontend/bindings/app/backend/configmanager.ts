@@ -3,74 +3,60 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
-export function AddCredentials(newAuthString: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4083250689, newAuthString) as any;
-    return $resultPromise;
+export function AddCredentials(newAuthString: string): $CancellablePromise<void> {
+    return $Call.ByID(4083250689, newAuthString);
 }
 
-export function GetConfig(): Promise<$models.Config> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(815152812) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function GetConfig(): $CancellablePromise<$models.Config> {
+    return $Call.ByID(815152812).then(($result: any) => {
         return $$createType0($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
-export function RemoveCredentials(email: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4243930372, email) as any;
-    return $resultPromise;
+export function RemoveCredentials(email: string): $CancellablePromise<void> {
+    return $Call.ByID(4243930372, email);
 }
 
-export function SetDeleteFromHost(deleteFromHost: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(377345147, deleteFromHost) as any;
-    return $resultPromise;
+export function SetDeleteFromHost(deleteFromHost: boolean): $CancellablePromise<void> {
+    return $Call.ByID(377345147, deleteFromHost);
 }
 
-export function SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(821557574, disableUnsupportedFilesFilter) as any;
-    return $resultPromise;
+export function SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter: boolean): $CancellablePromise<void> {
+    return $Call.ByID(821557574, disableUnsupportedFilesFilter);
 }
 
-export function SetForceUpload(forceUpload: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2189240988, forceUpload) as any;
-    return $resultPromise;
+export function SetForceUpload(forceUpload: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2189240988, forceUpload);
 }
 
-export function SetProxy(proxy: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2532528442, proxy) as any;
-    return $resultPromise;
+export function SetProxy(proxy: string): $CancellablePromise<void> {
+    return $Call.ByID(2532528442, proxy);
 }
 
-export function SetRecursive(recursive: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(455302378, recursive) as any;
-    return $resultPromise;
+export function SetRecursive(recursive: boolean): $CancellablePromise<void> {
+    return $Call.ByID(455302378, recursive);
 }
 
-export function SetSaver(saver: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3030960747, saver) as any;
-    return $resultPromise;
+export function SetSaver(saver: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3030960747, saver);
 }
 
-export function SetSelected(email: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2816040807, email) as any;
-    return $resultPromise;
+export function SetSelected(email: string): $CancellablePromise<void> {
+    return $Call.ByID(2816040807, email);
 }
 
-export function SetUploadThreads(uploadThreads: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1692245880, uploadThreads) as any;
-    return $resultPromise;
+export function SetUploadThreads(uploadThreads: number): $CancellablePromise<void> {
+    return $Call.ByID(1692245880, uploadThreads);
 }
 
-export function SetUseQuota(useQuota: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(778544527, useQuota) as any;
-    return $resultPromise;
+export function SetUseQuota(useQuota: boolean): $CancellablePromise<void> {
+    return $Call.ByID(778544527, useQuota);
 }
 
 // Private type creation functions

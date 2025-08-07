@@ -58,14 +58,14 @@ func (m *UploadManager) Upload(app *application.App, paths []string) {
 
 	targetPaths, err := FilterSupportedFiles(paths)
 	if err != nil {
-		app.EmitEvent("FileStatus", FileUploadResult{
+		app.Event.Emit("FileStatus", FileUploadResult{
 			IsError: true,
 			Error:   err,
 		})
 		return
 	}
 
-	app.EmitEvent("uploadStart", UploadBatchStart{
+	app.Event.Emit("uploadStart", UploadBatchStart{
 		Total: len(targetPaths),
 	})
 
@@ -98,14 +98,14 @@ func (m *UploadManager) Upload(app *application.App, paths []string) {
 	go func() {
 		m.wg.Wait()
 		close(results)
-		app.EmitEvent("uploadStop")
+		app.Event.Emit("uploadStop")
 		m.running = false
 	}()
 
 	// Process results
 	go func() {
 		for result := range results {
-			app.EmitEvent("FileStatus", result)
+			app.Event.Emit("FileStatus", result)
 			if result.IsError {
 				s := fmt.Sprintf("upload error: %v", result.Error)
 				app.Logger.Error(s)
