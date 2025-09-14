@@ -19,7 +19,7 @@ var title = "gotohp v" + backend.GetVersion(infoJson)
 
 func main() {
 	app := application.New(application.Options{
-		Name:     "com.github.xob0t.gotohp",
+		Name:        "com.xob0t.gotohp",
 		Description: "Google Photos unofficial client",
 		Services: []application.Service{
 			application.NewService(&backend.ConfigManager{}),
