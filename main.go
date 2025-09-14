@@ -39,6 +39,7 @@ func main() {
 		Height:            600,
 		EnableDragAndDrop: true,
 		DisableResize:     true,
+		BackgroundType:    application.BackgroundTypeTranslucent,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 0,
 			Backdrop:                application.MacBackdropTranslucent,
