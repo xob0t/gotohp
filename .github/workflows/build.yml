@@ -1,9 +1,6 @@
 name: Build Release
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       os:
@@ -16,6 +13,18 @@ on:
           - windows
           - linux
           - all
+      branch:
+        description: "Branch to build from"
+        required: true
+        default: "main"
+        type: string
+      commit_sha:
+        description: "Specific commit SHA to build (optional, overrides branch)"
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*" # Triggers on version tags like v1.0.0, v2.1.3, etc.
 
 permissions:
   contents: write
@@ -24,9 +33,35 @@ jobs:
   build-macos:
     name: Build macOS
     runs-on: macos-latest
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.os == 'macos' || inputs.os == 'all')) }}
+    if: >
+      (github.event_name == 'workflow_dispatch' && (inputs.os == 'macos' || inputs.os == 'all')) ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || (inputs.commit_sha || inputs.branch) }}
+
+      - name: Set Tag and Release Info
+        id: set-tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Tag push event
+            TAG_NAME="${{ github.ref_name }}"
+            RELEASE_NAME="Release ${{ github.ref_name }}"
+            RELEASE_BODY="Release build for tag: ${{ github.ref_name }}"
+            IS_PRERELEASE="false"
+          else
+            # Manual workflow_dispatch event
+            TAG_NAME="manual-build-${{ inputs.commit_sha && inputs.commit_sha || inputs.branch }}"
+            RELEASE_NAME="Manual Build from ${{ inputs.branch }}${{ inputs.commit_sha && format(' ({0})', inputs.commit_sha) || '' }} (Latest)"
+            RELEASE_BODY="Latest manually triggered build artifacts from branch: ${{ inputs.branch }}${{ inputs.commit_sha && format('\nCommit: {0}', inputs.commit_sha) || '' }}"
+            IS_PRERELEASE="true"
+          fi
+
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "release_body=$RELEASE_BODY" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -61,15 +96,51 @@ jobs:
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos
+          name: macos-artifact
           path: release/gotohp-macos-universal.zip
+
+      - name: Upload to Draft Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/gotohp-macos-universal.zip
+          tag_name: ${{ steps.set-tag.outputs.tag_name }}
+          name: ${{ steps.set-tag.outputs.release_name }}
+          body: ${{ steps.set-tag.outputs.release_body }}
+          draft: true
+          prerelease: ${{ steps.set-tag.outputs.is_prerelease }}
 
   build-windows:
     name: Build Windows
     runs-on: windows-latest
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.os == 'windows' || inputs.os == 'all')) }}
+    if: >
+      (github.event_name == 'workflow_dispatch' && (inputs.os == 'windows' || inputs.os == 'all')) ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || (inputs.commit_sha || inputs.branch) }}
+
+      - name: Set Tag and Release Info
+        id: set-tag
+        run: |
+          if ("${{ github.event_name }}" -eq "push") {
+            # Tag push event
+            $TAG_NAME = "${{ github.ref_name }}"
+            $RELEASE_NAME = "Release ${{ github.ref_name }}"
+            $RELEASE_BODY = "Release build for tag: ${{ github.ref_name }}"
+            $IS_PRERELEASE = "false"
+          } else {
+            # Manual workflow_dispatch event
+            $TAG_NAME = "manual-build-${{ inputs.commit_sha && inputs.commit_sha || inputs.branch }}"
+            $RELEASE_NAME = "Manual Build from ${{ inputs.branch }}${{ inputs.commit_sha && format(' ({0})', inputs.commit_sha) || '' }} (Latest)"
+            $RELEASE_BODY = "Latest manually triggered build artifacts from branch: ${{ inputs.branch }}${{ inputs.commit_sha && format('\nCommit: {0}', inputs.commit_sha) || '' }}"
+            $IS_PRERELEASE = "true"
+          }
+
+          "tag_name=$TAG_NAME" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "release_name=$RELEASE_NAME" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "release_body=$RELEASE_BODY" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "is_prerelease=$IS_PRERELEASE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -82,12 +153,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install NSIS
+      - name: Install Task
         shell: pwsh
         run: |
-          choco install nsis -y --no-progress
-          refreshenv
-          Write-Host "NSIS version: $(makensis -VERSION)"
+          go install github.com/go-task/task/v3/cmd/task@latest
+          Write-Host "Task installed successfully"
 
       - name: Install Wails3
         shell: cmd
@@ -100,25 +170,61 @@ jobs:
           wails3 doctor
 
           # Update build assets
-          wails3 task common:update:build-assets
+          task common:update:build-assets
 
-          # Build the application
-          wails3 task production
+          # Build the application with production flags
+          task windows:build PRODUCTION=true
           Move-Item -Path "bin\gotohp.exe" -Destination "release\gotohp-x64.exe"
           Remove-Item -Path "bin\gotohp.exe" -ErrorAction SilentlyContinue
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows
+          name: windows-artifact
           path: release/gotohp-x64.exe
+
+      - name: Upload to Draft Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/gotohp-x64.exe
+          tag_name: ${{ steps.set-tag.outputs.tag_name }}
+          name: ${{ steps.set-tag.outputs.release_name }}
+          body: ${{ steps.set-tag.outputs.release_body }}
+          draft: true
+          prerelease: ${{ steps.set-tag.outputs.is_prerelease }}
 
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.os == 'linux' || inputs.os == 'all')) }}
+    if: >
+      (github.event_name == 'workflow_dispatch' && (inputs.os == 'linux' || inputs.os == 'all')) ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || (inputs.commit_sha || inputs.branch) }}
+
+      - name: Set Tag and Release Info
+        id: set-tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Tag push event
+            TAG_NAME="${{ github.ref_name }}"
+            RELEASE_NAME="Release ${{ github.ref_name }}"
+            RELEASE_BODY="Release build for tag: ${{ github.ref_name }}"
+            IS_PRERELEASE="false"
+          else
+            # Manual workflow_dispatch event
+            TAG_NAME="manual-build-${{ inputs.commit_sha && inputs.commit_sha || inputs.branch }}"
+            RELEASE_NAME="Manual Build from ${{ inputs.branch }}${{ inputs.commit_sha && format(' ({0})', inputs.commit_sha) || '' }} (Latest)"
+            RELEASE_BODY="Latest manually triggered build artifacts from branch: ${{ inputs.branch }}${{ inputs.commit_sha && format('\nCommit: {0}', inputs.commit_sha) || '' }}"
+            IS_PRERELEASE="true"
+          fi
+
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "release_body=$RELEASE_BODY" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -166,29 +272,19 @@ jobs:
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux
+          name: linux-artifact
           path: |
             release/gotohp_amd64.deb
             release/gotohp_amd64.AppImage
 
-  create-release:
-    name: Create Release
-    needs: [build-macos, build-windows, build-linux]
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release
-
-      - name: Create Release
+      - name: Upload to Draft Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/macos/gotohp-macos-universal.zip
-            release/windows/gotohp-x64.exe
-            release/linux/gotohp_amd64.deb
-            release/linux/gotohp_amd64.AppImage
-          tag_name: ${{ github.ref }}
+            release/gotohp_amd64.deb
+            release/gotohp_amd64.AppImage
+          tag_name: ${{ steps.set-tag.outputs.tag_name }}
+          name: ${{ steps.set-tag.outputs.release_name }}
+          body: ${{ steps.set-tag.outputs.release_body }}
           draft: true
+          prerelease: ${{ steps.set-tag.outputs.is_prerelease }}
