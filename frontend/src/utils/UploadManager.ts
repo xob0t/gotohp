@@ -79,8 +79,7 @@ class UploadManager {
   }
 
   public cancelUpload() {
-    const event = new Events.WailsEvent("uploadCancel");
-    Events.Emit(event);
+    Events.Emit("uploadCancel");
   }
 
   public async copyResultsAsJson() {
