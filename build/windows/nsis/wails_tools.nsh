@@ -14,10 +14,10 @@
     !define INFO_PRODUCTNAME "gotohp"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "0.3.0"
+    !define INFO_PRODUCTVERSION "0.4.0"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT ""
+    !define INFO_COPYRIGHT "© now, My Company"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"

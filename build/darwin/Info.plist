@@ -10,11 +10,11 @@
         <key>CFBundleIdentifier</key>
             <string>com.xob0t.gotohp</string>
         <key>CFBundleVersion</key>
-            <string>0.3.0</string>
+            <string>0.4.0</string>
         <key>CFBundleGetInfoString</key>
-            <string></string>
+            <string>This is a comment</string>
         <key>CFBundleShortVersionString</key>
-            <string>0.3.0</string>
+            <string>0.4.0</string>
         <key>CFBundleIconFile</key>
             <string>icons</string>
         <key>LSMinimumSystemVersion</key>
@@ -22,6 +22,6 @@
         <key>NSHighResolutionCapable</key>
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
-            <string></string>
+            <string>© now, My Company</string>
     </dict>
 </plist>
