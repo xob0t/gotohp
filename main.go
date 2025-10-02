@@ -37,6 +37,8 @@ func main() {
 		Frameless:         false,
 		Width:             400,
 		Height:            600,
+		MaxWidth:          400,
+		MaxHeight:         600,
 		EnableDragAndDrop: true,
 		DisableResize:     true,
 		BackgroundType:    application.BackgroundTypeTranslucent,
