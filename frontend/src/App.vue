@@ -119,7 +119,8 @@ const handleCopyClick = () => {
 
 <template>
   <main class="w-screen h-screen flex flex-col items-center" style="--wails-draggable: drag">
-    <div v-if="!uploadState.isUploading" class="flex flex-col items-center gap-4 w-full max-w-md mt-30 ">
+    <div v-if="!uploadState.isUploading" class="w-screen h-screen flex flex-col items-center gap-4 max-w-md pt-30"
+      data-wails-dropzone>
       <template v-if="options.length === 0">
         <EditableSelect v-model="selectedOption" :options="options"
           @update:options="(newOptions) => options = newOptions" @item-added="addCredentials"

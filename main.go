@@ -55,7 +55,7 @@ func main() {
 		uploadManager.Cancel()
 	})
 
-	window.OnWindowEvent(events.Common.WindowFilesDropped, func(event *application.WindowEvent) {
+	window.OnWindowEvent(events.Common.WindowDropZoneFilesDropped, func(event *application.WindowEvent) {
 		paths := event.Context().DroppedFiles()
 		uploadManager.Upload(app, paths)
 	})

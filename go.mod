@@ -8,7 +8,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.0
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.2.2
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.18
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.32
 	google.golang.org/protobuf v1.36.7
 )
 
