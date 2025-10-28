@@ -231,7 +231,7 @@ func saveAppConfig() error {
 		fmt.Println(err)
 		return err
 	}
-	os.MkdirAll(filepath.Dir(ConfigPath), 0666)
+	os.MkdirAll(filepath.Dir(ConfigPath), 0755)
 	b, err := k.Marshal(yaml.Parser())
 	if err != nil {
 		fmt.Println(err)
