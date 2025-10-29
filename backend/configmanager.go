@@ -176,7 +176,7 @@ func (g *ConfigManager) RemoveCredentials(email string) error {
 	return nil
 }
 
-func initConfigPath() {
+func determineConfigPath() {
 	// First try portable config in executable directory
 	exePath, err := os.Executable()
 	if err == nil {
@@ -204,11 +204,7 @@ func getUserConfigDir() string {
 }
 
 func (g *ConfigManager) GetConfig() Config {
-	initConfigPath()
-	if _, err := os.Stat(ConfigPath); err == nil {
-		fmt.Println("Created a new user settings config")
-		AppConfig = DefaultConfig
-	}
+	determineConfigPath()
 
 	file, _ := os.ReadFile(ConfigPath)
 	if len(file) == 0 {
@@ -223,7 +219,6 @@ func (g *ConfigManager) GetConfig() Config {
 }
 
 func saveAppConfig() error {
-	initConfigPath()
 	k := koanf.New(".")
 
 	err := k.Load(structs.Provider(AppConfig, "koanf"), nil)
