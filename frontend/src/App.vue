@@ -1,31 +1,30 @@
 <script setup lang="ts">
-import './index.css'
-import { ref, onMounted, watch } from 'vue'
-import EditableSelect from "./components/ui/EditableSelect.vue"
-import Upload from './Upload.vue'
-import SettingsPanel from "./SettingsPanel.vue"
-import { uploadManager } from './utils/UploadManager'
-
 import { Label } from '@/components/ui/label'
-import { ConfigManager } from '../bindings/app/backend'
-import Button from "./components/ui/button/Button.vue"
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet'
-
 import { useColorMode } from '@vueuse/core'
+import { onMounted, ref, watch } from 'vue'
+import { ConfigManager } from '../bindings/app/backend'
+import Button from "./components/ui/button/Button.vue"
+import EditableSelect from "./components/ui/EditableSelect.vue"
+import './index.css'
+import SettingsPanel from "./SettingsPanel.vue"
+import Upload from './Upload.vue'
+import { uploadManager } from './utils/UploadManager'
+
+import { toast, Toaster } from "vue-sonner"
 
 useColorMode().value = "dark"
 
-// Access upload state from manager
 const { state: uploadState } = uploadManager
 const copyButtonText = ref('Copy as JSON');
 
 const selectedOption = ref('')
-const options = ref<string[]>([]) // Only emails here
-const credentialMap = ref<Record<string, string>>({}) // Maps email to full credential
+const options = ref<string[]>([])
+const credentialMap = ref<Record<string, string>>({})
 
 function extractEmailFromCredential(credential: string): string | null {
   try {
@@ -44,16 +43,15 @@ watch(selectedOption, async (newValue) => {
       console.log('Successfully updated selected value:', newValue)
     } catch (error) {
       console.error('Failed to update selected value:', error)
+      toast.error('Failed to update selected account.')
     }
   }
 })
 
 async function addCredentials(authString: string) {
   try {
-    // First validate and add via backend
     await ConfigManager.AddCredentials(authString)
 
-    // If successful, update frontend state
     const email = extractEmailFromCredential(authString)
     if (email) {
       credentialMap.value[email] = authString
@@ -62,19 +60,21 @@ async function addCredentials(authString: string) {
       }
       selectedOption.value = email
     }
+    toast.success('Credentials added successfully!')
     return true
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to add credentials:', error)
+    toast.error('Failed to add credentials', {
+      description: error?.message,
+    })
     return false
   }
 }
 
 async function removeCredentials(email: string) {
   try {
-    // First remove via backend
     await ConfigManager.RemoveCredentials(email)
 
-    // If successful, update frontend state
     if (credentialMap.value[email]) {
       delete credentialMap.value[email]
       options.value = options.value.filter(opt => opt !== email)
@@ -82,9 +82,11 @@ async function removeCredentials(email: string) {
         selectedOption.value = ''
       }
     }
+    toast.success('Credentials removed.')
     return true
   } catch (error) {
     console.error('Failed to remove credentials:', error)
+    toast.error('Failed to remove credentials.')
     return false
   }
 }
@@ -92,7 +94,6 @@ async function removeCredentials(email: string) {
 onMounted(async () => {
   const config = await ConfigManager.GetConfig()
   if (config.credentials?.length) {
-    // Initialize both the dropdown options and credential map
     credentialMap.value = {}
     options.value = []
 
@@ -159,5 +160,6 @@ const handleCopyClick = () => {
     <div v-if="uploadState.isUploading" class="w-full">
       <Upload />
     </div>
+    <Toaster position="bottom-center" />
   </main>
 </template>
