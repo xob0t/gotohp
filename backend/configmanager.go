@@ -233,7 +233,7 @@ func saveAppConfig() error {
 		return err
 	}
 
-	err = os.WriteFile(ConfigPath, b, os.ModePerm)
+	err = os.WriteFile(ConfigPath, b, 0644)
 
 	if err != nil {
 		fmt.Println(err)
