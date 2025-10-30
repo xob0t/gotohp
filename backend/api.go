@@ -505,7 +505,6 @@ func (a *Api) CommitUpload(
 
 	// Make the request
 	resp, err := a.client.Do(req)
-	// resp, _ := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}

@@ -56,12 +56,16 @@ func (m *UploadManager) Upload(app *application.App, paths []string) {
 	m.running = true
 	m.cancel = make(chan struct{})
 
-	targetPaths, err := FilterSupportedFiles(paths)
+	targetPaths, err := filterGooglePhotosFiles(paths)
 	if err != nil {
 		app.Event.Emit("FileStatus", FileUploadResult{
 			IsError: true,
 			Error:   err,
 		})
+		return
+	}
+
+	if len(targetPaths) == 0 {
 		return
 	}
 
@@ -115,15 +119,6 @@ func (m *UploadManager) Upload(app *application.App, paths []string) {
 			}
 		}
 	}()
-}
-
-func FilterSupportedFiles(targetPaths []string) ([]string, error) {
-	supportedFiles, err := filterGooglePhotosFiles(targetPaths)
-	if err != nil {
-		return []string{}, err
-	}
-
-	return supportedFiles, nil
 }
 
 // isSupportedByGooglePhotos checks if a file extension is supported by Google Photos
@@ -202,15 +197,20 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 			for _, file := range files {
 				if AppConfig.DisableUnsupportedFilesFilter {
 					supportedFiles = append(supportedFiles, file)
-				} else if isSupportedByGooglePhotos(file) {
-					supportedFiles = append(supportedFiles, file)
+				} else {
+					if isSupportedByGooglePhotos(file) {
+						supportedFiles = append(supportedFiles, file)
+					}
 				}
+
 			}
 		} else {
-			if !AppConfig.DisableUnsupportedFilesFilter {
+			if AppConfig.DisableUnsupportedFilesFilter {
 				supportedFiles = append(supportedFiles, path)
-			} else if isSupportedByGooglePhotos(path) {
-				supportedFiles = append(supportedFiles, path)
+			} else {
+				if isSupportedByGooglePhotos(path) {
+					supportedFiles = append(supportedFiles, path)
+				}
 			}
 
 		}
@@ -219,7 +219,7 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	return supportedFiles, nil
 }
 
-func UploadFile(ctx context.Context, api *Api, filePath string) (string, error) {
+func uploadFile(ctx context.Context, api *Api, filePath string) (string, error) {
 	mediakey := ""
 	sha1_hash_bytes, err := CalculateSHA1(ctx, filePath)
 	if err != nil {
@@ -300,7 +300,7 @@ func startUploadWorker(workChan <-chan string, results chan<- FileUploadResult, 
 			if err != nil {
 				results <- FileUploadResult{IsError: true, Error: err, Path: path}
 			}
-			mediaKey, err := UploadFile(ctx, api, path)
+			mediaKey, err := uploadFile(ctx, api, path)
 			if err != nil {
 				results <- FileUploadResult{IsError: true, Error: err, Path: path}
 			} else {
