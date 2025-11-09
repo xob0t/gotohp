@@ -22,6 +22,11 @@ on:
         description: "Specific commit SHA to build (optional, overrides branch)"
         required: false
         type: string
+      build_debug:
+        description: "Also build debug version"
+        required: false
+        default: true
+        type: boolean
   push:
     tags:
       - "v*" # Triggers on version tags like v1.0.0, v2.1.3, etc.
@@ -77,7 +82,7 @@ jobs:
       - name: Install Wails3
         run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
 
-      - name: Build macOS App
+      - name: Build macOS App (Production)
         run: |
           mkdir -p release
           wails3 doctor
@@ -93,16 +98,30 @@ jobs:
           zip -r ../release/gotohp-macos-universal.zip gotohp.app
           cd ..
 
+      - name: Build macOS App (Debug)
+        if: (github.event_name == 'workflow_dispatch' && inputs.build_debug) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+        run: |
+          # Clean bin directory
+          rm -rf bin/gotohp.app
+
+          # Build debug version
+          wails3 build
+
+          # Create zip file of the debug .app bundle
+          cd bin
+          zip -r ../release/gotohp-macos-universal_debug.zip gotohp.app
+          cd ..
+
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-artifact
-          path: release/gotohp-macos-universal.zip
+          path: release/gotohp-macos-universal*.zip
 
       - name: Upload to Draft Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/gotohp-macos-universal.zip
+          files: release/gotohp-macos-universal*.zip
           tag_name: ${{ steps.set-tag.outputs.tag_name }}
           name: ${{ steps.set-tag.outputs.release_name }}
           body: ${{ steps.set-tag.outputs.release_body }}
@@ -163,7 +182,7 @@ jobs:
         shell: cmd
         run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
 
-      - name: Build Windows App
+      - name: Build Windows App (Production)
         shell: pwsh
         run: |
           mkdir -p release
@@ -175,18 +194,28 @@ jobs:
           # Build the application with production flags
           task windows:build PRODUCTION=true
           Move-Item -Path "bin\gotohp.exe" -Destination "release\gotohp-x64.exe"
+
+      - name: Build Windows App (Debug)
+        if: (github.event_name == 'workflow_dispatch' && inputs.build_debug) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+        shell: pwsh
+        run: |
+          # Clean bin directory
           Remove-Item -Path "bin\gotohp.exe" -ErrorAction SilentlyContinue
+
+          # Build debug version
+          wails3 build
+          Move-Item -Path "bin\gotohp.exe" -Destination "release\gotohp-x64_debug.exe"
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-artifact
-          path: release/gotohp-x64.exe
+          path: release/gotohp-x64*.exe
 
       - name: Upload to Draft Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/gotohp-x64.exe
+          files: release/gotohp-x64*.exe
           tag_name: ${{ steps.set-tag.outputs.tag_name }}
           name: ${{ steps.set-tag.outputs.release_name }}
           body: ${{ steps.set-tag.outputs.release_body }}
@@ -245,7 +274,7 @@ jobs:
       - name: Install Wails3
         run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@latest
 
-      - name: Build Linux App
+      - name: Build Linux App (Production)
         run: |
           mkdir -p release
           wails3 doctor
@@ -269,6 +298,18 @@ jobs:
             mv "release/gotohp.deb" "release/gotohp_amd64.deb"
           fi
 
+      - name: Build Linux App (Debug)
+        if: (github.event_name == 'workflow_dispatch' && inputs.build_debug) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+        run: |
+          # Clean bin directory
+          rm -f bin/gotohp
+
+          # Build debug version
+          wails3 build
+
+          # Copy debug binary
+          cp bin/gotohp "release/gotohp_amd64_debug"
+
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -276,6 +317,7 @@ jobs:
           path: |
             release/gotohp_amd64.deb
             release/gotohp_amd64.AppImage
+            release/gotohp_amd64_debug
 
       - name: Upload to Draft Release
         uses: softprops/action-gh-release@v2
@@ -283,6 +325,7 @@ jobs:
           files: |
             release/gotohp_amd64.deb
             release/gotohp_amd64.AppImage
+            release/gotohp_amd64_debug
           tag_name: ${{ steps.set-tag.outputs.tag_name }}
           name: ${{ steps.set-tag.outputs.release_name }}
           body: ${{ steps.set-tag.outputs.release_body }}
