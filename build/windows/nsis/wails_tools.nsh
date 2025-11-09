@@ -14,7 +14,7 @@
     !define INFO_PRODUCTNAME "gotohp"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "0.4.1"
+    !define INFO_PRODUCTVERSION "0.4.2"
 !endif
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "© now, My Company"
