@@ -48,6 +48,14 @@ type FileUploadResult struct {
 	Path     string
 }
 
+type ThreadStatus struct {
+	WorkerID int
+	Status   string // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
+	FilePath string
+	FileName string
+	Message  string
+}
+
 func (m *UploadManager) Upload(app *application.App, paths []string) {
 	if m.running {
 		return
@@ -76,22 +84,27 @@ func (m *UploadManager) Upload(app *application.App, paths []string) {
 	if AppConfig.UploadThreads < 1 {
 		AppConfig.UploadThreads = 1
 	}
+
+	// Don't start more threads than files to process
+	numWorkers := min(AppConfig.UploadThreads, len(targetPaths))
+
 	// Create a worker pool for concurrent uploads
 	workChan := make(chan string, len(targetPaths))
 	results := make(chan FileUploadResult, len(targetPaths))
 
 	// Start workers
-	for range AppConfig.UploadThreads {
+	for i := range numWorkers {
 		m.wg.Add(1)
-		go startUploadWorker(workChan, results, m.cancel, &m.wg)
+		go startUploadWorker(i, workChan, results, m.cancel, &m.wg, app)
 	}
 
 	// Send work to workers
 	go func() {
+	LOOP:
 		for _, path := range targetPaths {
 			select {
 			case <-m.cancel:
-				break
+				break LOOP
 			case workChan <- path:
 			}
 		}
@@ -219,8 +232,19 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	return supportedFiles, nil
 }
 
-func uploadFile(ctx context.Context, api *Api, filePath string) (string, error) {
+func uploadFile(ctx context.Context, api *Api, filePath string, workerID int, app *application.App) (string, error) {
+	fileName := filepath.Base(filePath)
 	mediakey := ""
+
+	// Stage 1: Hashing
+	app.Event.Emit("ThreadStatus", ThreadStatus{
+		WorkerID: workerID,
+		Status:   "hashing",
+		FilePath: filePath,
+		FileName: fileName,
+		Message:  "Hashing...",
+	})
+
 	sha1_hash_bytes, err := CalculateSHA1(ctx, filePath)
 	if err != nil {
 		return "", fmt.Errorf("error calculating hash file: %w", err)
@@ -228,12 +252,28 @@ func uploadFile(ctx context.Context, api *Api, filePath string) (string, error) 
 
 	sha1_hash_b64 := base64.StdEncoding.EncodeToString([]byte(sha1_hash_bytes))
 
+	// Stage 2: Checking if exists in library
 	if !AppConfig.ForceUpload {
+		app.Event.Emit("ThreadStatus", ThreadStatus{
+			WorkerID: workerID,
+			Status:   "checking",
+			FilePath: filePath,
+			FileName: fileName,
+			Message:  "Checking if file exists in library...",
+		})
+
 		mediakey, err = api.FindRemoteMediaByHash(sha1_hash_bytes)
 		if err != nil {
 			fmt.Println("Error checking for remote matches:", err)
 		}
 		if len(mediakey) > 0 {
+			app.Event.Emit("ThreadStatus", ThreadStatus{
+				WorkerID: workerID,
+				Status:   "completed",
+				FilePath: filePath,
+				FileName: fileName,
+				Message:  "Already in library",
+			})
 			if AppConfig.DeleteFromHost {
 				err = os.Remove(filePath)
 				if err != nil {
@@ -255,6 +295,15 @@ func uploadFile(ctx context.Context, api *Api, filePath string) (string, error) 
 		return "", fmt.Errorf("error getting file info: %w", err)
 	}
 
+	// Stage 3: Uploading
+	app.Event.Emit("ThreadStatus", ThreadStatus{
+		WorkerID: workerID,
+		Status:   "uploading",
+		FilePath: filePath,
+		FileName: fileName,
+		Message:  "Uploading...",
+	})
+
 	token, err := api.GetUploadToken(sha1_hash_b64, fileInfo.Size())
 	if err != nil {
 		return "", fmt.Errorf("error uploading file: %w", err)
@@ -265,6 +314,15 @@ func uploadFile(ctx context.Context, api *Api, filePath string) (string, error) 
 		return "", fmt.Errorf("error uploading file: %w", err)
 
 	}
+
+	// Stage 4: Finalizing
+	app.Event.Emit("ThreadStatus", ThreadStatus{
+		WorkerID: workerID,
+		Status:   "finalizing",
+		FilePath: filePath,
+		FileName: fileName,
+		Message:  "Committing upload...",
+	})
 
 	mediaKey, err := api.CommitUpload(CommitToken, fileInfo.Name(), sha1_hash_bytes, fileInfo.ModTime().Unix())
 	if err != nil {
@@ -283,11 +341,24 @@ func uploadFile(ctx context.Context, api *Api, filePath string) (string, error) 
 
 }
 
-func startUploadWorker(workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup) {
+func startUploadWorker(workerID int, workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app *application.App) {
 	defer wg.Done()
+
+	// Emit idle status initially
+	app.Event.Emit("ThreadStatus", ThreadStatus{
+		WorkerID: workerID,
+		Status:   "idle",
+		Message:  "Waiting for files...",
+	})
+
 	for path := range workChan {
 		select {
 		case <-cancel:
+			app.Event.Emit("ThreadStatus", ThreadStatus{
+				WorkerID: workerID,
+				Status:   "idle",
+				Message:  "Cancelled",
+			})
 			return // Stop if cancellation is requested
 		default:
 			ctx, cancelUpload := context.WithCancel(context.Background())
@@ -299,14 +370,50 @@ func startUploadWorker(workChan <-chan string, results chan<- FileUploadResult, 
 			api, err := NewApi()
 			if err != nil {
 				results <- FileUploadResult{IsError: true, Error: err, Path: path}
+				app.Event.Emit("ThreadStatus", ThreadStatus{
+					WorkerID: workerID,
+					Status:   "error",
+					FilePath: path,
+					FileName: filepath.Base(path),
+					Message:  fmt.Sprintf("API error: %v", err),
+				})
+				continue
 			}
-			mediaKey, err := uploadFile(ctx, api, path)
+			mediaKey, err := uploadFile(ctx, api, path, workerID, app)
 			if err != nil {
 				results <- FileUploadResult{IsError: true, Error: err, Path: path}
+				app.Event.Emit("ThreadStatus", ThreadStatus{
+					WorkerID: workerID,
+					Status:   "error",
+					FilePath: path,
+					FileName: filepath.Base(path),
+					Message:  fmt.Sprintf("Error: %v", err),
+				})
 			} else {
 				results <- FileUploadResult{IsError: false, Path: path, MediaKey: mediaKey}
+				app.Event.Emit("ThreadStatus", ThreadStatus{
+					WorkerID: workerID,
+					Status:   "completed",
+					FilePath: path,
+					FileName: filepath.Base(path),
+					Message:  "Completed",
+				})
 			}
 			cancelUpload()
+
+			// Mark as idle after completing file
+			app.Event.Emit("ThreadStatus", ThreadStatus{
+				WorkerID: workerID,
+				Status:   "idle",
+				Message:  "Waiting for next file...",
+			})
 		}
 	}
+
+	// Final idle status when no more work
+	app.Event.Emit("ThreadStatus", ThreadStatus{
+		WorkerID: workerID,
+		Status:   "idle",
+		Message:  "Finished",
+	})
 }

@@ -6,10 +6,19 @@ export interface UploadSuccess {
   mediaKey: string;
 }
 
+export interface ThreadStatus {
+  WorkerID: number;
+  Status: string; // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
+  FilePath: string;
+  FileName: string;
+  Message: string;
+}
+
 export interface UploadState {
   isUploading: boolean;
   totalFiles: number;
   uploadedFiles: number;
+  threads: Map<number, ThreadStatus>;
   results: {
     success: UploadSuccess[];
     fail: string[];
@@ -24,6 +33,7 @@ class UploadManager {
     isUploading: false,
     totalFiles: 0,
     uploadedFiles: 0,
+    threads: new Map<number, ThreadStatus>(),
     results: {
       success: [],
       fail: [],
@@ -52,7 +62,14 @@ class UploadManager {
       this.state.totalFiles = event.data[0].Total;
       this.state.uploadedFiles = 0;
       this.state.isUploading = true;
+      this.state.threads.clear();
       this.resetUploadResults();
+    });
+
+    // Handle thread status updates
+    Events.On("ThreadStatus", (event: { data: Array<ThreadStatus> }) => {
+      const threadStatus = event.data[0];
+      this.state.threads.set(threadStatus.WorkerID, threadStatus);
     });
 
     // Handle file status updates
