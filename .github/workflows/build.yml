@@ -103,25 +103,28 @@ jobs:
         run: |
           # Clean bin directory
           rm -rf bin/gotohp.app
+          rm -f bin/gotohp
 
-          # Build debug version
+          # Build debug version (creates binary, not .app)
           wails3 build
 
-          # Create zip file of the debug .app bundle
-          cd bin
-          zip -r ../release/gotohp-macos-universal_debug.zip gotohp.app
-          cd ..
+          # Rename debug binary
+          mv bin/gotohp release/gotohp-macos-universal_debug
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-artifact
-          path: release/gotohp-macos-universal*.zip
+          path: |
+            release/gotohp-macos-universal.zip
+            release/gotohp-macos-universal_debug
 
       - name: Upload to Draft Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/gotohp-macos-universal*.zip
+          files: |
+            release/gotohp-macos-universal.zip
+            release/gotohp-macos-universal_debug
           tag_name: ${{ steps.set-tag.outputs.tag_name }}
           name: ${{ steps.set-tag.outputs.release_name }}
           body: ${{ steps.set-tag.outputs.release_body }}
