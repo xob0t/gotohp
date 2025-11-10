@@ -11,10 +11,52 @@ Unofficial Google Photos Desktop GUI Client
 - Configurable upload threads
 - Individual files or directories uploads, with optional recursive scanning
 - Skips files already present in your account
+- CLI mode
 - Configurable, presistent upload settings (stored in "%system config path%/gotohp/gotohp.config")  
     You can force local config by creating empty gotohp.config next to executable.
 
 ## [Download](https://github.com/xob0t/gotohp/releases/latest)
+
+## CLI Usage
+
+### Windows
+
+Windows releases include a dedicated CLI executable (`gotohp-cli.exe`) for command-line usage:
+
+```cmd
+gotohp-cli.exe upload C:\path\to\photos --recursive --threads 5
+gotohp-cli.exe creds list
+gotohp-cli.exe creds add "androidId=..."
+gotohp-cli.exe creds set user@gmail.com
+gotohp-cli.exe version
+```
+
+**Available commands:**
+
+- `upload <filepath>` - Upload files or directories
+  - `-r, --recursive` - Include subdirectories
+  - `-t, --threads <n>` - Number of upload threads (default: 3)
+  - `-f, --force` - Force upload even if file exists
+  - `-d, --delete` - Delete from host after upload
+  - `-df, --disable-filter` - Disable file type filtering
+  - `-l, --log-level <level>` - Set log level: debug, info, warn, error (default: info)
+  - `-c, --config <path>` - Path to config file
+- `creds list` (alias: `ls`) - List all credentials
+- `creds add <auth-string>` - Add new credentials
+- `creds remove <email>` (alias: `rm`) - Remove credentials
+- `creds set <email>` (alias: `select`) - Set active credential (supports partial matching)
+- `version` - Show version information
+- `help` - Show help message
+
+### macOS / Linux
+
+The main executable supports CLI mode:
+
+```bash
+./gotohp upload /path/to/photos --recursive --threads 5
+./gotohp creds list
+./gotohp version
+```
 
 ## Requires mobile app credentials to work
 
@@ -72,7 +114,7 @@ You only need to do this once.
 
 #### Troubleshooting
 
-- __No Auth Request Intercepted__  
+- **No Auth Request Intercepted**  
   1. Log out of your Google account.
   2. Log in again.
   3. Try `Android App via Frida` interception method in HTTP Toolkit.

@@ -1,9 +1,12 @@
+//go:build !cli
+
 package main
 
 import (
 	"app/backend"
 	"embed"
 	"log"
+	"os"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -12,13 +15,22 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-//go:embed build/windows/info.json
-var infoJson embed.FS
-
-var title = "gotohp v" + backend.GetVersion(infoJson)
+var title = "gotohp v" + getAppVersion()
 
 func main() {
-	app := application.New(application.Options{
+	// Check if running in CLI mode based on recognized commands
+	// If unrecognized arguments are passed, default to GUI mode
+	if len(os.Args) > 1 && isCLICommand(os.Args[1]) {
+		runCLI()
+		return
+	}
+
+	// Run GUI mode (default when no arguments or unrecognized arguments)
+	runGUI()
+}
+
+func runGUI() {
+	wailsApp := application.New(application.Options{
 		Name:        "com.xob0t.gotohp",
 		Description: "Google Photos unofficial client",
 		Services: []application.Service{
@@ -32,7 +44,7 @@ func main() {
 		},
 	})
 
-	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:             title,
 		Frameless:         false,
 		Width:             400,
@@ -50,10 +62,12 @@ func main() {
 		URL: "/",
 	})
 
+	// Wrap Wails app in AppInterface
+	app := backend.NewWailsApp(wailsApp)
 	uploadManager := backend.NewUploadManager(app)
 
 	// Listen for upload cancel event
-	app.Event.On("uploadCancel", func(e *application.CustomEvent) {
+	wailsApp.Event.On("uploadCancel", func(e *application.CustomEvent) {
 		uploadManager.Cancel()
 	})
 
@@ -62,7 +76,7 @@ func main() {
 		uploadManager.Upload(app, paths)
 	})
 
-	err := app.Run()
+	err := wailsApp.Run()
 	if err != nil {
 		log.Fatal(err)
 	}

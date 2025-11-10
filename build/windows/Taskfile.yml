@@ -61,6 +61,21 @@ tasks:
       ARCH: '{{.ARCH | default ARCH}}'
       ARG_FLAG: '{{if eq .ARCH "amd64"}}AMD64{{else}}ARM64{{end}}'
 
+  build:cli:
+    summary: Builds the CLI-only application for Windows (no Wails/WebView dependencies)
+    dir: '{{.ROOT_DIR}}'
+    deps:
+      - task: common:go:mod:tidy
+    cmds:
+      - go build {{.BUILD_FLAGS}} -tags cli -o {{.BIN_DIR}}/{{.APP_NAME}}-cli.exe
+    vars:
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-trimpath -buildvcs=false -ldflags="-w -s"{{else}}-buildvcs=false -gcflags=all="-l"{{end}}'
+    env:
+      GOOS: windows
+      CGO_ENABLED: 0
+      GOARCH: '{{.ARCH | default ARCH}}'
+      PRODUCTION: '{{.PRODUCTION | default "false"}}'
+
   run:
     cmds:
       - '{{.BIN_DIR}}\\{{.APP_NAME}}.exe'

@@ -35,6 +35,11 @@ var DefaultConfig = Config{
 	UploadThreads: 3,
 }
 
+// ParseAuthString parses an auth string and returns url.Values (exported for CLI use)
+func ParseAuthString(authString string) (url.Values, error) {
+	return url.ParseQuery(authString)
+}
+
 func (g *ConfigManager) SetProxy(proxy string) {
 	AppConfig.Proxy = proxy
 	saveAppConfig()
@@ -204,18 +209,25 @@ func getUserConfigDir() string {
 }
 
 func (g *ConfigManager) GetConfig() Config {
+	// Don't reload if already loaded
+	if len(AppConfig.Credentials) == 0 && AppConfig.UploadThreads == 0 {
+		LoadConfig()
+	}
+	return AppConfig
+}
+
+// LoadConfig loads the configuration (exported for CLI use)
+func LoadConfig() error {
 	determineConfigPath()
 
 	file, _ := os.ReadFile(ConfigPath)
 	if len(file) == 0 {
-		fmt.Println("config file is empty")
 		AppConfig = DefaultConfig
 	} else {
 		AppConfig = loadAppConfig()
 	}
 
-	log.Println("Config", AppConfig)
-	return AppConfig
+	return nil
 }
 
 func saveAppConfig() error {

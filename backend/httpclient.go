@@ -1,12 +1,21 @@
 package backend
 
 import (
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
+
+var httpClientLogger *log.Logger
+
+// SetHTTPClientLogger sets the logger for the HTTP client
+func SetHTTPClientLogger(logger *log.Logger) {
+	httpClientLogger = logger
+}
 
 func NewHTTPClientWithProxy(proxyURLStr string) (*http.Client, error) {
 	// Create the base transport with default values
@@ -29,6 +38,14 @@ func NewHTTPClientWithProxy(proxyURLStr string) (*http.Client, error) {
 	retryClient.RetryWaitMin = 1 * time.Second   // Start with 1 second
 	retryClient.RetryWaitMax = 30 * time.Second  // Maximum wait time
 	retryClient.HTTPClient.Transport = transport // Set transport here
+
+	// Configure logger based on global setting
+	if httpClientLogger != nil {
+		retryClient.Logger = httpClientLogger
+	} else {
+		// Default: disable logging
+		retryClient.Logger = log.New(io.Discard, "", 0)
+	}
 
 	// Important: Configure the retry policy to retry on connection errors
 	retryClient.CheckRetry = retryablehttp.ErrorPropagatedRetryPolicy

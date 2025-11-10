@@ -13,14 +13,17 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// ProgressCallback is a function type for upload progress updates
+type ProgressCallback func(event string, data any)
+
 type UploadManager struct {
 	wg      sync.WaitGroup
 	cancel  chan struct{}
 	running bool
-	app     *application.App
+	app     AppInterface
 }
 
-func NewUploadManager(app *application.App) *UploadManager {
+func NewUploadManager(app AppInterface) *UploadManager {
 	return &UploadManager{
 		app: app,
 	}
@@ -56,7 +59,7 @@ type ThreadStatus struct {
 	Message  string
 }
 
-func (m *UploadManager) Upload(app *application.App, paths []string) {
+func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	if m.running {
 		return
 	}
@@ -66,7 +69,7 @@ func (m *UploadManager) Upload(app *application.App, paths []string) {
 
 	targetPaths, err := filterGooglePhotosFiles(paths)
 	if err != nil {
-		app.Event.Emit("FileStatus", FileUploadResult{
+		app.EmitEvent("FileStatus", FileUploadResult{
 			IsError: true,
 			Error:   err,
 		})
@@ -77,7 +80,7 @@ func (m *UploadManager) Upload(app *application.App, paths []string) {
 		return
 	}
 
-	app.Event.Emit("uploadStart", UploadBatchStart{
+	app.EmitEvent("uploadStart", UploadBatchStart{
 		Total: len(targetPaths),
 	})
 
@@ -115,20 +118,20 @@ func (m *UploadManager) Upload(app *application.App, paths []string) {
 	go func() {
 		m.wg.Wait()
 		close(results)
-		app.Event.Emit("uploadStop")
+		app.EmitEvent("uploadStop", nil)
 		m.running = false
 	}()
 
 	// Process results
 	go func() {
 		for result := range results {
-			app.Event.Emit("FileStatus", result)
+			app.EmitEvent("FileStatus", result)
 			if result.IsError {
 				s := fmt.Sprintf("upload error: %v", result.Error)
-				app.Logger.Error(s)
+				app.GetLogger().Error(s)
 			} else {
 				s := fmt.Sprintf("upload success: %v", result.Path)
-				app.Logger.Info(s)
+				app.GetLogger().Info(s)
 			}
 		}
 	}()
@@ -191,6 +194,11 @@ func scanDirectoryForFiles(path string, recursive bool) ([]string, error) {
 	return files, nil
 }
 
+// FilterGooglePhotosFiles returns a list of files that are supported by Google Photos (exported)
+func FilterGooglePhotosFiles(paths []string) ([]string, error) {
+	return filterGooglePhotosFiles(paths)
+}
+
 // filterGooglePhotosFiles returns a list of files that are supported by Google Photos
 func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	var supportedFiles []string
@@ -232,12 +240,25 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	return supportedFiles, nil
 }
 
+// UploadFile is an exported version for CLI use with callback
+func UploadFile(ctx context.Context, api *Api, filePath string, workerID int, callback ProgressCallback) (string, error) {
+	return uploadFileWithCallback(ctx, api, filePath, workerID, callback)
+}
+
 func uploadFile(ctx context.Context, api *Api, filePath string, workerID int, app *application.App) (string, error) {
+	// Create a callback that emits Wails events
+	callback := func(event string, data any) {
+		app.Event.Emit(event, data)
+	}
+	return uploadFileWithCallback(ctx, api, filePath, workerID, callback)
+}
+
+func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, workerID int, callback ProgressCallback) (string, error) {
 	fileName := filepath.Base(filePath)
 	mediakey := ""
 
 	// Stage 1: Hashing
-	app.Event.Emit("ThreadStatus", ThreadStatus{
+	callback("ThreadStatus", ThreadStatus{
 		WorkerID: workerID,
 		Status:   "hashing",
 		FilePath: filePath,
@@ -254,7 +275,7 @@ func uploadFile(ctx context.Context, api *Api, filePath string, workerID int, ap
 
 	// Stage 2: Checking if exists in library
 	if !AppConfig.ForceUpload {
-		app.Event.Emit("ThreadStatus", ThreadStatus{
+		callback("ThreadStatus", ThreadStatus{
 			WorkerID: workerID,
 			Status:   "checking",
 			FilePath: filePath,
@@ -267,7 +288,7 @@ func uploadFile(ctx context.Context, api *Api, filePath string, workerID int, ap
 			fmt.Println("Error checking for remote matches:", err)
 		}
 		if len(mediakey) > 0 {
-			app.Event.Emit("ThreadStatus", ThreadStatus{
+			callback("ThreadStatus", ThreadStatus{
 				WorkerID: workerID,
 				Status:   "completed",
 				FilePath: filePath,
@@ -296,7 +317,7 @@ func uploadFile(ctx context.Context, api *Api, filePath string, workerID int, ap
 	}
 
 	// Stage 3: Uploading
-	app.Event.Emit("ThreadStatus", ThreadStatus{
+	callback("ThreadStatus", ThreadStatus{
 		WorkerID: workerID,
 		Status:   "uploading",
 		FilePath: filePath,
@@ -316,7 +337,7 @@ func uploadFile(ctx context.Context, api *Api, filePath string, workerID int, ap
 	}
 
 	// Stage 4: Finalizing
-	app.Event.Emit("ThreadStatus", ThreadStatus{
+	callback("ThreadStatus", ThreadStatus{
 		WorkerID: workerID,
 		Status:   "finalizing",
 		FilePath: filePath,
@@ -341,11 +362,11 @@ func uploadFile(ctx context.Context, api *Api, filePath string, workerID int, ap
 
 }
 
-func startUploadWorker(workerID int, workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app *application.App) {
+func startUploadWorker(workerID int, workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app AppInterface) {
 	defer wg.Done()
 
 	// Emit idle status initially
-	app.Event.Emit("ThreadStatus", ThreadStatus{
+	app.EmitEvent("ThreadStatus", ThreadStatus{
 		WorkerID: workerID,
 		Status:   "idle",
 		Message:  "Waiting for files...",
@@ -354,7 +375,7 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 	for path := range workChan {
 		select {
 		case <-cancel:
-			app.Event.Emit("ThreadStatus", ThreadStatus{
+			app.EmitEvent("ThreadStatus", ThreadStatus{
 				WorkerID: workerID,
 				Status:   "idle",
 				Message:  "Cancelled",
@@ -370,7 +391,7 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 			api, err := NewApi()
 			if err != nil {
 				results <- FileUploadResult{IsError: true, Error: err, Path: path}
-				app.Event.Emit("ThreadStatus", ThreadStatus{
+				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
 					Status:   "error",
 					FilePath: path,
@@ -379,10 +400,15 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 				})
 				continue
 			}
-			mediaKey, err := uploadFile(ctx, api, path, workerID, app)
+
+			// Create callback from app interface
+			callback := func(event string, data any) {
+				app.EmitEvent(event, data)
+			}
+			mediaKey, err := uploadFileWithCallback(ctx, api, path, workerID, callback)
 			if err != nil {
 				results <- FileUploadResult{IsError: true, Error: err, Path: path}
-				app.Event.Emit("ThreadStatus", ThreadStatus{
+				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
 					Status:   "error",
 					FilePath: path,
@@ -391,7 +417,7 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 				})
 			} else {
 				results <- FileUploadResult{IsError: false, Path: path, MediaKey: mediaKey}
-				app.Event.Emit("ThreadStatus", ThreadStatus{
+				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
 					Status:   "completed",
 					FilePath: path,
@@ -402,7 +428,7 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 			cancelUpload()
 
 			// Mark as idle after completing file
-			app.Event.Emit("ThreadStatus", ThreadStatus{
+			app.EmitEvent("ThreadStatus", ThreadStatus{
 				WorkerID: workerID,
 				Status:   "idle",
 				Message:  "Waiting for next file...",
@@ -411,7 +437,7 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 	}
 
 	// Final idle status when no more work
-	app.Event.Emit("ThreadStatus", ThreadStatus{
+	app.EmitEvent("ThreadStatus", ThreadStatus{
 		WorkerID: workerID,
 		Status:   "idle",
 		Message:  "Finished",
