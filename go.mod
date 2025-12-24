@@ -3,7 +3,7 @@ module app
 go 1.25
 
 require (
-	github.com/charmbracelet/bubbles v0.21.0
+	github.com/charmbracelet/bubbles v0.21.1-0.20250623103423-23b8fd6302d7
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
@@ -11,7 +11,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.0
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.3.0
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.35
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.51
 	google.golang.org/protobuf v1.36.10
 )
 
@@ -64,12 +64,11 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/pjbgf/sha1cd v0.4.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/samber/lo v1.51.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
-	github.com/wailsapp/go-webview2 v1.0.21 // indirect
+	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect

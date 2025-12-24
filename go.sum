@@ -15,8 +15,8 @@ github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiE
 github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
 github.com/bep/debounce v1.2.1 h1:v67fRdBA9UQu2NhLFXrSg0Brw7CexQekrBwDMM8bzeY=
 github.com/bep/debounce v1.2.1/go.mod h1:H8yggRPQKLUhUoqrJC1bO2xNya7vanpDl7xR3ISbCJ0=
-github.com/charmbracelet/bubbles v0.21.0 h1:9TdC97SdRVg/1aaXNVWfFH3nnLAwOXr8Fn6u6mfQdFs=
-github.com/charmbracelet/bubbles v0.21.0/go.mod h1:HF+v6QUR4HkEpz62dx7ym2xc71/KBHg+zKwJtMw+qtg=
+github.com/charmbracelet/bubbles v0.21.1-0.20250623103423-23b8fd6302d7 h1:JFgG/xnwFfbezlUnFMJy0nusZvytYysV4SCS2cYbvws=
+github.com/charmbracelet/bubbles v0.21.1-0.20250623103423-23b8fd6302d7/go.mod h1:ISC1gtLcVilLOf23wvTfoQuYbW2q0JevFxPfUzZ9Ybw=
 github.com/charmbracelet/bubbletea v1.3.10 h1:otUDHWMMzQSB0Pkc87rm691KZ3SWa4KUlvF9nRvCICw=
 github.com/charmbracelet/bubbletea v1.3.10/go.mod h1:ORQfo0fk8U+po9VaNvnV95UPWA1BitP1E0N6xJPlHr4=
 github.com/charmbracelet/colorprofile v0.3.2 h1:9J27WdztfJQVAQKX2WOlSSRB+5gaKqqITmrvb1uTIiI=
@@ -163,12 +163,12 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/wailsapp/go-webview2 v1.0.21 h1:k3dtoZU4KCoN/AEIbWiPln3P2661GtA2oEgA2Pb+maA=
-github.com/wailsapp/go-webview2 v1.0.21/go.mod h1:qJmWAmAmaniuKGZPWwne+uor3AHMB5PFhqiK0Bbj8kc=
+github.com/wailsapp/go-webview2 v1.0.22 h1:YT61F5lj+GGaat5OB96Aa3b4QA+mybD0Ggq6NZijQ58=
+github.com/wailsapp/go-webview2 v1.0.22/go.mod h1:qJmWAmAmaniuKGZPWwne+uor3AHMB5PFhqiK0Bbj8kc=
 github.com/wailsapp/mimetype v1.4.1 h1:pQN9ycO7uo4vsUUuPeHEYoUkLVkaRntMnHJxVwYhwHs=
 github.com/wailsapp/mimetype v1.4.1/go.mod h1:9aV5k31bBOv5z6u+QP8TltzvNGJPmNJD4XlAL3U+j3o=
-github.com/wailsapp/wails/v3 v3.0.0-alpha.35 h1:K13yENsIKylCihm57kFhvt9jQIl+rxUZQkl4cjR6Ucw=
-github.com/wailsapp/wails/v3 v3.0.0-alpha.35/go.mod h1:UZpnhYuju4saspCJrIHAvC0H5XjtKnqd26FRxJLrQ0M=
+github.com/wailsapp/wails/v3 v3.0.0-alpha.51 h1:n8KT0H4lvtWld9tMIiHVX4nrR0wEMT2zy5hM/R6luMU=
+github.com/wailsapp/wails/v3 v3.0.0-alpha.51/go.mod h1:yaz8baG0+YzoiN8J6osn0wKiEi0iUux0ZU5NsZFu6OQ=
 github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM=
 github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI1Bc68Uw=
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e h1:JVG44RsyaB9T2KIHavMF/ppJZNG9ZpyihvCd0w101no=

@@ -6,3 +6,4 @@ build/linux/appimage/build
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
 config.yaml
 wails_windows_amd64.syso
+.claude/settings.local.json
