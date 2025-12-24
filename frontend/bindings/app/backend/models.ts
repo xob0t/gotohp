@@ -66,5 +66,96 @@ export class Config {
     }
 }
 
+export class FileUploadResult {
+    "MediaKey": string;
+    "IsError": boolean;
+    "Path": string;
+
+    /** Creates a new FileUploadResult instance. */
+    constructor($$source: Partial<FileUploadResult> = {}) {
+        if (!("MediaKey" in $$source)) {
+            this["MediaKey"] = "";
+        }
+        if (!("IsError" in $$source)) {
+            this["IsError"] = false;
+        }
+        if (!("Path" in $$source)) {
+            this["Path"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FileUploadResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): FileUploadResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new FileUploadResult($$parsedSource as Partial<FileUploadResult>);
+    }
+}
+
+export class ThreadStatus {
+    "WorkerID": number;
+
+    /**
+     * "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
+     */
+    "Status": string;
+    "FilePath": string;
+    "FileName": string;
+    "Message": string;
+
+    /** Creates a new ThreadStatus instance. */
+    constructor($$source: Partial<ThreadStatus> = {}) {
+        if (!("WorkerID" in $$source)) {
+            this["WorkerID"] = 0;
+        }
+        if (!("Status" in $$source)) {
+            this["Status"] = "";
+        }
+        if (!("FilePath" in $$source)) {
+            this["FilePath"] = "";
+        }
+        if (!("FileName" in $$source)) {
+            this["FileName"] = "";
+        }
+        if (!("Message" in $$source)) {
+            this["Message"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ThreadStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ThreadStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ThreadStatus($$parsedSource as Partial<ThreadStatus>);
+    }
+}
+
+export class UploadBatchStart {
+    "Total": number;
+
+    /** Creates a new UploadBatchStart instance. */
+    constructor($$source: Partial<UploadBatchStart> = {}) {
+        if (!("Total" in $$source)) {
+            this["Total"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UploadBatchStart instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UploadBatchStart {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UploadBatchStart($$parsedSource as Partial<UploadBatchStart>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = $Create.Array($Create.Any);

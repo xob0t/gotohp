@@ -1,17 +1,16 @@
 import { Clipboard, Events } from "@wailsio/runtime";
 import { reactive } from "vue";
+import type {
+  ThreadStatus,
+  FileUploadResult,
+  UploadBatchStart,
+} from "../../bindings/app/backend/models";
+
+export type { ThreadStatus, FileUploadResult, UploadBatchStart };
 
 export interface UploadSuccess {
   path: string;
   mediaKey: string;
-}
-
-export interface ThreadStatus {
-  WorkerID: number;
-  Status: string; // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
-  FilePath: string;
-  FileName: string;
-  Message: string;
 }
 
 export interface UploadState {

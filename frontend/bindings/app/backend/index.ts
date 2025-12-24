@@ -7,5 +7,8 @@ export {
 };
 
 export {
-    Config
+    Config,
+    FileUploadResult,
+    ThreadStatus,
+    UploadBatchStart
 } from "./models.js";
