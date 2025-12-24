@@ -13,6 +13,14 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+func init() {
+	application.RegisterEvent[UploadBatchStart]("uploadStart")
+	application.RegisterEvent[application.Void]("uploadStop")
+	application.RegisterEvent[FileUploadResult]("FileStatus")
+	application.RegisterEvent[ThreadStatus]("ThreadStatus")
+	application.RegisterEvent[application.Void]("uploadCancel")
+}
+
 // ProgressCallback is a function type for upload progress updates
 type ProgressCallback func(event string, data any)
 
@@ -41,22 +49,22 @@ func (m *UploadManager) Cancel() {
 }
 
 type UploadBatchStart struct {
-	Total int
+	Total int `json:"Total"`
 }
 
 type FileUploadResult struct {
-	MediaKey string
-	IsError  bool
-	Error    error
-	Path     string
+	MediaKey string `json:"MediaKey"`
+	IsError  bool   `json:"IsError"`
+	Error    error  `json:"-"`
+	Path     string `json:"Path"`
 }
 
 type ThreadStatus struct {
-	WorkerID int
-	Status   string // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
-	FilePath string
-	FileName string
-	Message  string
+	WorkerID int    `json:"WorkerID"`
+	Status   string `json:"Status"` // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
+	FilePath string `json:"FilePath"`
+	FileName string `json:"FileName"`
+	Message  string `json:"Message"`
 }
 
 func (m *UploadManager) Upload(app AppInterface, paths []string) {
