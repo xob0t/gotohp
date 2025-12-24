@@ -1,5 +1,5 @@
+import { Clipboard, Events } from "@wailsio/runtime";
 import { reactive } from "vue";
-import { Events, Clipboard } from "@wailsio/runtime";
 
 export interface UploadSuccess {
   path: string;
@@ -58,8 +58,8 @@ class UploadManager {
 
   private setupEventListeners() {
     // Handle upload start
-    Events.On("uploadStart", (event: { data: Array<{ Total: number }> }) => {
-      this.state.totalFiles = event.data[0].Total;
+    Events.On("uploadStart", (event: { data: { Total: number } }) => {
+      this.state.totalFiles = event.data.Total;
       this.state.uploadedFiles = 0;
       this.state.isUploading = true;
       this.state.threads.clear();
@@ -67,14 +67,13 @@ class UploadManager {
     });
 
     // Handle thread status updates
-    Events.On("ThreadStatus", (event: { data: Array<ThreadStatus> }) => {
-      const threadStatus = event.data[0];
-      this.state.threads.set(threadStatus.WorkerID, threadStatus);
+    Events.On("ThreadStatus", (event: { data: ThreadStatus }) => {
+      this.state.threads.set(event.data.WorkerID, event.data);
     });
 
     // Handle file status updates
-    Events.On("FileStatus", (event: { data: Array<{ IsError: boolean; Path: string; MediaKey: string }> }) => {
-      const { IsError, Path, MediaKey } = event.data[0];
+    Events.On("FileStatus", (event: { data: { IsError: boolean; Path: string; MediaKey: string } }) => {
+      const { IsError, Path, MediaKey } = event.data;
 
       if (!IsError) {
         this.state.uploadedFiles += 1;
