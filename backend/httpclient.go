@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"math/rand"
 	"net/http"
 	"net/url"
 	"time"
@@ -57,11 +58,13 @@ func ShouldRetry(resp *http.Response, err error) bool {
 	return resp.StatusCode >= 500 || resp.StatusCode == 429
 }
 
-// CalculateBackoff returns the delay for a given attempt (exponential backoff)
+// CalculateBackoff returns the delay for a given attempt (exponential backoff with jitter)
 func CalculateBackoff(attempt int, config RetryConfig) time.Duration {
 	delay := config.InitialDelay * time.Duration(1<<uint(attempt))
 	if delay > config.MaxDelay {
 		delay = config.MaxDelay
 	}
-	return delay
+	// Add up to 10% jitter to prevent thundering herd
+	jitter := time.Duration(rand.Int63n(int64(delay / 10)))
+	return delay + jitter
 }

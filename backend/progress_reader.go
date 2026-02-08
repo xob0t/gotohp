@@ -51,9 +51,3 @@ func (pr *ProgressReader) Read(p []byte) (n int, err error) {
 func (pr *ProgressReader) BytesRead() int64 {
 	return pr.read.Load()
 }
-
-// Reset resets the read counter (useful for retries).
-func (pr *ProgressReader) Reset() {
-	pr.read.Store(0)
-	pr.lastEmit = time.Time{}
-}

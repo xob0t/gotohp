@@ -288,7 +288,14 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 
 		mediakey, err = api.FindRemoteMediaByHash(sha1_hash_bytes)
 		if err != nil {
-			fmt.Println("Error checking for remote matches:", err)
+			// Non-fatal: log via callback and continue with upload
+			callback("ThreadStatus", ThreadStatus{
+				WorkerID: workerID,
+				Status:   "checking",
+				FilePath: filePath,
+				FileName: fileName,
+				Message:  fmt.Sprintf("Hash check warning: %v, proceeding with upload", err),
+			})
 		}
 		if len(mediakey) > 0 {
 			callback("ThreadStatus", ThreadStatus{
@@ -299,22 +306,15 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 				Message:  "Already in library",
 			})
 			if AppConfig.DeleteFromHost {
-				err = os.Remove(filePath)
-				if err != nil {
-					fmt.Println("Error deleting file:", err)
+				if err := os.Remove(filePath); err != nil {
+					return mediakey, fmt.Errorf("file exists in library but failed to delete local copy: %w", err)
 				}
 			}
 			return mediakey, nil
 		}
 	}
 
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", fmt.Errorf("error opening file: %w", err)
-	}
-	fileInfo, err := file.Stat()
-	file.Close()
-
+	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		return "", fmt.Errorf("error getting file info: %w", err)
 	}
@@ -379,7 +379,9 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 	}
 
 	if AppConfig.DeleteFromHost {
-		os.Remove(filePath)
+		if err := os.Remove(filePath); err != nil {
+			return mediaKey, fmt.Errorf("uploaded successfully but failed to delete file: %w", err)
+		}
 	}
 
 	return mediaKey, nil
@@ -408,8 +410,12 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 		default:
 			ctx, cancelUpload := context.WithCancel(context.Background())
 			go func() {
-				<-cancel // If global cancel happens, cancel this upload
-				cancelUpload()
+				select {
+				case <-cancel:
+					cancelUpload()
+				case <-ctx.Done():
+					// Upload completed or context cancelled
+				}
 			}()
 
 			api, err := NewApi()

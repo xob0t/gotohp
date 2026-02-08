@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -55,7 +54,7 @@ func NewApi() (*Api, error) {
 	}
 
 	if len(credentials) == 0 {
-		return nil, fmt.Errorf("no credentials with matching selcted email found")
+		return nil, fmt.Errorf("no credentials with matching selected email found")
 	}
 
 	client, err := NewHTTPClientWithProxy(AppConfig.Proxy)
@@ -353,7 +352,7 @@ func (a *Api) FindRemoteMediaByHash(shaHash []byte) (string, error) {
 
 	var pbResp generated.RemoteMatches
 	if err := proto.Unmarshal(bodyBytes, &pbResp); err != nil {
-		log.Fatalf("Failed to unmarshal protobuf: %v", err)
+		return "", fmt.Errorf("failed to unmarshal protobuf: %w", err)
 	}
 
 	mediaKey := pbResp.GetMediaKey()
@@ -462,12 +461,7 @@ func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.R
 	}
 	defer resp.Body.Close()
 
-	// Check if we should retry based on status code
-	if ShouldRetry(resp, nil) {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
+	// Check for non-success status codes (includes retryable 5xx/429 and non-retryable 4xx)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
