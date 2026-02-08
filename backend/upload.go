@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 
@@ -163,35 +162,28 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	}()
 }
 
+// supportedFormats is a map of file extensions supported by Google Photos (O(1) lookup)
+var supportedFormats = map[string]bool{
+	// Photo formats
+	"avif": true, "bmp": true, "gif": true, "heic": true, "ico": true,
+	"jpg": true, "jpeg": true, "png": true, "tiff": true, "webp": true,
+	"cr2": true, "cr3": true, "nef": true, "arw": true, "orf": true,
+	"raf": true, "rw2": true, "pef": true, "sr2": true, "dng": true,
+	// Video formats
+	"3gp": true, "3g2": true, "asf": true, "avi": true, "divx": true,
+	"m2t": true, "m2ts": true, "m4v": true, "mkv": true, "mmv": true,
+	"mod": true, "mov": true, "mp4": true, "mpg": true, "mpeg": true,
+	"mts": true, "tod": true, "wmv": true, "ts": true,
+}
+
 // isSupportedByGooglePhotos checks if a file extension is supported by Google Photos
 func isSupportedByGooglePhotos(filename string) bool {
-	// Convert to lowercase for case-insensitive comparison
 	ext := strings.ToLower(filepath.Ext(filename))
 	if ext == "" {
 		return false
 	}
-
-	// Remove the dot from the extension
-	ext = ext[1:]
-
-	// Supported photo formats
-	photoFormats := []string{
-		"avif", "bmp", "gif", "heic", "ico",
-		"jpg", "jpeg", "png", "tiff", "webp",
-		"cr2", "cr3", "nef", "arw", "orf",
-		"raf", "rw2", "pef", "sr2", "dng",
-	}
-
-	// Supported video formats
-	videoFormats := []string{
-		"3gp", "3g2", "asf", "avi", "divx",
-		"m2t", "m2ts", "m4v", "mkv", "mmv",
-		"mod", "mov", "mp4", "mpg", "mpeg",
-		"mts", "tod", "wmv", "ts",
-	}
-
-	// Check if extension is in either supported format
-	return slices.Contains(photoFormats, ext) || slices.Contains(videoFormats, ext)
+	// Remove the dot and check map
+	return supportedFormats[ext[1:]]
 }
 
 func scanDirectoryForFiles(path string, recursive bool) ([]string, error) {
@@ -413,6 +405,22 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 		Message:  "Waiting for files...",
 	})
 
+	// Create API client once per worker for connection reuse
+	api, err := NewApi()
+	if err != nil {
+		app.EmitEvent("ThreadStatus", ThreadStatus{
+			WorkerID: workerID,
+			Status:   "error",
+			Message:  fmt.Sprintf("Failed to initialize API: %v", err),
+		})
+		return
+	}
+
+	// Create callback from app interface (reuse for all files)
+	callback := func(event string, data any) {
+		app.EmitEvent(event, data)
+	}
+
 	for path := range workChan {
 		select {
 		case <-cancel:
@@ -433,23 +441,6 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 				}
 			}()
 
-			api, err := NewApi()
-			if err != nil {
-				results <- FileUploadResult{IsError: true, Error: err, Path: path}
-				app.EmitEvent("ThreadStatus", ThreadStatus{
-					WorkerID: workerID,
-					Status:   "error",
-					FilePath: path,
-					FileName: filepath.Base(path),
-					Message:  fmt.Sprintf("API error: %v", err),
-				})
-				continue
-			}
-
-			// Create callback from app interface
-			callback := func(event string, data any) {
-				app.EmitEvent(event, data)
-			}
 			mediaKey, err := uploadFileWithCallback(ctx, api, path, workerID, callback)
 			if err != nil {
 				results <- FileUploadResult{IsError: true, Error: err, Path: path}

@@ -12,6 +12,12 @@ func NewHTTPClientWithProxy(proxyURLStr string) (*http.Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = false
 
+	// Configure connection pooling for concurrent uploads
+	transport.MaxIdleConns = 100
+	transport.MaxIdleConnsPerHost = 10
+	transport.MaxConnsPerHost = 10
+	transport.IdleConnTimeout = 90 * time.Second
+
 	// Configure proxy if provided
 	if proxyURLStr != "" {
 		proxyURL, err := url.Parse(proxyURLStr)
