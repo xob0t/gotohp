@@ -253,14 +253,6 @@ func UploadFile(ctx context.Context, api *Api, filePath string, workerID int, ca
 	return uploadFileWithCallback(ctx, api, filePath, workerID, callback)
 }
 
-func uploadFile(ctx context.Context, api *Api, filePath string, workerID int, app *application.App) (string, error) {
-	// Create a callback that emits Wails events
-	callback := func(event string, data any) {
-		app.Event.Emit(event, data)
-	}
-	return uploadFileWithCallback(ctx, api, filePath, workerID, callback)
-}
-
 func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, workerID int, callback ProgressCallback) (string, error) {
 	fileName := filepath.Base(filePath)
 	mediakey := ""

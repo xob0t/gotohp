@@ -42,43 +42,43 @@ func ParseAuthString(authString string) (url.Values, error) {
 
 func (g *ConfigManager) SetProxy(proxy string) {
 	AppConfig.Proxy = proxy
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) SetSelected(email string) {
 	// Parse the auth string
 	AppConfig.Selected = email
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) SetUseQuota(useQuota bool) {
 	AppConfig.UseQuota = useQuota
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) SetSaver(saver bool) {
 	AppConfig.Saver = saver
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) SetRecursive(recursive bool) {
 	AppConfig.Recursive = recursive
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) SetForceUpload(forceUpload bool) {
 	AppConfig.ForceUpload = forceUpload
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) SetDeleteFromHost(deleteFromHost bool) {
 	AppConfig.DeleteFromHost = deleteFromHost
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter bool) {
 	AppConfig.DisableUnsupportedFilesFilter = disableUnsupportedFilesFilter
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
@@ -86,7 +86,7 @@ func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
 		return
 	}
 	AppConfig.UploadThreads = uploadThreads
-	saveAppConfig()
+	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) AddCredentials(newAuthString string) error {
@@ -138,7 +138,7 @@ func (g *ConfigManager) AddCredentials(newAuthString string) error {
 	// If validation passed, add the new credentials
 	AppConfig.Credentials = append(AppConfig.Credentials, newAuthString)
 	AppConfig.Selected = email
-	saveAppConfig()
+	_ = saveAppConfig()
 	return nil
 }
 
@@ -177,7 +177,7 @@ func (g *ConfigManager) RemoveCredentials(email string) error {
 		AppConfig.Selected = ""
 	}
 
-	saveAppConfig()
+	_ = saveAppConfig()
 	return nil
 }
 
@@ -211,7 +211,7 @@ func getUserConfigDir() string {
 func (g *ConfigManager) GetConfig() Config {
 	// Don't reload if already loaded
 	if len(AppConfig.Credentials) == 0 && AppConfig.UploadThreads == 0 {
-		LoadConfig()
+		_ = LoadConfig()
 	}
 	return AppConfig
 }
@@ -238,7 +238,9 @@ func saveAppConfig() error {
 		fmt.Println(err)
 		return err
 	}
-	os.MkdirAll(filepath.Dir(ConfigPath), 0755)
+	if err := os.MkdirAll(filepath.Dir(ConfigPath), 0755); err != nil {
+		return err
+	}
 	b, err := k.Marshal(yaml.Parser())
 	if err != nil {
 		fmt.Println(err)

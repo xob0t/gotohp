@@ -88,7 +88,7 @@ func runCLI() {
 				config.disableUnsupportedFilesFilter = true
 			case "--threads", "-t":
 				if i+1 < len(os.Args) {
-					fmt.Sscanf(os.Args[i+1], "%d", &config.threads)
+					_, _ = fmt.Sscanf(os.Args[i+1], "%d", &config.threads)
 					i++
 				}
 			case "--log-level", "-l":
