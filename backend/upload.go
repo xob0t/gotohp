@@ -19,6 +19,7 @@ func init() {
 	application.RegisterEvent[FileUploadResult]("FileStatus")
 	application.RegisterEvent[ThreadStatus]("ThreadStatus")
 	application.RegisterEvent[application.Void]("uploadCancel")
+	application.RegisterEvent[int64]("uploadTotalBytes")
 }
 
 // ProgressCallback is a function type for upload progress updates
@@ -92,18 +93,22 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		return
 	}
 
-	// Calculate total bytes for all files
-	var totalBytes int64
-	for _, path := range targetPaths {
-		if info, err := os.Stat(path); err == nil {
-			totalBytes += info.Size()
-		}
-	}
-
+	// Emit uploadStart immediately with TotalBytes=0 for responsive UI
 	app.EmitEvent("uploadStart", UploadBatchStart{
 		Total:      len(targetPaths),
-		TotalBytes: totalBytes,
+		TotalBytes: 0,
 	})
+
+	// Calculate total bytes asynchronously and emit update when complete
+	go func() {
+		var totalBytes int64
+		for _, path := range targetPaths {
+			if info, err := os.Stat(path); err == nil {
+				totalBytes += info.Size()
+			}
+		}
+		app.EmitEvent("uploadTotalBytes", totalBytes)
+	}()
 
 	if AppConfig.UploadThreads < 1 {
 		AppConfig.UploadThreads = 1

@@ -94,7 +94,7 @@ class UploadManager {
     // Handle upload start
     Events.On("uploadStart", (event: { data: UploadBatchStart }) => {
       this.state.totalFiles = event.data.Total;
-      this.state.totalBytes = event.data.TotalBytes;
+      this.state.totalBytes = event.data.TotalBytes; // May be 0 initially
       this.state.uploadedFiles = 0;
       this.state.uploadedBytes = 0;
       this.state.isUploading = true;
@@ -107,6 +107,11 @@ class UploadManager {
       this.completedBytes = 0;
       this.lastThreadBytes.clear();
       this.resetUploadResults();
+    });
+
+    // Handle async total bytes update (calculated after uploadStart)
+    Events.On("uploadTotalBytes", (event: { data: number }) => {
+      this.state.totalBytes = event.data;
     });
 
     // Handle thread status updates

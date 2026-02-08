@@ -17,6 +17,7 @@ declare module "@wailsio/runtime" {
             "uploadCancel": void;
             "uploadStart": backend$0.UploadBatchStart;
             "uploadStop": void;
+            "uploadTotalBytes": number;
         }
     }
 }
