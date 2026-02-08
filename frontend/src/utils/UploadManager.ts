@@ -20,6 +20,7 @@ export interface FileUploadResult {
 
 export interface UploadBatchStart {
   Total: number;
+  TotalBytes: number;
 }
 
 export interface UploadSuccess {
@@ -36,6 +37,13 @@ export interface UploadState {
     success: UploadSuccess[];
     fail: string[];
   };
+  // Byte tracking
+  totalBytes: number;
+  uploadedBytes: number;
+  // Timing
+  startTime: number;
+  // Speed calculation (bytes per second)
+  uploadSpeed: number;
 }
 
 class UploadManager {
@@ -51,7 +59,20 @@ class UploadManager {
       success: [],
       fail: [],
     },
+    totalBytes: 0,
+    uploadedBytes: 0,
+    startTime: 0,
+    uploadSpeed: 0,
   });
+
+  // For speed calculation
+  private lastSpeedUpdate: number = 0;
+  private lastBytesUploaded: number = 0;
+  private speedSamples: number[] = [];
+  // Track bytes from completed files
+  private completedBytes: number = 0;
+  // Track the last known BytesTotal for each worker to detect file completion
+  private lastThreadBytes: Map<number, number> = new Map();
 
   private constructor() {
     // Bind all methods to ensure 'this' context is preserved
@@ -71,17 +92,38 @@ class UploadManager {
 
   private setupEventListeners() {
     // Handle upload start
-    Events.On("uploadStart", (event: { data: { Total: number } }) => {
+    Events.On("uploadStart", (event: { data: UploadBatchStart }) => {
       this.state.totalFiles = event.data.Total;
+      this.state.totalBytes = event.data.TotalBytes;
       this.state.uploadedFiles = 0;
+      this.state.uploadedBytes = 0;
       this.state.isUploading = true;
       this.state.threads.clear();
+      this.state.startTime = Date.now();
+      this.state.uploadSpeed = 0;
+      this.lastSpeedUpdate = Date.now();
+      this.lastBytesUploaded = 0;
+      this.speedSamples = [];
+      this.completedBytes = 0;
+      this.lastThreadBytes.clear();
       this.resetUploadResults();
     });
 
     // Handle thread status updates
     Events.On("ThreadStatus", (event: { data: ThreadStatus }) => {
-      this.state.threads.set(event.data.WorkerID, event.data);
+      const thread = event.data;
+      const prevThread = this.state.threads.get(thread.WorkerID);
+      
+      // Detect when a file upload completes (status changes from uploading to completed/idle/error)
+      if (prevThread && prevThread.Status === 'uploading' && thread.Status !== 'uploading') {
+        // Add the completed file's total bytes to completedBytes
+        if (prevThread.BytesTotal > 0) {
+          this.completedBytes += prevThread.BytesTotal;
+        }
+      }
+      
+      this.state.threads.set(thread.WorkerID, thread);
+      this.updateBytesAndSpeed();
     });
 
     // Handle file status updates
@@ -100,6 +142,43 @@ class UploadManager {
     Events.On("uploadStop", () => {
       this.state.isUploading = false;
     });
+  }
+
+  private updateBytesAndSpeed() {
+    // Calculate bytes from currently active uploads
+    let activeUploadedBytes = 0;
+
+    this.state.threads.forEach((thread) => {
+      if (thread.Status === 'uploading' && thread.BytesTotal > 0) {
+        activeUploadedBytes += thread.BytesUploaded;
+      }
+    });
+
+    // Total uploaded = completed files + current progress
+    const totalUploaded = this.completedBytes + activeUploadedBytes;
+    this.state.uploadedBytes = totalUploaded;
+
+    // Calculate speed (using rolling average)
+    const now = Date.now();
+    const timeDelta = now - this.lastSpeedUpdate;
+
+    if (timeDelta >= 500) { // Update speed every 500ms
+      const bytesDelta = totalUploaded - this.lastBytesUploaded;
+      const instantSpeed = (bytesDelta / timeDelta) * 1000; // bytes per second
+
+      if (instantSpeed >= 0) {
+        this.speedSamples.push(instantSpeed);
+        // Keep last 5 samples for smoothing
+        if (this.speedSamples.length > 5) {
+          this.speedSamples.shift();
+        }
+        // Calculate average speed
+        this.state.uploadSpeed = this.speedSamples.reduce((a, b) => a + b, 0) / this.speedSamples.length;
+      }
+
+      this.lastSpeedUpdate = now;
+      this.lastBytesUploaded = totalUploaded;
+    }
   }
 
   public resetUploadResults() {

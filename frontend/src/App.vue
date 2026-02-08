@@ -185,7 +185,7 @@ const handleCopyClick = () => {
     </div>
     <div
       v-if="uploadState.isUploading"
-      class="w-full"
+      class="w-full h-full"
     >
       <Upload />
     </div>

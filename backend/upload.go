@@ -49,7 +49,8 @@ func (m *UploadManager) Cancel() {
 }
 
 type UploadBatchStart struct {
-	Total int `json:"Total"`
+	Total      int   `json:"Total"`
+	TotalBytes int64 `json:"TotalBytes"`
 }
 
 type FileUploadResult struct {
@@ -91,8 +92,17 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		return
 	}
 
+	// Calculate total bytes for all files
+	var totalBytes int64
+	for _, path := range targetPaths {
+		if info, err := os.Stat(path); err == nil {
+			totalBytes += info.Size()
+		}
+	}
+
 	app.EmitEvent("uploadStart", UploadBatchStart{
-		Total: len(targetPaths),
+		Total:      len(targetPaths),
+		TotalBytes: totalBytes,
 	})
 
 	if AppConfig.UploadThreads < 1 {

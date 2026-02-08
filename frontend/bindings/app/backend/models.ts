@@ -105,6 +105,13 @@ export class ThreadStatus {
     "FilePath": string;
     "FileName": string;
     "Message": string;
+    "BytesUploaded": number;
+    "BytesTotal": number;
+
+    /**
+     * Current attempt number (1-based), 0 if not applicable
+     */
+    "Attempt": number;
 
     /** Creates a new ThreadStatus instance. */
     constructor($$source: Partial<ThreadStatus> = {}) {
@@ -123,6 +130,15 @@ export class ThreadStatus {
         if (!("Message" in $$source)) {
             this["Message"] = "";
         }
+        if (!("BytesUploaded" in $$source)) {
+            this["BytesUploaded"] = 0;
+        }
+        if (!("BytesTotal" in $$source)) {
+            this["BytesTotal"] = 0;
+        }
+        if (!("Attempt" in $$source)) {
+            this["Attempt"] = 0;
+        }
 
         Object.assign(this, $$source);
     }
@@ -138,11 +154,15 @@ export class ThreadStatus {
 
 export class UploadBatchStart {
     "Total": number;
+    "TotalBytes": number;
 
     /** Creates a new UploadBatchStart instance. */
     constructor($$source: Partial<UploadBatchStart> = {}) {
         if (!("Total" in $$source)) {
             this["Total"] = 0;
+        }
+        if (!("TotalBytes" in $$source)) {
+            this["TotalBytes"] = 0;
         }
 
         Object.assign(this, $$source);
