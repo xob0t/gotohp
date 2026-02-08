@@ -6,17 +6,16 @@ const props = defineProps<{
   thread: ThreadStatus
 }>()
 
-// Compute status color
 const statusColor = computed(() => {
   switch (props.thread.Status) {
     case 'error':
-      return 'text-red-500'
+      return 'text-destructive'
     case 'completed':
-      return 'text-green-500'
+      return 'text-primary'
     case 'uploading':
-      return 'text-blue-600'
+      return 'text-blue-500'
     case 'hashing':
-      return 'text-blue-400'
+      return 'text-cyan-500'
     case 'checking':
       return 'text-yellow-500'
     case 'finalizing':
@@ -26,7 +25,6 @@ const statusColor = computed(() => {
   }
 })
 
-// Compute status label
 const statusLabel = computed(() => {
   switch (props.thread.Status) {
     case 'hashing':
@@ -38,7 +36,7 @@ const statusLabel = computed(() => {
     case 'finalizing':
       return 'Finalizing'
     case 'completed':
-      return 'Completed'
+      return 'Done'
     case 'error':
       return 'Error'
     default:
@@ -48,32 +46,27 @@ const statusLabel = computed(() => {
 </script>
 
 <template>
-  <div class="flex items-center gap-1.5 px-2 py-1 border rounded bg-card text-[10px]">
-    <!-- Thread ID -->
-    <span class="font-semibold text-muted-foreground">
+  <div class="flex items-center gap-2 px-3 py-2 bg-card border rounded-md text-xs">
+    <span class="text-muted-foreground font-medium w-5">
       #{{ thread.WorkerID + 1 }}
     </span>
 
-    <!-- Status label -->
-    <span :class="['font-medium min-w-[3.5rem]', statusColor]">
+    <span :class="['font-medium w-16', statusColor]">
       {{ statusLabel }}
     </span>
 
-    <!-- File name -->
-    <div class="flex-1 min-w-0">
-      <span
-        v-if="thread.FileName"
-        class="truncate block"
-        :title="thread.FilePath"
-      >
-        {{ thread.FileName }}
-      </span>
-      <span
-        v-else
-        class="text-muted-foreground truncate block"
-      >
-        {{ thread.Message }}
-      </span>
-    </div>
+    <span
+      v-if="thread.FileName"
+      class="flex-1 truncate"
+      :title="thread.FilePath"
+    >
+      {{ thread.FileName }}
+    </span>
+    <span
+      v-else
+      class="flex-1 truncate text-muted-foreground"
+    >
+      {{ thread.Message }}
+    </span>
   </div>
 </template>
