@@ -1,9 +1,7 @@
 package backend
 
 import (
-	"log"
 	"log/slog"
-	"os"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -14,10 +12,6 @@ type WailsApp struct {
 }
 
 func NewWailsApp(app *application.App) *WailsApp {
-	// Set debug level for GUI mode
-	// Enable HTTP client debug logs
-	SetHTTPClientLogger(log.New(os.Stderr, "[HTTP] ", log.LstdFlags))
-
 	return &WailsApp{app: app}
 }
 

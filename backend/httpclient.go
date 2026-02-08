@@ -1,21 +1,10 @@
 package backend
 
 import (
-	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/hashicorp/go-retryablehttp"
 )
-
-var httpClientLogger *log.Logger
-
-// SetHTTPClientLogger sets the logger for the HTTP client
-func SetHTTPClientLogger(logger *log.Logger) {
-	httpClientLogger = logger
-}
 
 func NewHTTPClientWithProxy(proxyURLStr string) (*http.Client, error) {
 	// Create the base transport with default values
@@ -32,23 +21,47 @@ func NewHTTPClientWithProxy(proxyURLStr string) (*http.Client, error) {
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
-	// Create retryable client with proper configuration
-	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = 3
-	retryClient.RetryWaitMin = 1 * time.Second   // Start with 1 second
-	retryClient.RetryWaitMax = 30 * time.Second  // Maximum wait time
-	retryClient.HTTPClient.Transport = transport // Set transport here
-
-	// Configure logger based on global setting
-	if httpClientLogger != nil {
-		retryClient.Logger = httpClientLogger
-	} else {
-		// Default: disable logging
-		retryClient.Logger = log.New(io.Discard, "", 0)
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   0, // No timeout for large uploads - context handles cancellation
 	}
 
-	// Important: Configure the retry policy to retry on connection errors
-	retryClient.CheckRetry = retryablehttp.ErrorPropagatedRetryPolicy
+	return client, nil
+}
 
-	return retryClient.StandardClient(), nil
+// RetryConfig holds configuration for retry behavior
+type RetryConfig struct {
+	MaxRetries   int
+	InitialDelay time.Duration
+	MaxDelay     time.Duration
+}
+
+// DefaultRetryConfig returns sensible defaults for retries
+func DefaultRetryConfig() RetryConfig {
+	return RetryConfig{
+		MaxRetries:   3,
+		InitialDelay: 1 * time.Second,
+		MaxDelay:     30 * time.Second,
+	}
+}
+
+// ShouldRetry determines if an HTTP response warrants a retry
+func ShouldRetry(resp *http.Response, err error) bool {
+	if err != nil {
+		return true // Network errors should be retried
+	}
+	if resp == nil {
+		return true
+	}
+	// Retry on 5xx server errors and 429 (rate limit)
+	return resp.StatusCode >= 500 || resp.StatusCode == 429
+}
+
+// CalculateBackoff returns the delay for a given attempt (exponential backoff)
+func CalculateBackoff(attempt int, config RetryConfig) time.Duration {
+	delay := config.InitialDelay * time.Duration(1<<uint(attempt))
+	if delay > config.MaxDelay {
+		delay = config.MaxDelay
+	}
+	return delay
 }

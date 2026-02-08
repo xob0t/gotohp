@@ -361,21 +361,89 @@ func (a *Api) FindRemoteMediaByHash(shaHash []byte) (string, error) {
 	return mediaKey, nil
 }
 
+// UploadProgressCallback is called with progress updates during file upload
+// attempt is 1-based (1 = first attempt, 2 = first retry, etc.)
+type UploadProgressCallback func(bytesUploaded, bytesTotal int64, attempt int)
+
 func (a *Api) UploadFile(ctx context.Context, filePath string, uploadToken string) (*generated.CommitToken, error) {
-	file, err := os.Open(filePath)
+	return a.UploadFileWithProgress(ctx, filePath, uploadToken, nil)
+}
+
+func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploadToken string, onProgress UploadProgressCallback) (*generated.CommitToken, error) {
+	// Get file size first (needed for progress tracking)
+	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("error opening file: %w", err)
+		return nil, fmt.Errorf("error getting file info: %w", err)
 	}
-	defer file.Close()
+	fileSize := fileInfo.Size()
 
 	uploadURL := "https://photos.googleapis.com/data/upload/uploadmedia/interactive?upload_id=" + uploadToken
+	retryConfig := DefaultRetryConfig()
 
-	req, err := http.NewRequestWithContext(ctx, "PUT", uploadURL, file)
+	var lastErr error
+	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
+		attemptNum := attempt + 1 // 1-based for display
+
+		// Check context before each attempt
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		// Wait before retry (skip on first attempt)
+		if attempt > 0 {
+			delay := CalculateBackoff(attempt-1, retryConfig)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(delay):
+			}
+		}
+
+		// Signal start of this attempt (resets progress on retry)
+		if onProgress != nil {
+			onProgress(0, fileSize, attemptNum)
+		}
+
+		// Open file fresh for each attempt - this is the key to not loading into memory
+		file, err := os.Open(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("error opening file: %w", err)
+		}
+
+		// Wrap file in progress reader if callback provided
+		var reader io.Reader = file
+		if onProgress != nil {
+			reader = NewProgressReader(file, fileSize, func(bytesRead, total int64) {
+				onProgress(bytesRead, total, attemptNum)
+			})
+		}
+
+		result, err := a.doUploadRequest(ctx, uploadURL, reader)
+		file.Close() // Close file after request completes (success or fail)
+
+		if err == nil {
+			return result, nil
+		}
+
+		lastErr = err
+
+		// Don't retry on context cancellation
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+	}
+
+	return nil, fmt.Errorf("upload failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
+}
+
+// doUploadRequest performs a single upload attempt
+func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.Reader) (*generated.CommitToken, error) {
+	req, err := http.NewRequestWithContext(ctx, "PUT", uploadURL, reader)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
-	// Important: Don't set ContentLength to enable chunked transfer encoding
+	// Use chunked transfer encoding (don't set ContentLength)
 	req.ContentLength = -1
 
 	bearerToken, err := a.BearerToken()
@@ -383,22 +451,22 @@ func (a *Api) UploadFile(ctx context.Context, filePath string, uploadToken strin
 		return nil, fmt.Errorf("failed to get bearer token: %w", err)
 	}
 
-	headers := map[string]string{
-		"Accept-Encoding": "gzip",
-		"Accept-Language": a.language,
-		"User-Agent":      a.userAgent,
-		"Authorization":   "Bearer " + bearerToken,
-	}
-
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
+	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("Accept-Language", a.language)
+	req.Header.Set("User-Agent", a.userAgent)
+	req.Header.Set("Authorization", "Bearer "+bearerToken)
 
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Check if we should retry based on status code
+	if ShouldRetry(resp, nil) {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)

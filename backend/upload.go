@@ -60,11 +60,14 @@ type FileUploadResult struct {
 }
 
 type ThreadStatus struct {
-	WorkerID int    `json:"WorkerID"`
-	Status   string `json:"Status"` // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
-	FilePath string `json:"FilePath"`
-	FileName string `json:"FileName"`
-	Message  string `json:"Message"`
+	WorkerID      int    `json:"WorkerID"`
+	Status        string `json:"Status"` // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
+	FilePath      string `json:"FilePath"`
+	FileName      string `json:"FileName"`
+	Message       string `json:"Message"`
+	BytesUploaded int64  `json:"BytesUploaded"`
+	BytesTotal    int64  `json:"BytesTotal"`
+	Attempt       int    `json:"Attempt"` // Current attempt number (1-based), 0 if not applicable
 }
 
 func (m *UploadManager) Upload(app AppInterface, paths []string) {
@@ -317,20 +320,41 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 	}
 
 	// Stage 3: Uploading
+	fileSize := fileInfo.Size()
 	callback("ThreadStatus", ThreadStatus{
-		WorkerID: workerID,
-		Status:   "uploading",
-		FilePath: filePath,
-		FileName: fileName,
-		Message:  "Uploading...",
+		WorkerID:      workerID,
+		Status:        "uploading",
+		FilePath:      filePath,
+		FileName:      fileName,
+		Message:       "Uploading...",
+		BytesUploaded: 0,
+		BytesTotal:    fileSize,
 	})
 
-	token, err := api.GetUploadToken(sha1_hash_b64, fileInfo.Size())
+	token, err := api.GetUploadToken(sha1_hash_b64, fileSize)
 	if err != nil {
 		return "", fmt.Errorf("error uploading file: %w", err)
 	}
 
-	CommitToken, err := api.UploadFile(ctx, filePath, token)
+	// Create progress callback for upload
+	progressCallback := func(bytesUploaded, bytesTotal int64, attempt int) {
+		message := "Uploading..."
+		if attempt > 1 {
+			message = fmt.Sprintf("Retrying... (attempt %d)", attempt)
+		}
+		callback("ThreadStatus", ThreadStatus{
+			WorkerID:      workerID,
+			Status:        "uploading",
+			FilePath:      filePath,
+			FileName:      fileName,
+			Message:       message,
+			BytesUploaded: bytesUploaded,
+			BytesTotal:    bytesTotal,
+			Attempt:       attempt,
+		})
+	}
+
+	CommitToken, err := api.UploadFileWithProgress(ctx, filePath, token, progressCallback)
 	if err != nil {
 		return "", fmt.Errorf("error uploading file: %w", err)
 
