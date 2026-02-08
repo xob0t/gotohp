@@ -16,8 +16,13 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <Primitive data-slot="button" :as="as" :as-child="asChild" style="--wails-draggable: none"
-    :class="cn(`cursor-pointer`, buttonVariants({ variant, size }), props.class)">
+  <Primitive
+    data-slot="button"
+    :as="as"
+    :as-child="asChild"
+    style="--wails-draggable: none"
+    :class="cn(`cursor-pointer`, buttonVariants({ variant, size }), props.class)"
+  >
     <slot />
   </Primitive>
 </template>

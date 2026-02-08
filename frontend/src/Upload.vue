@@ -25,17 +25,26 @@ const threadsList = computed(() => {
       </span>
     </div>
     <div class="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
-      <div class="h-full bg-primary transition-all"
-        :style="{ width: state.totalFiles > 0 ? `${(state.uploadedFiles / state.totalFiles) * 100}%` : '0%' }" />
+      <div
+        class="h-full bg-primary transition-all"
+        :style="{ width: state.totalFiles > 0 ? `${(state.uploadedFiles / state.totalFiles) * 100}%` : '0%' }"
+      />
     </div>
 
     <!-- Cancel button -->
-    <Button variant="destructive" class="cursor-pointer w-full" @click="() => uploadManager.cancelUpload()">
+    <Button
+      variant="destructive"
+      class="cursor-pointer w-full"
+      @click="() => uploadManager.cancelUpload()"
+    >
       Cancel
     </Button>
 
     <!-- Thread progress list -->
-    <div v-if="threadsList.length > 0" class="w-full flex flex-col gap-1">
+    <div
+      v-if="threadsList.length > 0"
+      class="w-full flex flex-col gap-1"
+    >
       <ThreadProgress
         v-for="thread in threadsList"
         :key="thread.WorkerID"

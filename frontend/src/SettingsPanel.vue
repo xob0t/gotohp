@@ -89,42 +89,91 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-2.5 m-4">
-        <NumberField v-model="settings.uploadThreads" class="flex items-center justify-between">
-            <Label for="upload-threads" class="size-full">Upload Threads</Label>
-            <NumberFieldContent>
-                <NumberFieldDecrement class="cursor-pointer" :disabled="settings.uploadThreads <= 1" />
-                <NumberFieldInput />
-                <NumberFieldIncrement class="cursor-pointer" />
-            </NumberFieldContent>
-        </NumberField>
-        <div class="flex items-center justify-between">
-            <Label for="use-quota" class="size-full cursor-pointer">Use Quota</Label>
-            <Switch id="use-quota" v-model="settings.useQuota" />
-        </div>
-        <div class="flex items-center justify-between">
-            <Label for="saver-mode" class="size-full cursor-pointer">Storage Saver Quality</Label>
-            <Switch id="saver-mode" v-model="settings.saver" />
-        </div>
-        <div class="flex items-center justify-between">
-            <Label for="recursive" class="size-full cursor-pointer">Recursive Directory Upload</Label>
-            <Switch id="recursive" v-model="settings.recursive" />
-        </div>
-        <div class="flex items-center justify-between">
-            <Label for="force-upload" class="size-full cursor-pointer">Force Upload</Label>
-            <Switch id="force-upload" v-model="settings.forceUpload" />
-        </div>
-        <div class="flex items-center justify-between">
-            <Label for="filter-unsupported" class="size-full cursor-pointer">Disable Unsupported Files Filter</Label>
-            <Switch id="filter-unsupported" v-model="settings.disableUnsupportedFilesFilter" />
-        </div>
-        <div class="flex items-center justify-between">
-            <Label for="delete-host" class="size-full cursor-pointer">Delete From Host After Upload</Label>
-            <Switch id="delete-host" variant="destructive" v-model="settings.deleteFromHost" />
-        </div>
-        <div>
-            <Input v-model="settings.proxy" type="text" placeholder="Proxy URL (optional)" />
-        </div>
+  <div class="flex flex-col gap-2.5 m-4">
+    <NumberField
+      v-model="settings.uploadThreads"
+      class="flex items-center justify-between"
+    >
+      <Label
+        for="upload-threads"
+        class="size-full"
+      >Upload Threads</Label>
+      <NumberFieldContent>
+        <NumberFieldDecrement
+          class="cursor-pointer"
+          :disabled="settings.uploadThreads <= 1"
+        />
+        <NumberFieldInput />
+        <NumberFieldIncrement class="cursor-pointer" />
+      </NumberFieldContent>
+    </NumberField>
+    <div class="flex items-center justify-between">
+      <Label
+        for="use-quota"
+        class="size-full cursor-pointer"
+      >Use Quota</Label>
+      <Switch
+        id="use-quota"
+        v-model="settings.useQuota"
+      />
     </div>
-
+    <div class="flex items-center justify-between">
+      <Label
+        for="saver-mode"
+        class="size-full cursor-pointer"
+      >Storage Saver Quality</Label>
+      <Switch
+        id="saver-mode"
+        v-model="settings.saver"
+      />
+    </div>
+    <div class="flex items-center justify-between">
+      <Label
+        for="recursive"
+        class="size-full cursor-pointer"
+      >Recursive Directory Upload</Label>
+      <Switch
+        id="recursive"
+        v-model="settings.recursive"
+      />
+    </div>
+    <div class="flex items-center justify-between">
+      <Label
+        for="force-upload"
+        class="size-full cursor-pointer"
+      >Force Upload</Label>
+      <Switch
+        id="force-upload"
+        v-model="settings.forceUpload"
+      />
+    </div>
+    <div class="flex items-center justify-between">
+      <Label
+        for="filter-unsupported"
+        class="size-full cursor-pointer"
+      >Disable Unsupported Files Filter</Label>
+      <Switch
+        id="filter-unsupported"
+        v-model="settings.disableUnsupportedFilesFilter"
+      />
+    </div>
+    <div class="flex items-center justify-between">
+      <Label
+        for="delete-host"
+        class="size-full cursor-pointer"
+      >Delete From Host After Upload</Label>
+      <Switch
+        id="delete-host"
+        v-model="settings.deleteFromHost"
+        variant="destructive"
+      />
+    </div>
+    <div>
+      <Input
+        v-model="settings.proxy"
+        type="text"
+        placeholder="Proxy URL (optional)"
+      />
+    </div>
+  </div>
 </template>

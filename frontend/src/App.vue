@@ -62,10 +62,10 @@ async function addCredentials(authString: string) {
     }
     toast.success('Credentials added successfully!')
     return true
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to add credentials:', error)
     toast.error('Failed to add credentials', {
-      description: error?.message,
+      description: error instanceof Error ? error.message : String(error),
     })
     return false
   }
@@ -119,26 +119,43 @@ const handleCopyClick = () => {
 </script>
 
 <template>
-  <main class="w-screen h-screen flex flex-col items-center" style="--wails-draggable: drag">
-    <div v-if="!uploadState.isUploading" class="w-screen h-screen flex flex-col items-center gap-4 max-w-md pt-30"
-      data-file-drop-target>
+  <main
+    class="w-screen h-screen flex flex-col items-center"
+    style="--wails-draggable: drag"
+  >
+    <div
+      v-if="!uploadState.isUploading"
+      class="w-screen h-screen flex flex-col items-center gap-4 max-w-md pt-30"
+      data-file-drop-target
+    >
       <template v-if="options.length === 0">
-        <EditableSelect v-model="selectedOption" :options="options"
-          @update:options="(newOptions) => options = newOptions" @item-added="addCredentials"
-          @item-removed="removeCredentials" />
+        <EditableSelect
+          v-model="selectedOption"
+          :options="options"
+          @update:options="(newOptions) => options = newOptions"
+          @item-added="addCredentials"
+          @item-removed="removeCredentials"
+        />
       </template>
 
       <template v-else>
         <h1 class="text-xl font-semibold select-none">
           Drop files to upload
         </h1>
-        <EditableSelect v-model="selectedOption" :options="options"
-          @update:options="(newOptions) => options = newOptions" @item-added="addCredentials"
-          @item-removed="removeCredentials" />
+        <EditableSelect
+          v-model="selectedOption"
+          :options="options"
+          @update:options="(newOptions) => options = newOptions"
+          @item-added="addCredentials"
+          @item-removed="removeCredentials"
+        />
 
         <Sheet>
           <SheetTrigger>
-            <Button variant="outline" class="cursor-pointer select-none">
+            <Button
+              variant="outline"
+              class="cursor-pointer select-none"
+            >
               Settings
             </Button>
           </SheetTrigger>
@@ -147,17 +164,29 @@ const handleCopyClick = () => {
           </SheetContent>
         </Sheet>
 
-        <div v-if="uploadState.uploadedFiles > 0" class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-5">
-          <h2 class="text-l font-semibold select-none ">Upload Results</h2>
+        <div
+          v-if="uploadState.uploadedFiles > 0"
+          class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-5"
+        >
+          <h2 class="text-l font-semibold select-none ">
+            Upload Results
+          </h2>
           <Label class="text-muted-foreground">Successful: {{ uploadState.results.success.length }}</Label>
           <Label class="text-muted-foreground">Failed: {{ uploadState.results.fail.length }}</Label>
-          <Button variant="outline" class="cursor-pointer select-none min-w-[125px]" @click="handleCopyClick">
+          <Button
+            variant="outline"
+            class="cursor-pointer select-none min-w-[125px]"
+            @click="handleCopyClick"
+          >
             {{ copyButtonText }}
           </Button>
         </div>
       </template>
     </div>
-    <div v-if="uploadState.isUploading" class="w-full">
+    <div
+      v-if="uploadState.isUploading"
+      class="w-full"
+    >
       <Upload />
     </div>
     <Toaster position="bottom-center" />

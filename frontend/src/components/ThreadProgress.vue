@@ -61,10 +61,17 @@ const statusLabel = computed(() => {
 
     <!-- File name -->
     <div class="flex-1 min-w-0">
-      <span v-if="thread.FileName" class="truncate block" :title="thread.FilePath">
+      <span
+        v-if="thread.FileName"
+        class="truncate block"
+        :title="thread.FilePath"
+      >
         {{ thread.FileName }}
       </span>
-      <span v-else class="text-muted-foreground truncate block">
+      <span
+        v-else
+        class="text-muted-foreground truncate block"
+      >
         {{ thread.Message }}
       </span>
     </div>

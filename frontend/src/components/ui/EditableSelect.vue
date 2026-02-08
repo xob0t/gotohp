@@ -73,43 +73,73 @@ const removeOption = (index: number) => {
 </script>
 
 <template>
-    <!-- Show only the Add input when there are no options -->
-    <div v-if="internalOptions.length === 0" class="flex gap-2">
-        <Input v-model="newOption" placeholder="Add credentials" @keydown.enter="addOption" />
-        <Button type="button" @click="addOption" :disabled="!newOption.trim()">
-            Add
+  <!-- Show only the Add input when there are no options -->
+  <div
+    v-if="internalOptions.length === 0"
+    class="flex gap-2"
+  >
+    <Input
+      v-model="newOption"
+      placeholder="Add credentials"
+      @keydown.enter="addOption"
+    />
+    <Button
+      type="button"
+      :disabled="!newOption.trim()"
+      @click="addOption"
+    >
+      Add
+    </Button>
+  </div>
+
+  <!-- Show the Select dropdown when there are options -->
+  <Select
+    v-else
+    v-model="selectedValue"
+  >
+    <SelectTrigger class="select-none">
+      <SelectValue placeholder="Select Account" />
+    </SelectTrigger>
+    <SelectContent align="center">
+      <SelectGroup>
+        <template
+          v-for="(option, index) in internalOptions"
+          :key="index"
+        >
+          <div class="relative flex items-center">
+            <SelectItem :value="option">
+              <div class="flex w-full items-center justify-between">
+                <span class="truncate">{{ option }}</span>
+              </div>
+            </SelectItem>
+
+            <button
+              type="button"
+              class="absolute right-2 p-1 rounded hover:bg-destructive z-10 group cursor-pointer"
+              :title="`Remove ${option}`"
+              @click.stop.prevent="() => removeOption(index)"
+            >
+              <X class="h-3 w-3 text-muted-foreground group-hover:text-black" />
+            </button>
+          </div>
+        </template>
+      </SelectGroup>
+      <div class="p-2 flex gap-2">
+        <Input
+          v-model="newOption"
+          class="h-8 px-1"
+          placeholder="Credentials"
+          @keydown.enter="addOption"
+        />
+        <Button
+          size="sm"
+          type="button"
+          :disabled="!newOption.trim()"
+          @click="addOption"
+        >
+          Add
         </Button>
-    </div>
-
-    <!-- Show the Select dropdown when there are options -->
-    <Select v-else v-model="selectedValue">
-        <SelectTrigger class="select-none">
-            <SelectValue placeholder="Select Account" />
-        </SelectTrigger>
-        <SelectContent align="center">
-            <SelectGroup>
-                <template v-for="(option, index) in internalOptions" :key="index">
-                    <div class="relative flex items-center">
-                        <SelectItem :value="option">
-                            <div class="flex w-full items-center justify-between">
-                                <span class="truncate">{{ option }}</span>
-                            </div>
-                        </SelectItem>
-
-                        <button type="button" @click.stop.prevent="() => removeOption(index)"
-                            class="absolute right-2 p-1 rounded hover:bg-destructive z-10 group cursor-pointer"
-                            :title="`Remove ${option}`">
-                            <X class="h-3 w-3 text-muted-foreground group-hover:text-black" />
-                        </button>
-                    </div>
-                </template>
-            </SelectGroup>
-            <div class="p-2 flex gap-2">
-                <Input class="h-8 px-1" v-model="newOption" placeholder="Credentials" @keydown.enter="addOption" />
-                <Button size="sm" type="button" @click="addOption" :disabled="!newOption.trim()">
-                    Add
-                </Button>
-            </div>
-        </SelectContent>
-    </Select>
+      </div>
+    </SelectContent>
+  </Select>
 </template>

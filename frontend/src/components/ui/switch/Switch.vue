@@ -40,14 +40,21 @@ const effectiveThumbSize = computed(() => props.thumbSize || props.size)
 </script>
 
 <template>
-  <SwitchRoot data-slot="switch" v-bind="forwarded" :class="cn(
-    'cursor-pointer',
-    switchVariants({ variant, size }),
-    props.class,
-  )">
-    <SwitchThumb data-slot="switch-thumb" :class="cn(
-      switchThumbVariants({ variant: effectiveThumbVariant, size: effectiveThumbSize })
-    )">
+  <SwitchRoot
+    data-slot="switch"
+    v-bind="forwarded"
+    :class="cn(
+      'cursor-pointer',
+      switchVariants({ variant, size }),
+      props.class,
+    )"
+  >
+    <SwitchThumb
+      data-slot="switch-thumb"
+      :class="cn(
+        switchThumbVariants({ variant: effectiveThumbVariant, size: effectiveThumbSize })
+      )"
+    >
       <slot name="thumb" />
     </SwitchThumb>
   </SwitchRoot>
