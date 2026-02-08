@@ -37,7 +37,7 @@ func runGUI() {
 			application.NewService(&backend.ConfigManager{}),
 		},
 		Assets: application.AssetOptions{
-			Handler: application.AssetFileServerFS(assets),
+			Handler: application.BundledAssetFileServer(assets),
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
@@ -45,15 +45,15 @@ func runGUI() {
 	})
 
 	window := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:             title,
-		Frameless:         false,
-		Width:             400,
-		Height:            600,
-		MaxWidth:          400,
-		MaxHeight:         600,
-		EnableDragAndDrop: true,
-		DisableResize:     true,
-		BackgroundType:    application.BackgroundTypeTranslucent,
+		Title:          title,
+		Frameless:      false,
+		Width:          400,
+		Height:         600,
+		MaxWidth:       400,
+		MaxHeight:      600,
+		EnableFileDrop: true,
+		DisableResize:  true,
+		BackgroundType: application.BackgroundTypeTranslucent,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 0,
 			Backdrop:                application.MacBackdropTranslucent,
@@ -71,7 +71,7 @@ func runGUI() {
 		uploadManager.Cancel()
 	})
 
-	window.OnWindowEvent(events.Common.WindowDropZoneFilesDropped, func(event *application.WindowEvent) {
+	window.OnWindowEvent(events.Common.WindowFilesDropped, func(event *application.WindowEvent) {
 		paths := event.Context().DroppedFiles()
 		uploadManager.Upload(app, paths)
 	})
