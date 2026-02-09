@@ -45,15 +45,14 @@ func runGUI() {
 	})
 
 	window := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:          title,
-		Frameless:      false,
-		Width:          400,
-		Height:         600,
-		MaxWidth:       400,
-		MaxHeight:      600,
-		EnableFileDrop: true,
-		DisableResize:  true,
-		BackgroundType: application.BackgroundTypeTranslucent,
+		Title:               title,
+		Frameless:           false,
+		Width:               400,
+		Height:              600,
+		EnableFileDrop:      true,
+		DisableResize:       true,
+		MaximiseButtonState: application.ButtonDisabled,
+		BackgroundType:      application.BackgroundTypeTranslucent,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 0,
 			Backdrop:                application.MacBackdropTranslucent,
