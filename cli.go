@@ -80,6 +80,7 @@ type uploadModel struct {
 	albumTotalItems int
 	albumComplete   bool
 	albumError      string
+	albumKeys       []string
 }
 
 type uploadResult struct {
@@ -89,11 +90,19 @@ type uploadResult struct {
 	Error    string `json:"error,omitempty"`
 }
 
+type albumSummary struct {
+	Name       string   `json:"name,omitempty"`
+	ItemsAdded int      `json:"itemsAdded,omitempty"`
+	AlbumKeys  []string `json:"albumKeys,omitempty"`
+	Error      string   `json:"error,omitempty"`
+}
+
 type uploadSummary struct {
 	Total     int            `json:"total"`
 	Succeeded int            `json:"succeeded"`
 	Failed    int            `json:"failed"`
 	Results   []uploadResult `json:"results"`
+	Album     *albumSummary  `json:"album,omitempty"`
 }
 
 func initialModel() uploadModel {
@@ -160,6 +169,7 @@ func (m uploadModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.albumName = msg.albumName
 		m.albumItemsAdded = msg.itemsAdded
 		m.albumComplete = true
+		m.albumKeys = msg.albumKeys
 		return m, nil
 
 	case albumErrorMsg:
@@ -358,6 +368,16 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 			Succeeded: m.completed,
 			Failed:    m.failed,
 			Results:   m.results,
+		}
+
+		// Add album info if present
+		if m.albumName != "" {
+			summary.Album = &albumSummary{
+				Name:       m.albumName,
+				ItemsAdded: m.albumItemsAdded,
+				AlbumKeys:  m.albumKeys,
+				Error:      m.albumError,
+			}
 		}
 
 		jsonOutput, err := json.MarshalIndent(summary, "", "  ")

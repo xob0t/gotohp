@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -30,12 +32,15 @@ type Config struct {
 
 type ConfigManager struct{}
 
-var AppConfig Config
-var UploadRunning bool = false
-var ConfigPath string
-var DefaultConfig = Config{
-	UploadThreads: 3,
-}
+var (
+	configMu      sync.RWMutex
+	AppConfig     Config
+	UploadRunning bool = false
+	ConfigPath    string
+	DefaultConfig = Config{
+		UploadThreads: 3,
+	}
+)
 
 // ParseAuthString parses an auth string and returns url.Values (exported for CLI use)
 func ParseAuthString(authString string) (url.Values, error) {
@@ -92,20 +97,35 @@ func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
 }
 
 func (g *ConfigManager) SetAlbumName(albumName string) {
-	AppConfig.AlbumName = albumName
+	configMu.Lock()
+	defer configMu.Unlock()
+	AppConfig.AlbumName = strings.TrimSpace(albumName)
 }
 
 func (g *ConfigManager) GetAlbumName() string {
+	configMu.RLock()
+	defer configMu.RUnlock()
 	return AppConfig.AlbumName
 }
 
 func (g *ConfigManager) SetAlbumAutoMode(autoMode bool) {
+	configMu.Lock()
+	defer configMu.Unlock()
 	AppConfig.AlbumAutoMode = autoMode
-	_ = saveAppConfig()
+	// Don't persist to disk - this is per-session like AlbumName
 }
 
 func (g *ConfigManager) GetAlbumAutoMode() bool {
+	configMu.RLock()
+	defer configMu.RUnlock()
 	return AppConfig.AlbumAutoMode
+}
+
+// GetAlbumConfig returns album name and auto mode atomically
+func GetAlbumConfig() (albumName string, autoMode bool) {
+	configMu.RLock()
+	defer configMu.RUnlock()
+	return AppConfig.AlbumName, AppConfig.AlbumAutoMode
 }
 
 func (g *ConfigManager) AddCredentials(newAuthString string) error {

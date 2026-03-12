@@ -1,6 +1,8 @@
 package backend
 
 import (
+	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -73,4 +75,13 @@ func CalculateBackoff(attempt int, config RetryConfig) time.Duration {
 	// Add up to 10% jitter to prevent thundering herd
 	jitter := time.Duration(rand.Int63n(int64(delay / 10)))
 	return delay + jitter
+}
+
+// CheckResponse validates an HTTP response and returns an error if not successful (2xx)
+func CheckResponse(resp *http.Response) error {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
+	}
+	body, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 }

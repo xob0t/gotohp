@@ -2,6 +2,8 @@ package backend
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -36,15 +38,30 @@ type AlbumStatus struct {
 
 // AlbumManager handles album creation with batching
 type AlbumManager struct {
-	api *Api
-	app AppInterface
+	api    *Api
+	app    AppInterface
+	cancel <-chan struct{}
 }
 
 // NewAlbumManager creates a new AlbumManager
-func NewAlbumManager(api *Api, app AppInterface) *AlbumManager {
+func NewAlbumManager(api *Api, app AppInterface, cancel <-chan struct{}) *AlbumManager {
 	return &AlbumManager{
-		api: api,
-		app: app,
+		api:    api,
+		app:    app,
+		cancel: cancel,
+	}
+}
+
+// isCancelled checks if cancellation has been requested
+func (m *AlbumManager) isCancelled() bool {
+	if m.cancel == nil {
+		return false
+	}
+	select {
+	case <-m.cancel:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -63,6 +80,7 @@ func (m *AlbumManager) AddToAlbum(mediaKeys []string, albumNameOrKey string) ([]
 		return nil, fmt.Errorf("no media keys provided")
 	}
 
+	albumNameOrKey = strings.TrimSpace(albumNameOrKey)
 	if albumNameOrKey == "" {
 		return nil, fmt.Errorf("album name or key cannot be empty")
 	}
@@ -79,22 +97,28 @@ func (m *AlbumManager) AddToAlbum(mediaKeys []string, albumNameOrKey string) ([]
 func (m *AlbumManager) addToExistingAlbum(mediaKeys []string, albumKey string) ([]string, error) {
 	totalItems := len(mediaKeys)
 	itemsAdded := 0
+	displayName := fmt.Sprintf("Album (%s...)", albumKey[:10])
 
 	// Process in API-sized batches (500 items per call)
 	for i := 0; i < len(mediaKeys); i += AlbumBatchSize {
+		// Check for cancellation
+		if m.isCancelled() {
+			return []string{albumKey}, fmt.Errorf("album creation cancelled (added %d/%d items)", itemsAdded, totalItems)
+		}
+
 		end := min(i+AlbumBatchSize, len(mediaKeys))
 		batch := mediaKeys[i:end]
 
-		err := m.api.AddMediaToAlbum(albumKey, batch)
+		err := m.addMediaWithRetry(albumKey, batch)
 		if err != nil {
-			return []string{albumKey}, fmt.Errorf("failed to add media to album: %w", err)
+			return []string{albumKey}, fmt.Errorf("failed to add media to album (added %d/%d items): %w", itemsAdded, totalItems, err)
 		}
 
 		itemsAdded += len(batch)
 
 		// Emit progress event
 		m.app.EmitEvent("albumProgress", AlbumStatus{
-			AlbumName:  "Existing Album",
+			AlbumName:  displayName,
 			ItemsAdded: itemsAdded,
 			TotalItems: totalItems,
 			AlbumKeys:  []string{albumKey},
@@ -104,7 +128,7 @@ func (m *AlbumManager) addToExistingAlbum(mediaKeys []string, albumKey string) (
 
 	// Emit completion event
 	m.app.EmitEvent("albumComplete", AlbumStatus{
-		AlbumName:  "Existing Album",
+		AlbumName:  displayName,
 		ItemsAdded: itemsAdded,
 		TotalItems: totalItems,
 		AlbumKeys:  []string{albumKey},
@@ -112,6 +136,50 @@ func (m *AlbumManager) addToExistingAlbum(mediaKeys []string, albumKey string) (
 	})
 
 	return []string{albumKey}, nil
+}
+
+// addMediaWithRetry adds media to an album with retry logic
+func (m *AlbumManager) addMediaWithRetry(albumKey string, mediaKeys []string) error {
+	retryConfig := DefaultRetryConfig()
+	var lastErr error
+
+	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
+		if attempt > 0 {
+			// Check for cancellation before retry delay
+			if m.isCancelled() {
+				return fmt.Errorf("cancelled during retry")
+			}
+			delay := CalculateBackoff(attempt-1, retryConfig)
+			time.Sleep(delay)
+		}
+
+		err := m.api.AddMediaToAlbum(albumKey, mediaKeys)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+
+		// Don't retry on 4xx errors (except 429)
+		if !isRetryableAlbumError(err) {
+			return err
+		}
+	}
+
+	return fmt.Errorf("failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
+}
+
+// isRetryableAlbumError checks if an error should be retried
+func isRetryableAlbumError(err error) bool {
+	errStr := err.Error()
+	// Retry on 5xx errors or 429 (rate limit)
+	if strings.Contains(errStr, "status 5") || strings.Contains(errStr, "status 429") {
+		return true
+	}
+	// Retry on network errors
+	if strings.Contains(errStr, "connection") || strings.Contains(errStr, "timeout") {
+		return true
+	}
+	return false
 }
 
 // createNewAlbum creates a new album with the given name and adds media to it
@@ -128,6 +196,11 @@ func (m *AlbumManager) createNewAlbum(mediaKeys []string, albumName string) ([]s
 
 	// Process in album-sized chunks (up to 20,000 items per album)
 	for i := 0; i < len(mediaKeys); i += AlbumLimit {
+		// Check for cancellation
+		if m.isCancelled() {
+			return albumKeys, fmt.Errorf("album creation cancelled (added %d/%d items)", itemsAdded, totalItems)
+		}
+
 		end := min(i+AlbumLimit, len(mediaKeys))
 		albumBatch := mediaKeys[i:end]
 
@@ -141,22 +214,27 @@ func (m *AlbumManager) createNewAlbum(mediaKeys []string, albumName string) ([]s
 
 		// Process this album's items in API-sized batches (500 items per call)
 		for j := 0; j < len(albumBatch); j += AlbumBatchSize {
+			// Check for cancellation
+			if m.isCancelled() {
+				return albumKeys, fmt.Errorf("album creation cancelled (added %d/%d items)", itemsAdded, totalItems)
+			}
+
 			batchEnd := min(j+AlbumBatchSize, len(albumBatch))
 			batch := albumBatch[j:batchEnd]
 
 			var err error
 			if currentAlbumKey == "" {
-				// First batch: create the album
-				currentAlbumKey, err = m.api.CreateAlbum(currentAlbumName, batch)
+				// First batch: create the album with retry
+				currentAlbumKey, err = m.createAlbumWithRetry(currentAlbumName, batch)
 				if err != nil {
-					return albumKeys, fmt.Errorf("failed to create album '%s': %w", currentAlbumName, err)
+					return albumKeys, fmt.Errorf("failed to create album '%s' (added %d/%d items): %w", currentAlbumName, itemsAdded, totalItems, err)
 				}
 				albumKeys = append(albumKeys, currentAlbumKey)
 			} else {
-				// Subsequent batches: add to existing album
-				err = m.api.AddMediaToAlbum(currentAlbumKey, batch)
+				// Subsequent batches: add to existing album with retry
+				err = m.addMediaWithRetry(currentAlbumKey, batch)
 				if err != nil {
-					return albumKeys, fmt.Errorf("failed to add media to album '%s': %w", currentAlbumName, err)
+					return albumKeys, fmt.Errorf("failed to add media to album '%s' (added %d/%d items): %w", currentAlbumName, itemsAdded, totalItems, err)
 				}
 			}
 
@@ -185,4 +263,34 @@ func (m *AlbumManager) createNewAlbum(mediaKeys []string, albumName string) ([]s
 	})
 
 	return albumKeys, nil
+}
+
+// createAlbumWithRetry creates an album with retry logic
+func (m *AlbumManager) createAlbumWithRetry(albumName string, mediaKeys []string) (string, error) {
+	retryConfig := DefaultRetryConfig()
+	var lastErr error
+
+	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
+		if attempt > 0 {
+			// Check for cancellation before retry delay
+			if m.isCancelled() {
+				return "", fmt.Errorf("cancelled during retry")
+			}
+			delay := CalculateBackoff(attempt-1, retryConfig)
+			time.Sleep(delay)
+		}
+
+		albumKey, err := m.api.CreateAlbum(albumName, mediaKeys)
+		if err == nil {
+			return albumKey, nil
+		}
+		lastErr = err
+
+		// Don't retry on 4xx errors (except 429)
+		if !isRetryableAlbumError(err) {
+			return "", err
+		}
+	}
+
+	return "", fmt.Errorf("failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
 }
