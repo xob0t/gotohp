@@ -203,7 +203,15 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	backend.AppConfig.ForceUpload = config.forceUpload
 	backend.AppConfig.DeleteFromHost = config.deleteFromHost
 	backend.AppConfig.DisableUnsupportedFilesFilter = config.disableUnsupportedFilesFilter
-	backend.AppConfig.AlbumName = config.albumName
+
+	// Handle album option - check for AUTO mode
+	if strings.ToUpper(config.albumName) == "AUTO" {
+		backend.AppConfig.AlbumAutoMode = true
+		backend.AppConfig.AlbumName = ""
+	} else {
+		backend.AppConfig.AlbumAutoMode = false
+		backend.AppConfig.AlbumName = config.albumName
+	}
 
 	// Parse log level
 	logLevel := parseLogLevel(config.logLevel)

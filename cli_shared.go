@@ -49,6 +49,7 @@ func runCLI() {
 			fmt.Println("  -d, --delete                 Delete from host after upload")
 			fmt.Println("  -df, --disable-filter        Disable file type filtering")
 			fmt.Println("  -a, --album <name>           Add uploaded files to album (creates if needed)")
+			fmt.Println("                               Use 'AUTO' to create albums based on folder names")
 			fmt.Println("  -l, --log-level <level>      Set log level: debug, info, warn, error (default: info)")
 			fmt.Println("  -c, --config <path>          Path to config file")
 			return
