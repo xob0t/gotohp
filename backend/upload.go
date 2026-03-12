@@ -139,16 +139,18 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		close(workChan)
 	}()
 
-	// Handle results and wait for completion
+	// Handle results, wait for completion, and create album if configured
 	go func() {
-		m.wg.Wait()
-		close(results)
-		app.EmitEvent("uploadStop", nil)
-		m.running = false
-	}()
+		// Collect successful uploads with path -> mediaKey mapping for AUTO mode
+		successfulUploads := make(map[string]string) // path -> mediaKey
 
-	// Process results
-	go func() {
+		// Wait for all workers to finish in a separate goroutine, then close results
+		go func() {
+			m.wg.Wait()
+			close(results)
+		}()
+
+		// Process all results (this blocks until results channel is closed)
 		for result := range results {
 			app.EmitEvent("FileStatus", result)
 			if result.IsError {
@@ -157,9 +159,97 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 			} else {
 				s := fmt.Sprintf("upload success: %v", result.Path)
 				app.GetLogger().Info(s)
+				if result.MediaKey != "" {
+					successfulUploads[result.Path] = result.MediaKey
+				}
 			}
 		}
+
+		// Handle album creation after all results are processed
+		app.GetLogger().Info(fmt.Sprintf("Upload complete. Successful uploads: %d, AlbumName: '%s', AlbumAutoMode: %v",
+			len(successfulUploads), AppConfig.AlbumName, AppConfig.AlbumAutoMode))
+
+		if len(successfulUploads) > 0 {
+			m.handleAlbumCreation(app, successfulUploads)
+		}
+
+		app.EmitEvent("uploadStop", nil)
+		m.running = false
 	}()
+}
+
+// handleAlbumCreation handles album creation based on config (manual name/key or AUTO mode)
+func (m *UploadManager) handleAlbumCreation(app AppInterface, uploads map[string]string) {
+	app.GetLogger().Info(fmt.Sprintf("handleAlbumCreation called with %d uploads", len(uploads)))
+
+	// Check if AUTO mode is enabled
+	if AppConfig.AlbumAutoMode {
+		app.GetLogger().Info("AUTO mode enabled, creating albums from directories")
+		api, err := NewApi()
+		if err != nil {
+			app.GetLogger().Error(fmt.Sprintf("failed to create API for album creation: %v", err))
+			return
+		}
+		albumManager := NewAlbumManager(api, app)
+		m.createAlbumsFromDirectories(albumManager, app, uploads)
+		return
+	}
+
+	// Manual mode: use AlbumName if set
+	if AppConfig.AlbumName == "" {
+		app.GetLogger().Info("No album name set and AUTO mode disabled, skipping album creation")
+		return
+	}
+
+	app.GetLogger().Info(fmt.Sprintf("Creating album with name/key: '%s'", AppConfig.AlbumName))
+
+	api, err := NewApi()
+	if err != nil {
+		app.GetLogger().Error(fmt.Sprintf("failed to create API for album creation: %v", err))
+		return
+	}
+
+	albumManager := NewAlbumManager(api, app)
+
+	mediaKeys := make([]string, 0, len(uploads))
+	for _, mediaKey := range uploads {
+		mediaKeys = append(mediaKeys, mediaKey)
+	}
+
+	app.GetLogger().Info(fmt.Sprintf("Adding %d media keys to album '%s'", len(mediaKeys), AppConfig.AlbumName))
+
+	albumKeys, err := albumManager.AddToAlbum(mediaKeys, AppConfig.AlbumName)
+	if err != nil {
+		app.GetLogger().Error(fmt.Sprintf("failed to create album '%s': %v", AppConfig.AlbumName, err))
+		return
+	}
+	app.GetLogger().Info(fmt.Sprintf("created album '%s' with %d items, album keys: %v", AppConfig.AlbumName, len(mediaKeys), albumKeys))
+}
+
+// createAlbumsFromDirectories creates albums based on parent directory names (AUTO mode)
+func (m *UploadManager) createAlbumsFromDirectories(albumManager *AlbumManager, app AppInterface, uploads map[string]string) {
+	// Group media keys by parent directory
+	mediaKeysByDir := make(map[string][]string)
+
+	for filePath, mediaKey := range uploads {
+		parentDir := filepath.Dir(filePath)
+		mediaKeysByDir[parentDir] = append(mediaKeysByDir[parentDir], mediaKey)
+	}
+
+	// Create an album for each directory
+	for dirPath, mediaKeys := range mediaKeysByDir {
+		albumName := filepath.Base(dirPath)
+		if albumName == "" || albumName == "." {
+			albumName = "Uploads"
+		}
+
+		albumKeys, err := albumManager.AddToAlbum(mediaKeys, albumName)
+		if err != nil {
+			app.GetLogger().Error(fmt.Sprintf("failed to create album '%s': %v", albumName, err))
+			continue
+		}
+		app.GetLogger().Info(fmt.Sprintf("created album '%s' with %d items, album keys: %v", albumName, len(mediaKeys), albumKeys))
+	}
 }
 
 // supportedFormats is a map of file extensions supported by Google Photos (O(1) lookup)

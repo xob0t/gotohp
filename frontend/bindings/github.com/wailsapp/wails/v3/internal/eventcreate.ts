@@ -14,13 +14,16 @@ function configure() {
     Object.freeze(Object.assign($Create.Events, {
         "FileStatus": $$createType0,
         "ThreadStatus": $$createType1,
-        "uploadStart": $$createType2,
+        "albumComplete": $$createType2,
+        "albumProgress": $$createType2,
+        "uploadStart": $$createType3,
     }));
 }
 
 // Private type creation functions
 const $$createType0 = backend$0.FileUploadResult.createFrom;
 const $$createType1 = backend$0.ThreadStatus.createFrom;
-const $$createType2 = backend$0.UploadBatchStart.createFrom;
+const $$createType2 = backend$0.AlbumStatus.createFrom;
+const $$createType3 = backend$0.UploadBatchStart.createFrom;
 
 configure();

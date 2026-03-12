@@ -21,6 +21,7 @@ type cliConfig struct {
 	disableUnsupportedFilesFilter bool
 	logLevel                      string
 	configPath                    string
+	albumName                     string
 }
 
 // Messages for bubbletea
@@ -202,6 +203,7 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	backend.AppConfig.ForceUpload = config.forceUpload
 	backend.AppConfig.DeleteFromHost = config.deleteFromHost
 	backend.AppConfig.DisableUnsupportedFilesFilter = config.disableUnsupportedFilesFilter
+	backend.AppConfig.AlbumName = config.albumName
 
 	// Parse log level
 	logLevel := parseLogLevel(config.logLevel)

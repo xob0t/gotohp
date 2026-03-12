@@ -13,6 +13,14 @@ export function AddCredentials(newAuthString: string): $CancellablePromise<void>
     return $Call.ByID(4083250689, newAuthString);
 }
 
+export function GetAlbumAutoMode(): $CancellablePromise<boolean> {
+    return $Call.ByID(492228705);
+}
+
+export function GetAlbumName(): $CancellablePromise<string> {
+    return $Call.ByID(3590690922);
+}
+
 export function GetConfig(): $CancellablePromise<$models.Config> {
     return $Call.ByID(815152812).then(($result: any) => {
         return $$createType0($result);
@@ -21,6 +29,14 @@ export function GetConfig(): $CancellablePromise<$models.Config> {
 
 export function RemoveCredentials(email: string): $CancellablePromise<void> {
     return $Call.ByID(4243930372, email);
+}
+
+export function SetAlbumAutoMode(autoMode: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1935381765, autoMode);
+}
+
+export function SetAlbumName(albumName: string): $CancellablePromise<void> {
+    return $Call.ByID(841849854, albumName);
 }
 
 export function SetDeleteFromHost(deleteFromHost: boolean): $CancellablePromise<void> {

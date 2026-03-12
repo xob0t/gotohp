@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Sheet,
@@ -25,6 +26,8 @@ const copyButtonText = ref('Copy as JSON');
 const selectedOption = ref('')
 const options = ref<string[]>([])
 const credentialMap = ref<Record<string, string>>({})
+const albumNameOrKey = ref('')
+const albumAutoMode = ref(false)
 
 function extractEmailFromCredential(credential: string): string | null {
   try {
@@ -35,6 +38,19 @@ function extractEmailFromCredential(credential: string): string | null {
     return null
   }
 }
+
+// Debounced album name update
+let albumDebounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(albumNameOrKey, (newValue) => {
+  if (albumDebounceTimer) {
+    clearTimeout(albumDebounceTimer)
+  }
+  albumDebounceTimer = setTimeout(async () => {
+    console.log('Setting album name to:', newValue)
+    await ConfigManager.SetAlbumName(newValue)
+    console.log('Album name set successfully')
+  }, 300)
+})
 
 watch(selectedOption, async (newValue) => {
   if (newValue) {
@@ -109,12 +125,26 @@ onMounted(async () => {
       selectedOption.value = config.selected
     }
   }
+
+  // Load album name and auto mode from config
+  const albumName = await ConfigManager.GetAlbumName()
+  if (albumName) {
+    albumNameOrKey.value = albumName
+  }
+  albumAutoMode.value = await ConfigManager.GetAlbumAutoMode()
 })
 
 const handleCopyClick = () => {
   uploadManager.copyResultsAsJson();
   copyButtonText.value = 'Copied!';
   setTimeout(() => copyButtonText.value = 'Copy as JSON', 1000);
+};
+
+// Refresh auto mode when settings sheet closes
+const onSheetOpenChange = async (open: boolean) => {
+  if (!open) {
+    albumAutoMode.value = await ConfigManager.GetAlbumAutoMode()
+  }
 };
 </script>
 
@@ -150,7 +180,17 @@ const handleCopyClick = () => {
           @item-removed="removeCredentials"
         />
 
-        <Sheet>
+        <div class="flex flex-col gap-1.5">
+          <Label for="album-input" class="text-muted-foreground text-xs">Album name or key (optional)</Label>
+          <Input
+            id="album-input"
+            v-model="albumNameOrKey"
+            :placeholder="albumAutoMode ? 'Auto mode enabled in Settings' : 'Album name or AF1Qip... key'"
+            :disabled="albumAutoMode"
+          />
+        </div>
+
+        <Sheet @update:open="onSheetOpenChange">
           <SheetTrigger>
             <Button
               variant="outline"

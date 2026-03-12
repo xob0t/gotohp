@@ -24,6 +24,8 @@ type Config struct {
 	UploadThreads                 int      `json:"uploadThreads" koanf:"upload_threads"`
 	DeleteFromHost                bool     `json:"deleteFromHost" koanf:"delete_from_host"`
 	DisableUnsupportedFilesFilter bool     `json:"disableUnsupportedFilesFilter" koanf:"disable_unsupported_files_filter"`
+	AlbumName                     string   `json:"albumName" koanf:"album_name"`
+	AlbumAutoMode                 bool     `json:"albumAutoMode" koanf:"album_auto_mode"`
 }
 
 type ConfigManager struct{}
@@ -87,6 +89,24 @@ func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
 	}
 	AppConfig.UploadThreads = uploadThreads
 	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetAlbumName(albumName string) {
+	AppConfig.AlbumName = albumName
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) GetAlbumName() string {
+	return AppConfig.AlbumName
+}
+
+func (g *ConfigManager) SetAlbumAutoMode(autoMode bool) {
+	AppConfig.AlbumAutoMode = autoMode
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) GetAlbumAutoMode() bool {
+	return AppConfig.AlbumAutoMode
 }
 
 func (g *ConfigManager) AddCredentials(newAuthString string) error {

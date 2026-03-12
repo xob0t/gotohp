@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+message CreateAlbum {
+  string album_name = 1;
+  int64 timestamp = 2;
+  int64 field3 = 3;
+
+  message field4_type {
+
+    message field1_type {
+      string media_key = 1;
+    }
+
+    field1_type field1 = 1;
+  }
+
+  repeated field4_type media_keys = 4;
+
+  message field6_type {
+  }
+
+  field6_type field6 = 6;
+
+  message field7_type {
+    int64 field1 = 1;
+  }
+
+  field7_type field7 = 7;
+
+  message field8_type {
+    string model = 3;
+    string make = 4;
+    int64 android_api_version = 5;
+  }
+
+  field8_type device_info = 8;
+}

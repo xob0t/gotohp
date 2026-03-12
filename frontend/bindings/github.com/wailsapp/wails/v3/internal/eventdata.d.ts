@@ -14,6 +14,8 @@ declare module "@wailsio/runtime" {
         interface CustomEvents {
             "FileStatus": backend$0.FileUploadResult;
             "ThreadStatus": backend$0.ThreadStatus;
+            "albumComplete": backend$0.AlbumStatus;
+            "albumProgress": backend$0.AlbumStatus;
             "uploadCancel": void;
             "uploadStart": backend$0.UploadBatchStart;
             "uploadStop": void;

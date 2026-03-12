@@ -5,7 +5,7 @@ import { Progress } from "./components/ui/progress"
 import { ScrollArea } from "./components/ui/scroll-area"
 import ThreadProgress from "./components/ThreadProgress.vue"
 import { uploadManager } from './utils/UploadManager'
-import { X, Clock, Zap } from 'lucide-vue-next'
+import { X, Clock, Zap, FolderPlus } from 'lucide-vue-next'
 
 const { state } = uploadManager
 
@@ -70,6 +70,12 @@ const bytesDisplay = computed(() => {
   if (state.totalBytes === 0) return ''
   return `${formatBytes(state.uploadedBytes)} / ${formatBytes(state.totalBytes)}`
 })
+
+// Album progress display
+const albumProgressPercent = computed(() => {
+  if (!state.albumStatus || state.albumStatus.TotalItems === 0) return 0
+  return Math.round((state.albumStatus.ItemsAdded / state.albumStatus.TotalItems) * 100)
+})
 </script>
 
 <template>
@@ -106,6 +112,29 @@ const bytesDisplay = computed(() => {
         <span v-else>&nbsp;</span>
         <span class="font-medium">{{ progressPercent }}%</span>
       </div>
+    </div>
+
+    <!-- Album creation progress -->
+    <div
+      v-if="state.albumStatus && (state.isCreatingAlbum || state.albumStatus.IsComplete)"
+      class="mb-3 p-3 rounded-lg border bg-muted/30"
+    >
+      <div class="flex items-center gap-2 mb-2">
+        <FolderPlus :size="14" class="text-primary" />
+        <span class="text-sm font-medium">
+          {{ state.isCreatingAlbum ? 'Adding to album...' : 'Added to album' }}
+        </span>
+      </div>
+      <p class="text-xs text-muted-foreground mb-1.5">
+        {{ state.albumStatus.AlbumName }}
+      </p>
+      <Progress
+        :model-value="albumProgressPercent"
+        class="h-1.5"
+      />
+      <p class="text-xs text-muted-foreground mt-1">
+        {{ state.albumStatus.ItemsAdded }} / {{ state.albumStatus.TotalItems }} items
+      </p>
     </div>
 
     <!-- Thread list - scrollable -->

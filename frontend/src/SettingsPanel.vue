@@ -4,6 +4,12 @@ import { ConfigManager } from '../bindings/app/backend'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import {
     NumberField,
@@ -22,6 +28,7 @@ interface Settings {
     deleteFromHost: boolean
     disableUnsupportedFilesFilter: boolean
     uploadThreads: number
+    albumAutoMode: boolean
 }
 
 const settings = ref<Settings>({
@@ -32,7 +39,8 @@ const settings = ref<Settings>({
     forceUpload: false,
     deleteFromHost: false,
     disableUnsupportedFilesFilter: false,
-    uploadThreads: 0
+    uploadThreads: 0,
+    albumAutoMode: false
 })
 
 onMounted(async () => {
@@ -45,7 +53,8 @@ onMounted(async () => {
         forceUpload: config.forceUpload || false,
         deleteFromHost: config.deleteFromHost || false,
         disableUnsupportedFilesFilter: config.disableUnsupportedFilesFilter || false,
-        uploadThreads: config.uploadThreads || 1
+        uploadThreads: config.uploadThreads || 1,
+        albumAutoMode: config.albumAutoMode || false
     }
 })
 
@@ -85,6 +94,10 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
     } else {
         await ConfigManager.SetUploadThreads(newValue)
     }
+})
+
+watch(() => settings.value.albumAutoMode, async (newValue) => {
+    await ConfigManager.SetAlbumAutoMode(newValue)
 })
 </script>
 
@@ -166,6 +179,26 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
         id="delete-host"
         v-model="settings.deleteFromHost"
         variant="destructive"
+      />
+    </div>
+    <div class="flex items-center justify-between">
+      <TooltipProvider :disable-hoverable-content="true">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Label
+              for="album-auto-mode"
+              class="size-full cursor-pointer"
+            >Auto Album (by folder name)</Label>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Creates new albums based on parent folder names.</p>
+            <p class="text-muted-foreground">Always creates new albums, does not add to existing ones.</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <Switch
+        id="album-auto-mode"
+        v-model="settings.albumAutoMode"
       />
     </div>
     <div>

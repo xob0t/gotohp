@@ -48,6 +48,7 @@ func runCLI() {
 			fmt.Println("  -f, --force                  Force upload even if file exists")
 			fmt.Println("  -d, --delete                 Delete from host after upload")
 			fmt.Println("  -df, --disable-filter        Disable file type filtering")
+			fmt.Println("  -a, --album <name>           Add uploaded files to album (creates if needed)")
 			fmt.Println("  -l, --log-level <level>      Set log level: debug, info, warn, error (default: info)")
 			fmt.Println("  -c, --config <path>          Path to config file")
 			return
@@ -99,6 +100,11 @@ func runCLI() {
 			case "--config", "-c":
 				if i+1 < len(os.Args) {
 					config.configPath = os.Args[i+1]
+					i++
+				}
+			case "--album", "-a":
+				if i+1 < len(os.Args) {
+					config.albumName = os.Args[i+1]
 					i++
 				}
 			}

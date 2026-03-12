@@ -7,6 +7,7 @@ export {
 };
 
 export {
+    AlbumStatus,
     Config,
     FileUploadResult,
     ThreadStatus,

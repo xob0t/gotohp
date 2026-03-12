@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+message CreateAlbumResponse {
+
+  message field1_type {
+    string album_media_key = 1;
+  }
+
+  field1_type field1 = 1;
+  repeated string field2 = 2;
+
+  message field3_type {
+
+    message field1_type {
+      string input_media_key = 1;
+      string result_key = 2;
+      int64 status = 3;
+    }
+
+    repeated field1_type field1 = 1;
+  }
+
+  field3_type field3 = 3;
+}

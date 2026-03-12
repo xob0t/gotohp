@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+message AddMediaToAlbum {
+  repeated string media_keys = 1;
+  string album_media_key = 2;
+
+  message field5_type {
+    int64 field1 = 1;
+  }
+
+  field5_type field5 = 5;
+
+  message field6_type {
+    string model = 3;
+    string make = 4;
+    int64 android_api_version = 5;
+  }
+
+  field6_type device_info = 6;
+  int64 timestamp = 7;
+}
