@@ -1,6 +1,6 @@
 module app
 
-go 1.25
+go 1.26
 
 require (
 	github.com/charmbracelet/bubbles v0.21.1-0.20250623103423-23b8fd6302d7
@@ -10,7 +10,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.0
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.3.0
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.69
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.74
 	google.golang.org/protobuf v1.36.10
 )
 
