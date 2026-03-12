@@ -6,9 +6,16 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// AlbumError represents an album creation error
+type AlbumError struct {
+	AlbumName string `json:"AlbumName"`
+	Error     string `json:"Error"`
+}
+
 func init() {
 	application.RegisterEvent[AlbumStatus]("albumProgress")
 	application.RegisterEvent[AlbumStatus]("albumComplete")
+	application.RegisterEvent[AlbumError]("albumError")
 }
 
 const (

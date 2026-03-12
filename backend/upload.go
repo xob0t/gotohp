@@ -12,6 +12,17 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// FilesDroppedEvent is emitted when files are dropped on any drop zone
+type FilesDroppedEvent struct {
+	Files    []string `json:"files"`
+	DropZone string   `json:"dropZone"`
+}
+
+// StartUploadEvent is received from frontend to start upload
+type StartUploadEvent struct {
+	Files []string `json:"files"`
+}
+
 func init() {
 	application.RegisterEvent[UploadBatchStart]("uploadStart")
 	application.RegisterEvent[application.Void]("uploadStop")
@@ -19,6 +30,8 @@ func init() {
 	application.RegisterEvent[ThreadStatus]("ThreadStatus")
 	application.RegisterEvent[application.Void]("uploadCancel")
 	application.RegisterEvent[int64]("uploadTotalBytes")
+	application.RegisterEvent[FilesDroppedEvent]("files-dropped")
+	application.RegisterEvent[StartUploadEvent]("startUpload")
 }
 
 // ProgressCallback is a function type for upload progress updates
@@ -221,6 +234,10 @@ func (m *UploadManager) handleAlbumCreation(app AppInterface, uploads map[string
 	albumKeys, err := albumManager.AddToAlbum(mediaKeys, AppConfig.AlbumName)
 	if err != nil {
 		app.GetLogger().Error(fmt.Sprintf("failed to create album '%s': %v", AppConfig.AlbumName, err))
+		app.EmitEvent("albumError", AlbumError{
+			AlbumName: AppConfig.AlbumName,
+			Error:     err.Error(),
+		})
 		return
 	}
 	app.GetLogger().Info(fmt.Sprintf("created album '%s' with %d items, album keys: %v", AppConfig.AlbumName, len(mediaKeys), albumKeys))
@@ -246,6 +263,10 @@ func (m *UploadManager) createAlbumsFromDirectories(albumManager *AlbumManager, 
 		albumKeys, err := albumManager.AddToAlbum(mediaKeys, albumName)
 		if err != nil {
 			app.GetLogger().Error(fmt.Sprintf("failed to create album '%s': %v", albumName, err))
+			app.EmitEvent("albumError", AlbumError{
+				AlbumName: albumName,
+				Error:     err.Error(),
+			})
 			continue
 		}
 		app.GetLogger().Info(fmt.Sprintf("created album '%s' with %d items, album keys: %v", albumName, len(mediaKeys), albumKeys))

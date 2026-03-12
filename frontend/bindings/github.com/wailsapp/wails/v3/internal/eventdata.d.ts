@@ -15,7 +15,10 @@ declare module "@wailsio/runtime" {
             "FileStatus": backend$0.FileUploadResult;
             "ThreadStatus": backend$0.ThreadStatus;
             "albumComplete": backend$0.AlbumStatus;
+            "albumError": backend$0.AlbumError;
             "albumProgress": backend$0.AlbumStatus;
+            "files-dropped": backend$0.FilesDroppedEvent;
+            "startUpload": backend$0.StartUploadEvent;
             "uploadCancel": void;
             "uploadStart": backend$0.UploadBatchStart;
             "uploadStop": void;

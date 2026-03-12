@@ -5,6 +5,7 @@ package main
 import (
 	"app/backend"
 	"embed"
+	"fmt"
 	"log"
 	"os"
 
@@ -72,7 +73,31 @@ func runGUI() {
 
 	window.OnWindowEvent(events.Common.WindowFilesDropped, func(event *application.WindowEvent) {
 		paths := event.Context().DroppedFiles()
-		uploadManager.Upload(app, paths)
+		dropTarget := event.Context().DropTargetDetails()
+
+		var dropZone string
+		if dropTarget != nil {
+			dropZone = dropTarget.Attributes["data-drop-zone"]
+			wailsApp.Logger.Info("Drop target detected",
+				"dropZone", dropZone,
+				"elementID", dropTarget.ElementID)
+		}
+
+		// Emit event to frontend with drop details
+		wailsApp.Event.Emit("files-dropped", backend.FilesDroppedEvent{
+			Files:    paths,
+			DropZone: dropZone,
+		})
+	})
+
+	// Listen for upload request from frontend (after drop zone is determined)
+	wailsApp.Event.On("startUpload", func(e *application.CustomEvent) {
+		if data, ok := e.Data.(backend.StartUploadEvent); ok {
+			wailsApp.Logger.Info("Starting upload", "fileCount", len(data.Files))
+			uploadManager.Upload(app, data.Files)
+		} else {
+			wailsApp.Logger.Error("startUpload: unexpected data type", "type", fmt.Sprintf("%T", e.Data))
+		}
 	})
 
 	err := wailsApp.Run()

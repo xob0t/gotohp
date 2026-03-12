@@ -7,9 +7,12 @@ export {
 };
 
 export {
+    AlbumError,
     AlbumStatus,
     Config,
     FileUploadResult,
+    FilesDroppedEvent,
+    StartUploadEvent,
     ThreadStatus,
     UploadBatchStart
 } from "./models.js";

@@ -194,3 +194,14 @@
 * {
   scrollbar-color: #454a4d #202324;
 }
+
+/* Drop zone styles - activated by Wails runtime when dragging over */
+.drop-zone.file-drop-target-active {
+  border-color: oklch(0.696 0.17 162.48) !important;
+  background-color: oklch(0.696 0.17 162.48 / 10%);
+}
+
+.drop-zone.file-drop-target-active h2,
+.drop-zone.file-drop-target-active p {
+  color: oklch(0.985 0 0) !important;
+}

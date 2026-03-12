@@ -93,7 +93,6 @@ func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
 
 func (g *ConfigManager) SetAlbumName(albumName string) {
 	AppConfig.AlbumName = albumName
-	_ = saveAppConfig()
 }
 
 func (g *ConfigManager) GetAlbumName() string {

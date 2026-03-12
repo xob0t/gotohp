@@ -6,6 +6,34 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * AlbumError represents an album creation error
+ */
+export class AlbumError {
+    "AlbumName": string;
+    "Error": string;
+
+    /** Creates a new AlbumError instance. */
+    constructor($$source: Partial<AlbumError> = {}) {
+        if (!("AlbumName" in $$source)) {
+            this["AlbumName"] = "";
+        }
+        if (!("Error" in $$source)) {
+            this["Error"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AlbumError instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AlbumError {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AlbumError($$parsedSource as Partial<AlbumError>);
+    }
+}
+
+/**
  * AlbumStatus represents the status of album creation
  */
 export class AlbumStatus {
@@ -144,6 +172,66 @@ export class FileUploadResult {
     static createFrom($$source: any = {}): FileUploadResult {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new FileUploadResult($$parsedSource as Partial<FileUploadResult>);
+    }
+}
+
+/**
+ * FilesDroppedEvent is emitted when files are dropped on any drop zone
+ */
+export class FilesDroppedEvent {
+    "files": string[];
+    "dropZone": string;
+
+    /** Creates a new FilesDroppedEvent instance. */
+    constructor($$source: Partial<FilesDroppedEvent> = {}) {
+        if (!("files" in $$source)) {
+            this["files"] = [];
+        }
+        if (!("dropZone" in $$source)) {
+            this["dropZone"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FilesDroppedEvent instance from a string or object.
+     */
+    static createFrom($$source: any = {}): FilesDroppedEvent {
+        const $$createField0_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("files" in $$parsedSource) {
+            $$parsedSource["files"] = $$createField0_0($$parsedSource["files"]);
+        }
+        return new FilesDroppedEvent($$parsedSource as Partial<FilesDroppedEvent>);
+    }
+}
+
+/**
+ * StartUploadEvent is received from frontend to start upload
+ */
+export class StartUploadEvent {
+    "files": string[];
+
+    /** Creates a new StartUploadEvent instance. */
+    constructor($$source: Partial<StartUploadEvent> = {}) {
+        if (!("files" in $$source)) {
+            this["files"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new StartUploadEvent instance from a string or object.
+     */
+    static createFrom($$source: any = {}): StartUploadEvent {
+        const $$createField0_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("files" in $$parsedSource) {
+            $$parsedSource["files"] = $$createField0_0($$parsedSource["files"]);
+        }
+        return new StartUploadEvent($$parsedSource as Partial<StartUploadEvent>);
     }
 }
 

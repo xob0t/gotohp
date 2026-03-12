@@ -15,8 +15,11 @@ function configure() {
         "FileStatus": $$createType0,
         "ThreadStatus": $$createType1,
         "albumComplete": $$createType2,
+        "albumError": $$createType3,
         "albumProgress": $$createType2,
-        "uploadStart": $$createType3,
+        "files-dropped": $$createType4,
+        "startUpload": $$createType5,
+        "uploadStart": $$createType6,
     }));
 }
 
@@ -24,6 +27,9 @@ function configure() {
 const $$createType0 = backend$0.FileUploadResult.createFrom;
 const $$createType1 = backend$0.ThreadStatus.createFrom;
 const $$createType2 = backend$0.AlbumStatus.createFrom;
-const $$createType3 = backend$0.UploadBatchStart.createFrom;
+const $$createType3 = backend$0.AlbumError.createFrom;
+const $$createType4 = backend$0.FilesDroppedEvent.createFrom;
+const $$createType5 = backend$0.StartUploadEvent.createFrom;
+const $$createType6 = backend$0.UploadBatchStart.createFrom;
 
 configure();

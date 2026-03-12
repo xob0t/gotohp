@@ -36,6 +36,11 @@ export interface AlbumStatus {
   IsComplete: boolean;
 }
 
+export interface AlbumError {
+  AlbumName: string;
+  Error: string;
+}
+
 export interface UploadState {
   isUploading: boolean;
   totalFiles: number;
@@ -171,6 +176,13 @@ class UploadManager {
     Events.On("albumComplete", (event: { data: AlbumStatus }) => {
       this.state.albumStatus = event.data;
       this.state.isCreatingAlbum = false;
+    });
+
+    // Handle album creation error
+    Events.On("albumError", (event: { data: AlbumError }) => {
+      this.state.isCreatingAlbum = false;
+      // Emit a custom event that App.vue can listen to for showing toast
+      window.dispatchEvent(new CustomEvent('albumError', { detail: event.data }));
     });
   }
 
