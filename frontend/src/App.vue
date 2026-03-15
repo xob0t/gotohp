@@ -26,7 +26,6 @@ const copyButtonText = ref('Copy as JSON');
 
 // Drag state for dual drop zones
 const isDraggingFiles = ref(false)
-let dragEnterCount = 0
 
 // Album upload flow state
 const showAlbumInput = ref(false)
@@ -207,7 +206,8 @@ const cancelAlbumUpload = () => {
 }
 
 // Handle album error event
-const onAlbumError = (event: CustomEvent<{ AlbumName: string; Error: string }>) => {
+const albumErrorHandler = (e: Event) => {
+  const event = e as CustomEvent<{ AlbumName: string; Error: string }>
   const { AlbumName, Error } = event.detail
   // Check if it's a 404 error (album key not found)
   if (Error.includes('404')) {
@@ -226,7 +226,7 @@ onMounted(() => {
   document.addEventListener('dragleave', onDragLeave)
   document.addEventListener('dragover', onDragOver)
   document.addEventListener('drop', onDrop)
-  window.addEventListener('albumError', onAlbumError as EventListener)
+  window.addEventListener('albumError', albumErrorHandler)
 
   // Listen for files-dropped event from backend
   Events.On('files-dropped', (event: { data: { files: string[]; dropZone: string } }) => {
@@ -256,7 +256,7 @@ onUnmounted(() => {
   document.removeEventListener('dragleave', onDragLeave)
   document.removeEventListener('dragover', onDragOver)
   document.removeEventListener('drop', onDrop)
-  window.removeEventListener('albumError', onAlbumError as EventListener)
+  window.removeEventListener('albumError', albumErrorHandler)
   if (dragLeaveTimeout) {
     clearTimeout(dragLeaveTimeout)
   }
@@ -279,24 +279,36 @@ onUnmounted(() => {
         data-drop-zone="regular"
         class="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/50 rounded-xl transition-all duration-200 drop-zone"
       >
-        <h2 class="text-xl font-semibold select-none text-muted-foreground">Upload Only</h2>
-        <p class="text-sm text-muted-foreground/70 mt-2 select-none text-center px-4">Upload files without adding to any album</p>
+        <h2 class="text-xl font-semibold select-none text-muted-foreground">
+          Upload Only
+        </h2>
+        <p class="text-sm text-muted-foreground/70 mt-2 select-none text-center px-4">
+          Upload files without adding to any album
+        </p>
       </div>
       <div
         data-file-drop-target
         data-drop-zone="album"
         class="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/50 rounded-xl transition-all duration-200 drop-zone"
       >
-        <h2 class="text-xl font-semibold select-none text-muted-foreground">Upload to Album</h2>
-        <p class="text-sm text-muted-foreground/70 mt-2 select-none text-center px-4">Upload and add to a specific album (you'll enter the name)</p>
+        <h2 class="text-xl font-semibold select-none text-muted-foreground">
+          Upload to Album
+        </h2>
+        <p class="text-sm text-muted-foreground/70 mt-2 select-none text-center px-4">
+          Upload and add to a specific album (you'll enter the name)
+        </p>
       </div>
       <div
         data-file-drop-target
         data-drop-zone="auto-album"
         class="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/50 rounded-xl transition-all duration-200 drop-zone"
       >
-        <h2 class="text-xl font-semibold select-none text-muted-foreground">Auto Album</h2>
-        <p class="text-sm text-muted-foreground/70 mt-2 select-none text-center px-4">Upload and create albums automatically based on folder names</p>
+        <h2 class="text-xl font-semibold select-none text-muted-foreground">
+          Auto Album
+        </h2>
+        <p class="text-sm text-muted-foreground/70 mt-2 select-none text-center px-4">
+          Upload and create albums automatically based on folder names
+        </p>
       </div>
     </div>
 
@@ -319,12 +331,22 @@ onUnmounted(() => {
       <template v-else>
         <!-- Show album input screen when files dropped on album zone -->
         <template v-if="showAlbumInput">
-          <div class="flex flex-col items-center justify-center gap-6 p-8" style="--wails-draggable: none">
-            <h1 class="text-xl font-semibold select-none">Upload to Album</h1>
-            <p class="text-muted-foreground select-none">{{ pendingFileCount }} file(s) ready to upload</p>
+          <div
+            class="flex flex-col items-center justify-center gap-6 p-8"
+            style="--wails-draggable: none"
+          >
+            <h1 class="text-xl font-semibold select-none">
+              Upload to Album
+            </h1>
+            <p class="text-muted-foreground select-none">
+              {{ pendingFileCount }} file(s) ready to upload
+            </p>
             
             <div class="flex flex-col gap-2 w-full max-w-xs">
-              <Label for="album-input" class="text-muted-foreground text-sm">Album name or key</Label>
+              <Label
+                for="album-input"
+                class="text-muted-foreground text-sm"
+              >Album name or key</Label>
               <Input
                 id="album-input"
                 v-model="albumNameOrKey"

@@ -85,7 +85,9 @@ const albumProgressPercent = computed(() => {
       <p class="text-2xl font-bold tabular-nums">
         {{ state.uploadedFiles }}<span class="text-muted-foreground font-normal">/</span><span class="text-muted-foreground">{{ state.totalFiles }}</span>
       </p>
-      <p class="text-xs text-muted-foreground">files uploaded</p>
+      <p class="text-xs text-muted-foreground">
+        files uploaded
+      </p>
     </div>
 
     <!-- Stats row -->
@@ -120,7 +122,10 @@ const albumProgressPercent = computed(() => {
       class="mb-3 p-3 rounded-lg border bg-muted/30"
     >
       <div class="flex items-center gap-2 mb-2">
-        <FolderPlus :size="14" class="text-primary" />
+        <FolderPlus
+          :size="14"
+          class="text-primary"
+        />
         <span class="text-sm font-medium">
           {{ state.isCreatingAlbum ? 'Adding to album...' : 'Added to album' }}
         </span>
@@ -160,7 +165,10 @@ const albumProgressPercent = computed(() => {
       class="w-full"
       @click="() => uploadManager.cancelUpload()"
     >
-      <X :size="14" class="mr-1" />
+      <X
+        :size="14"
+        class="mr-1"
+      />
       Cancel Upload
     </Button>
   </div>
