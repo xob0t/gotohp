@@ -67,6 +67,10 @@ export function SetSelected(email: string): $CancellablePromise<void> {
     return $Call.ByID(2816040807, email);
 }
 
+export function SetSetDateFromFilename(v: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1731635347, v);
+}
+
 export function SetUploadThreads(uploadThreads: number): $CancellablePromise<void> {
     return $Call.ByID(1692245880, uploadThreads);
 }

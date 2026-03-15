@@ -315,8 +315,8 @@ func (m *UploadManager) createAlbumsFromDirectories(albumManager *AlbumManager, 
 // supportedFormats is a map of file extensions supported by Google Photos (O(1) lookup)
 var supportedFormats = map[string]bool{
 	// Photo formats
-	"avif": true, "bmp": true, "gif": true, "heic": true, "ico": true,
-	"jpg": true, "jpeg": true, "png": true, "tiff": true, "webp": true,
+	"avif": true, "bmp": true, "gif": true, "heic": true, "heif": true, "ico": true,
+	"jpg": true, "jpeg": true, "png": true, "tif": true, "tiff": true, "webp": true,
 	"cr2": true, "cr3": true, "nef": true, "arw": true, "orf": true,
 	"raf": true, "rw2": true, "pef": true, "sr2": true, "dng": true,
 	// Video formats
@@ -418,6 +418,18 @@ func UploadFile(ctx context.Context, api *Api, filePath string, workerID int, ca
 func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, workerID int, callback ProgressCallback) (string, error) {
 	fileName := filepath.Base(filePath)
 	mediakey := ""
+
+	// Determine the timestamp to use for the upload.
+	// Default to file mtime, but allow filename-based timestamp to take precedence if enabled.
+	var uploadTimestamp int64
+	if info, err := os.Stat(filePath); err == nil {
+		uploadTimestamp = info.ModTime().Unix()
+	}
+	if AppConfig.SetDateFromFilename {
+		if t, ok := parseTimestampFromFilename(filePath); ok {
+			uploadTimestamp = t.Unix()
+		}
+	}
 
 	// Stage 1: Hashing
 	callback("ThreadStatus", ThreadStatus{
@@ -528,7 +540,7 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 		Message:  "Committing upload...",
 	})
 
-	mediaKey, err := api.CommitUpload(CommitToken, fileInfo.Name(), sha1_hash_bytes, fileInfo.ModTime().Unix())
+	mediaKey, err := api.CommitUpload(CommitToken, fileInfo.Name(), sha1_hash_bytes, uploadTimestamp)
 	if err != nil {
 		return "", fmt.Errorf("error committing file: %w", err)
 	}

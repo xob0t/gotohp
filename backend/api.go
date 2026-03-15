@@ -533,13 +533,28 @@ func (a *Api) CommitUpload(
 		return "", fmt.Errorf("failed to marshal protobuf: %w", err)
 	}
 
-	// Get the bearer token
+	retryConfig := DefaultRetryConfig()
+	var lastErr error
+	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
+		if attempt > 0 {
+			delay := CalculateBackoff(attempt-1, retryConfig)
+			time.Sleep(delay)
+		}
+		mediaKey, err := a.doCommitRequest(serializedData)
+		if err == nil {
+			return mediaKey, nil
+		}
+		lastErr = err
+	}
+	return "", fmt.Errorf("commit failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
+}
+
+func (a *Api) doCommitRequest(serializedData []byte) (string, error) {
 	bearerToken, err := a.BearerToken()
 	if err != nil {
 		return "", fmt.Errorf("failed to get bearer token: %w", err)
 	}
 
-	// Prepare headers
 	headers := map[string]string{
 		"accept-Encoding":          "gzip",
 		"accept-Language":          a.language,
@@ -550,45 +565,37 @@ func (a *Api) CommitUpload(
 		"x-goog-ext-174067345-bin": "CgIIAg==",
 	}
 
-	// Create the request
-	req, err := http.NewRequest(
-		"POST",
+	req, err := http.NewRequest("POST",
 		"https://photosdata-pa.googleapis.com/6439526531001121323/16538846908252377752",
-		bytes.NewReader(serializedData),
-	)
+		bytes.NewReader(serializedData))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
-
-	// Set headers
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
 
-	// Make the request
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	// Handle gzip response if needed
 	var reader io.Reader = resp.Body
 	if resp.Header.Get("Content-Encoding") == "gzip" {
-		reader, err = gzip.NewReader(resp.Body)
+		gr, err := gzip.NewReader(resp.Body)
 		if err != nil {
 			return "", fmt.Errorf("failed to create gzip reader: %w", err)
 		}
-		defer reader.(*gzip.Reader).Close()
+		defer gr.Close()
+		reader = gr
 	}
 
-	// Parse the response body
 	bodyBytes, err := io.ReadAll(reader)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
@@ -599,16 +606,13 @@ func (a *Api) CommitUpload(
 		return "", fmt.Errorf("failed to unmarshal protobuf: %w", err)
 	}
 
-	// Get media key from response
 	if pbResp.GetField1() == nil || pbResp.GetField1().GetField3() == nil {
 		return "", fmt.Errorf("upload rejected by API: invalid response structure")
 	}
-
 	mediaKey := pbResp.GetField1().GetField3().GetMediaKey()
 	if mediaKey == "" {
 		return "", fmt.Errorf("upload rejected by API: no media key returned")
 	}
-
 	return mediaKey, nil
 }
 
