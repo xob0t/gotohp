@@ -393,7 +393,6 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 						supportedFiles = append(supportedFiles, file)
 					}
 				}
-
 			}
 		} else {
 			if AppConfig.DisableUnsupportedFilesFilter {
@@ -403,7 +402,6 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 					supportedFiles = append(supportedFiles, path)
 				}
 			}
-
 		}
 	}
 
@@ -528,7 +526,6 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 	CommitToken, err := api.UploadFileWithProgress(ctx, filePath, token, progressCallback)
 	if err != nil {
 		return "", fmt.Errorf("error uploading file: %w", err)
-
 	}
 
 	// Stage 4: Finalizing
@@ -556,7 +553,6 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 	}
 
 	return mediaKey, nil
-
 }
 
 func startUploadWorker(workerID int, workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app AppInterface) {

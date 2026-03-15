@@ -37,3 +37,16 @@ tasks:
     cmds:
       - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
 
+  fmt:
+    summary: Formats Go code with gofumpt (stricter than gofmt)
+    cmds:
+      - gofumpt -l -w .
+
+  lint:
+    summary: Runs all linters (Go and frontend)
+    cmds:
+      - gofumpt -l -d .
+      - golangci-lint run --disable=staticcheck,gosimple,stylecheck ./...
+      - cmd: npm run lint
+        dir: frontend
+

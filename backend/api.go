@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"app/generated"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"app/generated"
 
 	"google.golang.org/protobuf/proto"
 )
@@ -144,7 +145,6 @@ func (a *Api) getAuthToken() (map[string]string, error) {
 		"https://android.googleapis.com/auth",
 		strings.NewReader(authRequestData.Encode()),
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

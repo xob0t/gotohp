@@ -1,11 +1,12 @@
 package main
 
 import (
-	"app/backend"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
+
+	"app/backend"
 
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"

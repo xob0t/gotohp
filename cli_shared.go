@@ -1,12 +1,13 @@
 package main
 
 import (
-	"app/backend"
 	"embed"
 	"fmt"
 	"os"
 	"slices"
 	"strings"
+
+	"app/backend"
 )
 
 //go:embed build/windows/info.json

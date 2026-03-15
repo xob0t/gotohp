@@ -283,7 +283,7 @@ func saveAppConfig() error {
 		fmt.Println(err)
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(ConfigPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(ConfigPath), 0o755); err != nil {
 		return err
 	}
 	b, err := k.Marshal(yaml.Parser())
@@ -292,8 +292,7 @@ func saveAppConfig() error {
 		return err
 	}
 
-	err = os.WriteFile(ConfigPath, b, 0644)
-
+	err = os.WriteFile(ConfigPath, b, 0o644)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -304,7 +303,7 @@ func saveAppConfig() error {
 
 func loadAppConfig() Config {
 	var c Config
-	var k = koanf.New(".")
+	k := koanf.New(".")
 	if err := k.Load(file.Provider(ConfigPath), yaml.Parser()); err != nil {
 		log.Printf("error parsing app config: %v", err)
 		return DefaultConfig
