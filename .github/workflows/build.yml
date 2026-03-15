@@ -111,20 +111,23 @@ jobs:
           # Rename debug binary
           mv bin/gotohp release/gotohp-macos-universal_debug
 
-      - name: Upload macOS Artifact
+      - name: Upload macOS Release Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-artifact
-          path: |
-            release/gotohp-macos-universal.zip
-            release/gotohp-macos-universal_debug
+          name: macos-release
+          path: release/gotohp-macos-universal.zip
+
+      - name: Upload macOS Debug Artifact
+        if: (github.event_name == 'workflow_dispatch' && inputs.build_debug) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-debug
+          path: release/gotohp-macos-universal_debug
 
       - name: Upload to Draft Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            release/gotohp-macos-universal.zip
-            release/gotohp-macos-universal_debug
+          files: release/gotohp-macos-universal.zip
           tag_name: ${{ steps.set-tag.outputs.tag_name }}
           name: ${{ steps.set-tag.outputs.release_name }}
           body: ${{ steps.set-tag.outputs.release_body }}
@@ -218,13 +221,20 @@ jobs:
           task windows:build:cli
           Move-Item -Path "bin\gotohp-cli.exe" -Destination "release\gotohp-cli-x64_debug.exe"
 
-      - name: Upload Windows Artifact
+      - name: Upload Windows Release Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-artifact
+          name: windows-release
           path: |
             release/gotohp-x64.exe
             release/gotohp-cli-x64.exe
+
+      - name: Upload Windows Debug Artifact
+        if: (github.event_name == 'workflow_dispatch' && inputs.build_debug) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-debug
+          path: |
             release/gotohp-x64_debug.exe
             release/gotohp-cli-x64_debug.exe
 
@@ -234,8 +244,6 @@ jobs:
           files: |
             release/gotohp-x64.exe
             release/gotohp-cli-x64.exe
-            release/gotohp-x64_debug.exe
-            release/gotohp-cli-x64_debug.exe
           tag_name: ${{ steps.set-tag.outputs.tag_name }}
           name: ${{ steps.set-tag.outputs.release_name }}
           body: ${{ steps.set-tag.outputs.release_body }}
@@ -330,14 +338,20 @@ jobs:
           # Copy debug binary
           cp bin/gotohp "release/gotohp_amd64_debug"
 
-      - name: Upload Linux Artifact
+      - name: Upload Linux Release Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-artifact
+          name: linux-release
           path: |
             release/gotohp_amd64.deb
             release/gotohp_amd64.AppImage
-            release/gotohp_amd64_debug
+
+      - name: Upload Linux Debug Artifact
+        if: (github.event_name == 'workflow_dispatch' && inputs.build_debug) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-debug
+          path: release/gotohp_amd64_debug
 
       - name: Upload to Draft Release
         uses: softprops/action-gh-release@v2
@@ -345,7 +359,6 @@ jobs:
           files: |
             release/gotohp_amd64.deb
             release/gotohp_amd64.AppImage
-            release/gotohp_amd64_debug
           tag_name: ${{ steps.set-tag.outputs.tag_name }}
           name: ${{ steps.set-tag.outputs.release_name }}
           body: ${{ steps.set-tag.outputs.release_body }}
