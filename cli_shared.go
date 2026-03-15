@@ -49,6 +49,7 @@ func runCLI() {
 			fmt.Println("  -f, --force                  Force upload even if file exists")
 			fmt.Println("  -d, --delete                 Delete from host after upload")
 			fmt.Println("  -df, --disable-filter        Disable file type filtering")
+			fmt.Println("  --date-from-filename         Set media date from filename (e.g. 20240709_182027.jpg)")
 			fmt.Println("  -a, --album <name>           Add uploaded files to album (creates if needed)")
 			fmt.Println("                               Use 'AUTO' to create albums based on folder names")
 			fmt.Println("  -l, --log-level <level>      Set log level: debug, info, warn, error (default: info)")
@@ -89,6 +90,8 @@ func runCLI() {
 				config.deleteFromHost = true
 			case "--disable-filter", "-df":
 				config.disableUnsupportedFilesFilter = true
+			case "--date-from-filename":
+				config.setDateFromFilename = true
 			case "--threads", "-t":
 				if i+1 < len(os.Args) {
 					_, _ = fmt.Sscanf(os.Args[i+1], "%d", &config.threads)

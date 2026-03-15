@@ -20,6 +20,7 @@ type cliConfig struct {
 	forceUpload                   bool
 	deleteFromHost                bool
 	disableUnsupportedFilesFilter bool
+	setDateFromFilename           bool
 	logLevel                      string
 	configPath                    string
 	albumName                     string
@@ -276,6 +277,7 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	backend.AppConfig.ForceUpload = config.forceUpload
 	backend.AppConfig.DeleteFromHost = config.deleteFromHost
 	backend.AppConfig.DisableUnsupportedFilesFilter = config.disableUnsupportedFilesFilter
+	backend.AppConfig.SetDateFromFilename = config.setDateFromFilename
 
 	// Handle album option - check for AUTO mode
 	if strings.ToUpper(config.albumName) == "AUTO" {

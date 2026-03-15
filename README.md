@@ -39,6 +39,8 @@ gotohp-cli.exe version
   - `-f, --force` - Force upload even if file exists
   - `-d, --delete` - Delete from host after upload
   - `-df, --disable-filter` - Disable file type filtering
+  - `--date-from-filename` - Set media date from filename (e.g. `20240709_182027.jpg`)
+  - `-a, --album <name>` - Add uploaded files to album (use `AUTO` for folder-based albums)
   - `-l, --log-level <level>` - Set log level: debug, info, warn, error (default: info)
   - `-c, --config <path>` - Path to config file
 - `creds list` (alias: `ls`) - List all credentials
