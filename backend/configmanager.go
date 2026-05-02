@@ -29,6 +29,7 @@ type Config struct {
 	AlbumName                     string   `json:"albumName" koanf:"album_name"`
 	AlbumAutoMode                 bool     `json:"albumAutoMode" koanf:"album_auto_mode"`
 	SetDateFromFilename           bool     `json:"setDateFromFilename" koanf:"set_date_from_filename"`
+	ExcludePattern                string   `json:"excludePattern" koanf:"exclude_pattern"`
 }
 
 type ConfigManager struct{}
@@ -132,6 +133,17 @@ func GetAlbumConfig() (albumName string, autoMode bool) {
 func (g *ConfigManager) SetSetDateFromFilename(v bool) {
 	AppConfig.SetDateFromFilename = v
 	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetExcludePattern(pattern string) {
+	AppConfig.ExcludePattern = pattern
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) GetExcludePattern() string {
+	configMu.RLock()
+	defer configMu.RUnlock()
+	return AppConfig.ExcludePattern
 }
 
 func (g *ConfigManager) AddCredentials(newAuthString string) error {

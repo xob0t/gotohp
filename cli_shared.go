@@ -50,6 +50,7 @@ func runCLI() {
 			fmt.Println("  -d, --delete                 Delete from host after upload")
 			fmt.Println("  -df, --disable-filter        Disable file type filtering")
 			fmt.Println("  --date-from-filename         Set media date from filename (e.g. 20240709_182027.jpg)")
+			fmt.Println("  -e, --exclude <pattern>      Exclude directories whose name matches pattern (e.g. @eaDir)")
 			fmt.Println("  -a, --album <name>           Add uploaded files to album (creates if needed)")
 			fmt.Println("                               Use 'AUTO' to create albums based on folder names")
 			fmt.Println("  -l, --log-level <level>      Set log level: debug, info, warn, error (default: info)")
@@ -92,6 +93,11 @@ func runCLI() {
 				config.disableUnsupportedFilesFilter = true
 			case "--date-from-filename":
 				config.setDateFromFilename = true
+			case "--exclude", "-e":
+				if i+1 < len(os.Args) {
+					config.excludePattern = os.Args[i+1]
+					i++
+				}
 			case "--threads", "-t":
 				if i+1 < len(os.Args) {
 					_, _ = fmt.Sscanf(os.Args[i+1], "%d", &config.threads)
