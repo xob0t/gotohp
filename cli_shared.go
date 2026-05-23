@@ -42,7 +42,7 @@ func runCLI() {
 	case "upload":
 		// Check for help flag first
 		if len(os.Args) > 2 && (os.Args[2] == "--help" || os.Args[2] == "-h") {
-			fmt.Println("Usage: gotohp upload <filepath> [flags]")
+			fmt.Printf("Usage: %s upload <filepath> [flags]\n", cliExecutableName)
 			fmt.Println("\nFlags:")
 			fmt.Println("  -r, --recursive              Include subdirectories")
 			fmt.Println("  -t, --threads <n>            Number of upload threads (default: 3)")
@@ -60,8 +60,8 @@ func runCLI() {
 
 		if len(os.Args) < 3 {
 			fmt.Println("Error: filepath required")
-			fmt.Println("Usage: gotohp upload <filepath> [flags]")
-			fmt.Println("\nRun 'gotohp upload --help' for more information")
+			fmt.Printf("Usage: %s upload <filepath> [flags]\n", cliExecutableName)
+			fmt.Printf("\nRun '%s upload --help' for more information\n", cliExecutableName)
 			os.Exit(1)
 		}
 
@@ -174,8 +174,10 @@ func printCLIHelp() {
 	fmt.Println("gotohp - Google Photos unofficial client")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  gotohp              Launch GUI application")
-	fmt.Println("  gotohp <command>    Run CLI command")
+	if cliHasGUI {
+		fmt.Printf("  %s              Launch GUI application\n", cliExecutableName)
+	}
+	fmt.Printf("  %s <command>    Run CLI command\n", cliExecutableName)
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  upload <filepath>   Upload a file to Google Photos")
@@ -183,11 +185,11 @@ func printCLIHelp() {
 	fmt.Println("  help                Show this help message")
 	fmt.Println("  version             Show version information")
 	fmt.Println()
-	fmt.Println("Run 'gotohp <command> --help' for more information on a command")
+	fmt.Printf("Run '%s <command> --help' for more information on a command\n", cliExecutableName)
 }
 
 func printCredentialsHelp() {
-	fmt.Println("Usage: gotohp creds <subcommand> [args]")
+	fmt.Printf("Usage: %s creds <subcommand> [args]\n", cliExecutableName)
 	fmt.Println()
 	fmt.Println("Subcommands:")
 	fmt.Println("  add <auth-string>       Add a new credential")
@@ -216,7 +218,7 @@ func handleCredentialsCommand(args []string) {
 	case "add":
 		if len(args) < 2 {
 			fmt.Println("Error: auth-string required")
-			fmt.Println("Usage: gotohp credentials add <auth-string>")
+			fmt.Printf("Usage: %s credentials add <auth-string>\n", cliExecutableName)
 			os.Exit(1)
 		}
 		authString := args[1]
@@ -230,7 +232,7 @@ func handleCredentialsCommand(args []string) {
 	case "remove", "rm":
 		if len(args) < 2 {
 			fmt.Println("Error: email required")
-			fmt.Println("Usage: gotohp credentials remove <email>")
+			fmt.Printf("Usage: %s credentials remove <email>\n", cliExecutableName)
 			os.Exit(1)
 		}
 		email := args[1]
@@ -269,7 +271,7 @@ func handleCredentialsCommand(args []string) {
 	case "set", "select":
 		if len(args) < 2 {
 			fmt.Println("Error: email required")
-			fmt.Println("Usage: gotohp creds set <email>")
+			fmt.Printf("Usage: %s creds set <email>\n", cliExecutableName)
 			os.Exit(1)
 		}
 		query := args[1]

@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // FilesDroppedEvent is emitted when files are dropped on any drop zone
@@ -21,17 +19,6 @@ type FilesDroppedEvent struct {
 // StartUploadEvent is received from frontend to start upload
 type StartUploadEvent struct {
 	Files []string `json:"files"`
-}
-
-func init() {
-	application.RegisterEvent[UploadBatchStart]("uploadStart")
-	application.RegisterEvent[application.Void]("uploadStop")
-	application.RegisterEvent[FileUploadResult]("FileStatus")
-	application.RegisterEvent[ThreadStatus]("ThreadStatus")
-	application.RegisterEvent[application.Void]("uploadCancel")
-	application.RegisterEvent[int64]("uploadTotalBytes")
-	application.RegisterEvent[FilesDroppedEvent]("files-dropped")
-	application.RegisterEvent[StartUploadEvent]("startUpload")
 }
 
 // ProgressCallback is a function type for upload progress updates

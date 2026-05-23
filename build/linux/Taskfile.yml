@@ -20,6 +20,19 @@ tasks:
       GOARCH: '{{.ARCH | default ARCH}}'
       PRODUCTION: '{{.PRODUCTION | default "false"}}'
 
+  build:cli:
+    summary: Builds the CLI application for Linux
+    deps:
+      - task: common:go:mod:tidy
+    cmds:
+      - go build {{.BUILD_FLAGS}} -tags cli -o {{.BIN_DIR}}/{{.APP_NAME}}-cli
+    vars:
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-trimpath -buildvcs=false -ldflags="-w -s"{{else}}-buildvcs=false{{end}}'
+    env:
+      GOOS: linux
+      CGO_ENABLED: 0
+      GOARCH: '{{.ARCH | default ARCH}}'
+
   package:
     summary: Packages a production build of the application for Linux
     deps:
@@ -85,6 +98,15 @@ tasks:
     summary: Creates a deb package
     cmds: 
       - wails3 tool package -name {{.APP_NAME}} -format deb -config ./build/linux/nfpm/nfpm.yaml -out {{.ROOT_DIR}}/bin
+
+  generate:cli:deb:
+    summary: Creates a deb package for the CLI binary
+    deps:
+      - task: build:cli
+        vars:
+          PRODUCTION: "true"
+    cmds:
+      - nfpm package --packager deb --config ./build/linux/nfpm/nfpm-cli.yaml --target {{.ROOT_DIR}}/bin/{{.APP_NAME}}-cli.deb
 
   generate:rpm:
     summary: Creates a rpm package

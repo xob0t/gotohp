@@ -1,0 +1,16 @@
+name: "gotohp-cli"
+arch: ${GOARCH}
+platform: "linux"
+version: "0.7.0"
+section: "utils"
+priority: "optional"
+maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
+description: "Google Photos unofficial client CLI"
+vendor: "xob0t"
+homepage: "https://github.com/xob0t/gotohp"
+license: "MIT"
+release: "1"
+
+contents:
+  - src: "./bin/gotohp-cli"
+    dst: "/usr/local/bin/gotohp-cli"
