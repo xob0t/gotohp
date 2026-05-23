@@ -2,7 +2,6 @@ package backend
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -165,20 +164,12 @@ func (a *Api) getAuthToken() (map[string]string, error) {
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ReadResponseBody(resp)
 		return make(map[string]string), fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	// Handle gzip encoding if present
-	var reader io.Reader
-	reader, err = gzip.NewReader(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer reader.(*gzip.Reader).Close()
-
 	// Parse the response body
-	bodyBytes, err := io.ReadAll(reader)
+	bodyBytes, err := ReadResponseBody(resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -268,7 +259,7 @@ func (a *Api) GetUploadToken(shaHashB64 string, fileSize int64) (string, error) 
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ReadResponseBody(resp)
 		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -340,19 +331,12 @@ func (a *Api) FindRemoteMediaByHash(shaHash []byte) (string, error) {
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ReadResponseBody(resp)
 		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var reader io.Reader
-	reader, err = gzip.NewReader(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer reader.(*gzip.Reader).Close()
-
 	// Parse the response body
-	bodyBytes, err := io.ReadAll(reader)
+	bodyBytes, err := ReadResponseBody(resp)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -470,11 +454,11 @@ func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.R
 
 	// Check for non-success status codes (includes retryable 5xx/429 and non-retryable 4xx)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ReadResponseBody(resp)
 		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	bodyBytes, err := io.ReadAll(resp.Body)
+	bodyBytes, err := ReadResponseBody(resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -589,21 +573,11 @@ func (a *Api) doCommitRequest(serializedData []byte) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ReadResponseBody(resp)
 		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var reader io.Reader = resp.Body
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		gr, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return "", fmt.Errorf("failed to create gzip reader: %w", err)
-		}
-		defer gr.Close()
-		reader = gr
-	}
-
-	bodyBytes, err := io.ReadAll(reader)
+	bodyBytes, err := ReadResponseBody(resp)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -698,22 +672,12 @@ func (a *Api) CreateAlbum(albumName string, mediaKeys []string) (string, error) 
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ReadResponseBody(resp)
 		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	// Handle gzip response if needed
-	var reader io.Reader = resp.Body
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		reader, err = gzip.NewReader(resp.Body)
-		if err != nil {
-			return "", fmt.Errorf("failed to create gzip reader: %w", err)
-		}
-		defer reader.(*gzip.Reader).Close()
-	}
-
 	// Parse the response body
-	bodyBytes, err := io.ReadAll(reader)
+	bodyBytes, err := ReadResponseBody(resp)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -798,7 +762,7 @@ func (a *Api) AddMediaToAlbum(albumMediaKey string, mediaKeys []string) error {
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ReadResponseBody(resp)
 		return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 

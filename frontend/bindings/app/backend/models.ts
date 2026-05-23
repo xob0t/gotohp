@@ -157,6 +157,7 @@ export class Config {
 export class FileUploadResult {
     "MediaKey": string;
     "IsError": boolean;
+    "ErrorMessage": string;
     "Path": string;
 
     /** Creates a new FileUploadResult instance. */
@@ -166,6 +167,9 @@ export class FileUploadResult {
         }
         if (!("IsError" in $$source)) {
             this["IsError"] = false;
+        }
+        if (!("ErrorMessage" in $$source)) {
+            this["ErrorMessage"] = "";
         }
         if (!("Path" in $$source)) {
             this["Path"] = "";

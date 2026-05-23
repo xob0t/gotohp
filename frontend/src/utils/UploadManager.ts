@@ -15,6 +15,7 @@ export interface ThreadStatus {
 export interface FileUploadResult {
   MediaKey: string;
   IsError: boolean;
+  ErrorMessage: string;
   Path: string;
 }
 
@@ -144,20 +145,25 @@ class UploadManager {
           this.completedBytes += prevThread.BytesTotal;
         }
       }
+
+      if (thread.Status === 'error' && prevThread?.Message !== thread.Message) {
+        window.dispatchEvent(new CustomEvent('uploadError', { detail: thread }));
+      }
       
       this.state.threads.set(thread.WorkerID, thread);
       this.updateBytesAndSpeed();
     });
 
     // Handle file status updates
-    Events.On("FileStatus", (event: { data: { IsError: boolean; Path: string; MediaKey: string } }) => {
+    Events.On("FileStatus", (event: { data: FileUploadResult }) => {
       const { IsError, Path, MediaKey } = event.data;
 
       if (!IsError) {
         this.state.uploadedFiles += 1;
         this.state.results.success.push({ path: Path, mediaKey: MediaKey });
       } else {
-        this.state.results.fail.push(Path);
+        const errorMessage = event.data.ErrorMessage;
+        this.state.results.fail.push(errorMessage ? `${Path}: ${errorMessage}` : Path);
       }
     });
 

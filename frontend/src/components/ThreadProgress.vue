@@ -50,6 +50,8 @@ const fileSizeDisplay = computed(() => {
   }
   return `${formatBytes(props.thread.BytesUploaded)}/${formatBytes(props.thread.BytesTotal)}`
 })
+
+const statusMessage = computed(() => props.thread.Message.replace(/^Error:\s*/, ''))
 </script>
 
 <template>
@@ -91,5 +93,11 @@ const fileSizeDisplay = computed(() => {
         <span>{{ uploadPercent }}%</span>
       </div>
     </template>
+    <p
+      v-else-if="thread.Status === 'error'"
+      class="mt-1 text-[11px] leading-snug text-destructive break-words"
+    >
+      {{ statusMessage }}
+    </p>
   </div>
 </template>
