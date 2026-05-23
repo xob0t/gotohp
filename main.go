@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"app/backend"
 
@@ -32,6 +33,8 @@ func main() {
 }
 
 func runGUI() {
+	normalizeFrontendDevServerURL()
+
 	wailsApp := application.New(application.Options{
 		Name:        "com.xob0t.gotohp",
 		Description: "Google Photos unofficial client",
@@ -104,5 +107,16 @@ func runGUI() {
 	err := wailsApp.Run()
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func normalizeFrontendDevServerURL() {
+	const envName = "FRONTEND_DEVSERVER_URL"
+
+	value := os.Getenv(envName)
+	value = strings.Replace(value, "http://localhost:", "http://127.0.0.1:", 1)
+	value = strings.Replace(value, "https://localhost:", "https://127.0.0.1:", 1)
+	if value != os.Getenv(envName) {
+		_ = os.Setenv(envName, value)
 	}
 }
