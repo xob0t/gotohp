@@ -4,8 +4,8 @@ set -e
 # Build configuration
 APP_NAME="gotohp"
 BUNDLE_ID="com.xob0t.gotohp"
-VERSION="0.7.0"
-BUILD_NUMBER="0.7.0"
+VERSION="0.8.0"
+BUILD_NUMBER="0.8.0"
 BUILD_DIR="build/ios"
 TARGET="simulator"
 

@@ -1,7 +1,7 @@
 name: "gotohp-cli"
 arch: ${GOARCH}
 platform: "linux"
-version: "0.7.0"
+version: "0.8.0"
 section: "utils"
 priority: "optional"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
