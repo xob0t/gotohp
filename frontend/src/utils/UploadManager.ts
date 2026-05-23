@@ -90,8 +90,8 @@ class UploadManager {
   private speedSamples: number[] = [];
   // Track bytes from completed files
   private completedBytes: number = 0;
-  // Track the last known BytesTotal for each worker to detect file completion
-  private lastThreadBytes: Map<number, number> = new Map();
+  // Track the last known BytesTotal for each file
+  private fileBytes: Map<string, number> = new Map();
 
   private constructor() {
     // Bind all methods to ensure 'this' context is preserved
@@ -124,7 +124,7 @@ class UploadManager {
       this.lastBytesUploaded = 0;
       this.speedSamples = [];
       this.completedBytes = 0;
-      this.lastThreadBytes.clear();
+      this.fileBytes.clear();
       this.resetUploadResults();
     });
 
@@ -137,13 +137,9 @@ class UploadManager {
     Events.On("ThreadStatus", (event: { data: ThreadStatus }) => {
       const thread = event.data;
       const prevThread = this.state.threads.get(thread.WorkerID);
-      
-      // Detect when a file upload completes (status changes from uploading to completed/idle/error)
-      if (prevThread && prevThread.Status === 'uploading' && thread.Status !== 'uploading') {
-        // Add the completed file's total bytes to completedBytes
-        if (prevThread.BytesTotal > 0) {
-          this.completedBytes += prevThread.BytesTotal;
-        }
+
+      if (thread.Status === 'uploading' && thread.FilePath && thread.BytesTotal > 0) {
+        this.fileBytes.set(thread.FilePath, thread.BytesTotal);
       }
 
       if (thread.Status === 'error' && prevThread?.Message !== thread.Message) {
@@ -161,10 +157,16 @@ class UploadManager {
       if (!IsError) {
         this.state.uploadedFiles += 1;
         this.state.results.success.push({ path: Path, mediaKey: MediaKey });
+        const completedFileBytes = this.fileBytes.get(Path);
+        if (completedFileBytes && completedFileBytes > 0) {
+          this.completedBytes += completedFileBytes;
+        }
       } else {
         const errorMessage = event.data.ErrorMessage;
         this.state.results.fail.push(errorMessage ? `${Path}: ${errorMessage}` : Path);
       }
+      this.fileBytes.delete(Path);
+      this.updateBytesAndSpeed();
     });
 
     // Handle upload stop
@@ -199,6 +201,8 @@ class UploadManager {
     this.state.threads.forEach((thread) => {
       if (thread.Status === 'uploading' && thread.BytesTotal > 0) {
         activeUploadedBytes += thread.BytesUploaded;
+      } else if (thread.Status === 'finalizing' && thread.FilePath) {
+        activeUploadedBytes += this.fileBytes.get(thread.FilePath) ?? 0;
       }
     });
 
