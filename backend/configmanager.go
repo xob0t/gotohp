@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -199,6 +200,41 @@ func (g *ConfigManager) AddCredentials(newAuthString string) error {
 	return nil
 }
 
+func (g *ConfigManager) CredentialNeedsTokenBinding(authString string) bool {
+	params, err := url.ParseQuery(authString)
+	if err != nil {
+		return false
+	}
+	return credentialNeedsTokenBinding(params)
+}
+
+func (g *ConfigManager) AddTokenBindingAliasFromADB(email string) error {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return fmt.Errorf("email cannot be empty")
+	}
+
+	alias, err := extractTokenBindingAliasFromADB(email)
+	if err != nil {
+		return err
+	}
+
+	for i, cred := range AppConfig.Credentials {
+		params, err := url.ParseQuery(cred)
+		if err != nil {
+			continue
+		}
+		if params.Get("Email") != email {
+			continue
+		}
+		params.Set("token_binding_alias", alias)
+		AppConfig.Credentials[i] = params.Encode()
+		return saveAppConfig()
+	}
+
+	return fmt.Errorf("no credentials found for email %s", email)
+}
+
 func (g *ConfigManager) RemoveCredentials(email string) error {
 	if email == "" {
 		return fmt.Errorf("email cannot be empty")
@@ -236,6 +272,116 @@ func (g *ConfigManager) RemoveCredentials(email string) error {
 
 	_ = saveAppConfig()
 	return nil
+}
+
+func credentialNeedsTokenBinding(params url.Values) bool {
+	if params.Get("token_binding_alias") != "" {
+		return false
+	}
+	return params.Get("assertion_jwt") != "" ||
+		params.Get("check_tb_upgrade_eligible") != ""
+}
+
+func extractTokenBindingAliasFromADB(email string) (string, error) {
+	if _, err := exec.LookPath("adb"); err != nil {
+		return "", fmt.Errorf("adb was not found in PATH")
+	}
+
+	escapedEmail := strings.ReplaceAll(email, "'", "''")
+	sql := fmt.Sprintf(
+		"select extras.value from extras join accounts on accounts._id=extras.accounts_id where accounts.name='%s' and extras.key='lstBindingKeyAlias';",
+		escapedEmail,
+	)
+
+	devices, err := listADBDevices()
+	if err != nil {
+		return "", err
+	}
+
+	var failures []string
+	var reachableRoot bool
+	for _, device := range devices {
+		_ = exec.Command("adb", "-s", device, "root").Run()
+
+		out, err := runADBSQLite(device, sql, false)
+		if err != nil {
+			out, err = runADBSQLite(device, sql, true)
+		}
+		if err != nil {
+			failures = append(failures, fmt.Sprintf("%s: %s", device, cleanADBError(out)))
+			continue
+		}
+
+		reachableRoot = true
+		alias := strings.TrimSpace(out)
+		if alias == "" {
+			failures = append(failures, fmt.Sprintf("%s: no token binding key for %s", device, email))
+			continue
+		}
+		if !strings.HasPrefix(alias, tokenBindingECDSAAliasPrefix) {
+			failures = append(failures, fmt.Sprintf("%s: unsupported token binding key format", device))
+			continue
+		}
+
+		return alias, nil
+	}
+
+	if reachableRoot {
+		return "", fmt.Errorf("token binding alias not found for %s on any connected adb device (%s)", email, strings.Join(failures, "; "))
+	}
+	return "", fmt.Errorf("could not read Android AccountManager on any connected adb device; root is required (%s)", strings.Join(failures, "; "))
+}
+
+func listADBDevices() ([]string, error) {
+	out, err := exec.Command("adb", "devices").CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list adb devices: %s", cleanADBError(string(out)))
+	}
+
+	var devices []string
+	var unavailable []string
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 || fields[0] == "List" {
+			continue
+		}
+		switch fields[1] {
+		case "device":
+			devices = append(devices, fields[0])
+		case "offline", "unauthorized", "no permissions":
+			unavailable = append(unavailable, fmt.Sprintf("%s is %s", fields[0], fields[1]))
+		default:
+			unavailable = append(unavailable, fmt.Sprintf("%s is %s", fields[0], fields[1]))
+		}
+	}
+
+	if len(devices) == 0 {
+		if len(unavailable) > 0 {
+			return nil, fmt.Errorf("no usable adb devices found (%s)", strings.Join(unavailable, "; "))
+		}
+		return nil, fmt.Errorf("no adb devices found")
+	}
+
+	return devices, nil
+}
+
+func runADBSQLite(device string, sql string, useSU bool) (string, error) {
+	args := []string{"-s", device, "shell", "sqlite3", "/data/system_ce/0/accounts_ce.db"}
+	if useSU {
+		args = []string{"-s", device, "shell", "su", "-c", "sqlite3 /data/system_ce/0/accounts_ce.db"}
+	}
+	cmd := exec.Command("adb", args...)
+	cmd.Stdin = strings.NewReader(sql)
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+func cleanADBError(out string) string {
+	out = strings.TrimSpace(out)
+	if out == "" {
+		return "adb command failed"
+	}
+	return strings.Join(strings.Fields(out), " ")
 }
 
 func determineConfigPath() {

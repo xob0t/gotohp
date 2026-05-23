@@ -13,6 +13,14 @@ export function AddCredentials(newAuthString: string): $CancellablePromise<void>
     return $Call.ByID(4083250689, newAuthString);
 }
 
+export function AddTokenBindingAliasFromADB(email: string): $CancellablePromise<void> {
+    return $Call.ByID(3252041498, email);
+}
+
+export function CredentialNeedsTokenBinding(authString: string): $CancellablePromise<boolean> {
+    return $Call.ByID(920629710, authString);
+}
+
 export function GetAlbumAutoMode(): $CancellablePromise<boolean> {
     return $Call.ByID(492228705);
 }
@@ -25,6 +33,10 @@ export function GetConfig(): $CancellablePromise<$models.Config> {
     return $Call.ByID(815152812).then(($result: any) => {
         return $$createType0($result);
     });
+}
+
+export function GetExcludePattern(): $CancellablePromise<string> {
+    return $Call.ByID(2942848526);
 }
 
 export function RemoveCredentials(email: string): $CancellablePromise<void> {
@@ -45,6 +57,10 @@ export function SetDeleteFromHost(deleteFromHost: boolean): $CancellablePromise<
 
 export function SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter: boolean): $CancellablePromise<void> {
     return $Call.ByID(821557574, disableUnsupportedFilesFilter);
+}
+
+export function SetExcludePattern(pattern: string): $CancellablePromise<void> {
+    return $Call.ByID(4021766002, pattern);
 }
 
 export function SetForceUpload(forceUpload: boolean): $CancellablePromise<void> {

@@ -7,17 +7,14 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/tink-crypto/tink-go/v2/hybrid"
-	"github.com/tink-crypto/tink-go/v2/insecurecleartextkeyset"
 	"github.com/tink-crypto/tink-go/v2/keyset"
 )
 
@@ -209,73 +206,6 @@ func decryptTokenEncryptedResponse(parsed map[string]string, session *tokenBindi
 	return nil
 }
 
-func stripTokenBindingPrivateParams(values url.Values) {
-	for _, key := range []string{"token_binding_alias"} {
-		values.Del(key)
-	}
-}
-
-func authUserAgent(values url.Values, fallbackGMSVersion string) string {
-	gmsVersion := fallbackGMSVersion
-	if gmsVersion == "" {
-		gmsVersion = "261631032"
-	}
-
-	androidVersion := values.Get("auth_android_version")
-	if androidVersion == "" {
-		androidVersion = androidVersionFromSDK(values.Get("sdk_version"))
-	}
-	if androidVersion == "" {
-		androidVersion = "13"
-	}
-
-	language := strings.ReplaceAll(values.Get("lang"), "-", "_")
-	if language == "" {
-		language = "en_US"
-	}
-
-	model := values.Get("auth_device_model")
-	if model == "" {
-		if androidVersion == "36" {
-			model = "CPH2769"
-		} else {
-			model = "WayDroid x86_64 Device"
-		}
-	}
-
-	buildID := values.Get("auth_build_id")
-	if buildID == "" {
-		if androidVersion == "36" {
-			buildID = "BP2A.250605.015"
-		} else {
-			buildID = "TQ3A.230901.001"
-		}
-	}
-
-	return fmt.Sprintf("com.google.android.gms/%s (Linux; U; Android %s; %s; %s; Build/%s; Cronet/147.0.7727.49)", gmsVersion, androidVersion, language, model, buildID)
-}
-
-func androidVersionFromSDK(sdkVersion string) string {
-	switch sdkVersion {
-	case "36":
-		return "16"
-	case "35":
-		return "15"
-	case "34":
-		return "14"
-	case "33":
-		return "13"
-	default:
-		return sdkVersion
-	}
-}
-
-func stripAuthPrivateParams(values url.Values) {
-	for _, key := range []string{"auth_android_version", "auth_device_model", "auth_build_id"} {
-		values.Del(key)
-	}
-}
-
 func decodeBase64URL(s string) ([]byte, error) {
 	if out, err := base64.RawURLEncoding.DecodeString(s); err == nil {
 		return out, nil
@@ -366,17 +296,4 @@ func aliasType(alias string) string {
 		}
 	}
 	return alias
-}
-
-func sha256Hex(b []byte) string {
-	h := sha256.Sum256(b)
-	return hex.EncodeToString(h[:])
-}
-
-func tokenBindingKeysetMaterialForTest(handle *keyset.Handle) ([]byte, error) {
-	buf := &bytes.Buffer{}
-	if err := insecurecleartextkeyset.Write(handle, keyset.NewBinaryWriter(buf)); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }

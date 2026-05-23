@@ -133,7 +133,7 @@ func (a *Api) getAuthToken() (map[string]string, error) {
 		}
 		authRequestData.Set("assertion_jwt", assertionJWT)
 	}
-	stripTokenBindingPrivateParams(authRequestData)
+	authRequestData.Del("token_binding_alias")
 
 	headers := map[string]string{
 		"Accept-Encoding": "gzip",

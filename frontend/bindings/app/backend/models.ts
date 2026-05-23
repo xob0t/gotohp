@@ -91,6 +91,7 @@ export class Config {
     "albumName": string;
     "albumAutoMode": boolean;
     "setDateFromFilename": boolean;
+    "excludePattern": string;
 
     /** Creates a new Config instance. */
     constructor($$source: Partial<Config> = {}) {
@@ -132,6 +133,9 @@ export class Config {
         }
         if (!("setDateFromFilename" in $$source)) {
             this["setDateFromFilename"] = false;
+        }
+        if (!("excludePattern" in $$source)) {
+            this["excludePattern"] = "";
         }
 
         Object.assign(this, $$source);
