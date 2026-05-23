@@ -336,7 +336,7 @@ func isSupportedByGooglePhotos(filename string) bool {
 	return supportedFormats[ext[1:]]
 }
 
-func scanDirectoryForFiles(path string, recursive bool) ([]string, error) {
+func scanDirectoryForFiles(path string, recursive bool, excludePattern string) ([]string, error) {
 	var files []string
 
 	entries, err := os.ReadDir(path)
@@ -347,11 +347,12 @@ func scanDirectoryForFiles(path string, recursive bool) ([]string, error) {
 	for _, entry := range entries {
 		fullPath := filepath.Join(path, entry.Name())
 		if entry.IsDir() {
+			if excludePattern != "" && entry.Name() == excludePattern {
+				continue
+			}
 			if recursive {
-				subFiles, err := scanDirectoryForFiles(fullPath, recursive)
+				subFiles, err := scanDirectoryForFiles(fullPath, recursive, excludePattern)
 				if err != nil {
-					// Log error and continue with other directories instead of failing
-					// This handles permission errors, broken symlinks, etc.
 					continue
 				}
 				files = append(files, subFiles...)
@@ -380,7 +381,7 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 		}
 
 		if fileInfo.IsDir() {
-			files, err := scanDirectoryForFiles(path, AppConfig.Recursive)
+			files, err := scanDirectoryForFiles(path, AppConfig.Recursive, AppConfig.ExcludePattern)
 			if err != nil {
 				return nil, fmt.Errorf("error scanning directory %s: %v", path, err)
 			}
