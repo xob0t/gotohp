@@ -25,11 +25,12 @@ type StartUploadEvent struct {
 type ProgressCallback func(event string, data any)
 
 type UploadManager struct {
-	mu      sync.Mutex
-	wg      sync.WaitGroup
-	cancel  chan struct{}
-	running bool
-	app     AppInterface
+	mu       sync.Mutex
+	wg       sync.WaitGroup
+	cancel   chan struct{}
+	canceled bool
+	running  bool
+	app      AppInterface
 }
 
 func NewUploadManager(app AppInterface) *UploadManager {
@@ -47,8 +48,9 @@ func (m *UploadManager) IsRunning() bool {
 func (m *UploadManager) Cancel() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.cancel != nil {
+	if m.cancel != nil && !m.canceled {
 		close(m.cancel)
+		m.canceled = true
 		// Don't set to nil - readers still need to detect closure via select
 	}
 }
@@ -108,6 +110,7 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	}
 	m.running = true
 	m.cancel = make(chan struct{})
+	m.canceled = false
 	m.mu.Unlock()
 
 	targetPaths, err := filterGooglePhotosFiles(paths)
