@@ -115,21 +115,14 @@ func (a *Api) getAuthToken() (map[string]string, error) {
 		return nil, fmt.Errorf("failed to parse auth data: %w", err)
 	}
 
-	authRequestData := url.Values{
-		"androidId":                    {authDataValues.Get("androidId")},
-		"app":                          {"com.google.android.apps.photos"},
-		"client_sig":                   {authDataValues.Get("client_sig")},
-		"callerPkg":                    {"com.google.android.apps.photos"},
-		"callerSig":                    {authDataValues.Get("callerSig")},
-		"device_country":               {authDataValues.Get("device_country")},
-		"Email":                        {authDataValues.Get("Email")},
-		"google_play_services_version": {authDataValues.Get("google_play_services_version")},
-		"lang":                         {authDataValues.Get("lang")},
-		"oauth2_foreground":            {authDataValues.Get("oauth2_foreground")},
-		"sdk_version":                  {authDataValues.Get("sdk_version")},
-		"service":                      {authDataValues.Get("service")},
-		"Token":                        {authDataValues.Get("Token")},
+	authRequestData := url.Values{}
+	for key, values := range authDataValues {
+		authRequestData[key] = append([]string(nil), values...)
 	}
+	authRequestData.Set("app", "com.google.android.apps.photos")
+	authRequestData.Set("callerPkg", "com.google.android.apps.photos")
+	authRequestData.Del("it_caveat_types")
+	authRequestData.Del("assertion_jwt")
 
 	headers := map[string]string{
 		"Accept-Encoding": "gzip",
