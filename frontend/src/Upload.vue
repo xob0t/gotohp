@@ -5,7 +5,7 @@ import { Progress } from "./components/ui/progress"
 import { ScrollArea } from "./components/ui/scroll-area"
 import ThreadProgress from "./components/ThreadProgress.vue"
 import { uploadManager } from './utils/UploadManager'
-import { X, Clock, Zap, FolderPlus } from 'lucide-vue-next'
+import { X, Clock, Zap, FolderPlus } from '@lucide/vue'
 
 const { state } = uploadManager
 
