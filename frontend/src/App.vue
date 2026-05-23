@@ -16,8 +16,9 @@ import './index.css'
 import SettingsPanel from "./SettingsPanel.vue"
 import Upload from './Upload.vue'
 import { uploadManager } from './utils/UploadManager'
+import Toaster from './components/ui/sonner/Sonner.vue'
 
-import { toast, Toaster } from "vue-sonner"
+import { toast } from "vue-sonner"
 
 useColorMode().value = "dark"
 
@@ -266,12 +267,24 @@ const albumErrorHandler = (e: Event) => {
   }
 }
 
+const uploadErrorHandler = (e: Event) => {
+  const event = e as CustomEvent<{ FileName: string; Message: string }>
+  const { FileName, Message } = event.detail
+  const errorMessage = Message.replace(/^Error:\s*/, '')
+  toast.error(FileName ? `Upload failed: ${FileName}` : 'Upload failed', {
+    description: errorMessage,
+    duration: 10000,
+    important: true,
+  })
+}
+
 onMounted(() => {
   document.addEventListener('dragenter', onDragEnter)
   document.addEventListener('dragleave', onDragLeave)
   document.addEventListener('dragover', onDragOver)
   document.addEventListener('drop', onDrop)
   window.addEventListener('albumError', albumErrorHandler)
+  window.addEventListener('uploadError', uploadErrorHandler)
 
   // Listen for files-dropped event from backend
   Events.On('files-dropped', (event: { data: { files: string[]; dropZone: string } }) => {
@@ -302,6 +315,7 @@ onUnmounted(() => {
   document.removeEventListener('dragover', onDragOver)
   document.removeEventListener('drop', onDrop)
   window.removeEventListener('albumError', albumErrorHandler)
+  window.removeEventListener('uploadError', uploadErrorHandler)
   if (dragLeaveTimeout) {
     clearTimeout(dragLeaveTimeout)
   }
@@ -504,6 +518,11 @@ onUnmounted(() => {
     >
       <Upload />
     </div>
-    <Toaster position="bottom-center" />
+    <Toaster
+      position="bottom-center"
+      rich-colors
+      expand
+      :visible-toasts="4"
+    />
   </main>
 </template>

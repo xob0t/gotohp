@@ -95,10 +95,11 @@ type UploadBatchStart struct {
 }
 
 type FileUploadResult struct {
-	MediaKey string `json:"MediaKey"`
-	IsError  bool   `json:"IsError"`
-	Error    error  `json:"-"`
-	Path     string `json:"Path"`
+	MediaKey     string `json:"MediaKey"`
+	IsError      bool   `json:"IsError"`
+	Error        error  `json:"-"`
+	ErrorMessage string `json:"ErrorMessage"`
+	Path         string `json:"Path"`
 }
 
 type ThreadStatus struct {
@@ -125,8 +126,9 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	targetPaths, err := filterGooglePhotosFiles(paths)
 	if err != nil {
 		app.EmitEvent("FileStatus", FileUploadResult{
-			IsError: true,
-			Error:   err,
+			IsError:      true,
+			Error:        err,
+			ErrorMessage: err.Error(),
 		})
 		return
 	}
@@ -604,7 +606,7 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 
 			mediaKey, err := uploadFileWithCallback(ctx, api, path, workerID, callback)
 			if err != nil {
-				results <- FileUploadResult{IsError: true, Error: err, Path: path}
+				results <- FileUploadResult{IsError: true, Error: err, ErrorMessage: err.Error(), Path: path}
 				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
 					Status:   "error",

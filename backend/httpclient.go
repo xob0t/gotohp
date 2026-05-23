@@ -1,11 +1,13 @@
 package backend
 
 import (
+	"compress/gzip"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -82,6 +84,19 @@ func CheckResponse(resp *http.Response) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := ReadResponseBody(resp)
 	return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+}
+
+func ReadResponseBody(resp *http.Response) ([]byte, error) {
+	var reader io.Reader = resp.Body
+	if strings.Contains(strings.ToLower(resp.Header.Get("Content-Encoding")), "gzip") {
+		gzipReader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create gzip reader: %w", err)
+		}
+		defer gzipReader.Close()
+		reader = gzipReader
+	}
+	return io.ReadAll(reader)
 }
