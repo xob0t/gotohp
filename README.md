@@ -19,17 +19,15 @@ Unofficial Google Photos Desktop GUI Client
 
 ## CLI Usage
 
-### Windows
+Releases include a standalone CLI executable for command-line usage. Use the `gotohp-cli` artifact for your platform; it does not depend on the GUI runtime.
 
-Windows releases include a dedicated CLI executable (`gotohp-cli.exe`) for command-line usage:
-
-```cmd
-gotohp-cli.exe upload C:\path\to\photos --recursive --threads 5
-gotohp-cli.exe upload C:\path\to\photos --recursive --exclude @eaDir
-gotohp-cli.exe creds list
-gotohp-cli.exe creds add "androidId=..."
-gotohp-cli.exe creds set user@gmail.com
-gotohp-cli.exe version
+```shell
+gotohp-cli upload /path/to/photos --recursive --threads 5
+gotohp-cli upload /path/to/photos --recursive --exclude @eaDir
+gotohp-cli creds list
+gotohp-cli creds add "androidId=..."
+gotohp-cli creds set user@gmail.com
+gotohp-cli version
 ```
 
 **Available commands:**
@@ -51,17 +49,6 @@ gotohp-cli.exe version
 - `creds set <email>` (alias: `select`) - Set active credential (supports partial matching)
 - `version` - Show version information
 - `help` - Show help message
-
-### macOS / Linux
-
-The main executable supports CLI mode:
-
-```bash
-./gotohp upload /path/to/photos --recursive --threads 5
-./gotohp upload /path/to/photos --recursive --exclude @eaDir
-./gotohp creds list
-./gotohp version
-```
 
 ## Requires mobile app credentials to work
 
