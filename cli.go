@@ -205,8 +205,8 @@ func (m uploadModel) View() string {
 	if m.totalFiles > 0 {
 		percent := float64(m.completed+m.failed) / float64(m.totalFiles)
 		b.WriteString(m.progress.ViewAs(percent))
-		b.WriteString(fmt.Sprintf("\n%d/%d files", m.completed+m.failed, m.totalFiles))
-		b.WriteString(fmt.Sprintf(" (✓ %d success, ✗ %d failed)\n\n", m.completed, m.failed))
+		fmt.Fprintf(&b, "\n%d/%d files", m.completed+m.failed, m.totalFiles)
+		fmt.Fprintf(&b, " (✓ %d success, ✗ %d failed)\n\n", m.completed, m.failed)
 	}
 
 	// Worker status
@@ -229,11 +229,11 @@ func (m uploadModel) View() string {
 		} else if m.albumComplete {
 			b.WriteString(albumStyle.Render("✓ Added to album: "))
 			b.WriteString(m.albumName)
-			b.WriteString(fmt.Sprintf(" (%d items)\n", m.albumItemsAdded))
+			fmt.Fprintf(&b, " (%d items)\n", m.albumItemsAdded)
 		} else if m.albumTotalItems > 0 {
 			b.WriteString(albumStyle.Render("Adding to album: "))
 			b.WriteString(m.albumName)
-			b.WriteString(fmt.Sprintf(" (%d/%d items)\n", m.albumItemsAdded, m.albumTotalItems))
+			fmt.Fprintf(&b, " (%d/%d items)\n", m.albumItemsAdded, m.albumTotalItems)
 		}
 	}
 

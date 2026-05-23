@@ -160,7 +160,7 @@ func (a *Api) getAuthToken() (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("auth request failed after retries: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -255,7 +255,7 @@ func (a *Api) GetUploadToken(shaHashB64 string, fileSize int64) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -327,7 +327,7 @@ func (a *Api) FindRemoteMediaByHash(shaHash []byte) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -409,7 +409,10 @@ func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploa
 		}
 
 		result, err := a.doUploadRequest(ctx, uploadURL, reader)
-		file.Close() // Close file after request completes (success or fail)
+		closeErr := file.Close() // Close file after request completes (success or fail)
+		if err == nil && closeErr != nil {
+			return nil, fmt.Errorf("error closing file: %w", closeErr)
+		}
 
 		if err == nil {
 			return result, nil
@@ -450,7 +453,7 @@ func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.R
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check for non-success status codes (includes retryable 5xx/429 and non-retryable 4xx)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -570,7 +573,7 @@ func (a *Api) doCommitRequest(serializedData []byte) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := ReadResponseBody(resp)
@@ -668,7 +671,7 @@ func (a *Api) CreateAlbum(albumName string, mediaKeys []string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -758,7 +761,7 @@ func (a *Api) AddMediaToAlbum(albumMediaKey string, mediaKeys []string) error {
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check for errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

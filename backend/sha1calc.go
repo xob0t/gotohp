@@ -40,7 +40,7 @@ func CalculateSHA1(ctx context.Context, filePath string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	hash := sha1.New()
 	cw := &chunkedContextWriter{ctx: ctx, w: hash}
