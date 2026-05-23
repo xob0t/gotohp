@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 import { Select, SelectContent, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import SelectItem from '@/components/ui/CustomSelectItem.vue'
