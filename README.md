@@ -58,7 +58,7 @@ You only need to do this once.
 
 1. Install Google Photos ReVanced on your android device/emulator.
    - Install GmsCore [https://github.com/ReVanced/GmsCore/releases](https://github.com/ReVanced/GmsCore/releases)
-   - Install patched apk [https://github.com/j-hc/revanced-magisk-module/releases](https://github.com/j-hc/revanced-magisk-module/releases) or patch it yourself
+   - Install patched apk [https://github.com/RookieEnough/Morphe-AutoBuilds/releases](https://github.com/RookieEnough/Morphe-AutoBuilds/releases) or patch it yourself
 2. Connect the device to your PC via ADB.
 3. Open the terminal on your PC and execute
 
