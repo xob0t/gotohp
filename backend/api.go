@@ -124,6 +124,17 @@ func (a *Api) getAuthToken() (map[string]string, error) {
 	authRequestData.Del("it_caveat_types")
 	authRequestData.Del("assertion_jwt")
 
+	var tokenBinding *tokenBindingSession
+	if alias := authRequestData.Get("token_binding_alias"); alias != "" {
+		var assertionJWT string
+		tokenBinding, assertionJWT, err = newTokenBindingSession(alias)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare token binding assertion: %w", err)
+		}
+		authRequestData.Set("assertion_jwt", assertionJWT)
+	}
+	authRequestData.Del("token_binding_alias")
+
 	headers := map[string]string{
 		"Accept-Encoding": "gzip",
 		"app":             "com.google.android.apps.photos",
@@ -183,6 +194,9 @@ func (a *Api) getAuthToken() (map[string]string, error) {
 		if len(parts) == 2 {
 			parsedAuthResponse[parts[0]] = parts[1]
 		}
+	}
+	if err := decryptTokenEncryptedResponse(parsedAuthResponse, tokenBinding); err != nil {
+		return nil, err
 	}
 
 	// Validate we got the required fields

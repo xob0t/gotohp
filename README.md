@@ -13,7 +13,7 @@ Unofficial Google Photos Desktop GUI Client
 - Skips files already present in your account
 - CLI mode
 - Configurable, presistent upload settings (stored in "%system config path%/gotohp/gotohp.config")  
-    You can force local config by creating empty gotohp.config next to executable.
+   You can force local config by creating empty gotohp.config next to executable.
 
 ## [Download](https://github.com/xob0t/gotohp/releases/latest)
 
@@ -70,22 +70,22 @@ You only need to do this once.
 ### Option 1 - ReVanced. No root required
 
 1. Install Google Photos ReVanced on your android device/emulator.
-    - Install GmsCore [https://github.com/ReVanced/GmsCore/releases](https://github.com/ReVanced/GmsCore/releases)
-    - Install patched apk [https://github.com/j-hc/revanced-magisk-module/releases](https://github.com/j-hc/revanced-magisk-module/releases) or patch it yourself
+   - Install GmsCore [https://github.com/ReVanced/GmsCore/releases](https://github.com/ReVanced/GmsCore/releases)
+   - Install patched apk [https://github.com/j-hc/revanced-magisk-module/releases](https://github.com/j-hc/revanced-magisk-module/releases) or patch it yourself
 2. Connect the device to your PC via ADB.
 3. Open the terminal on your PC and execute
 
-    Windows
+   Windows
 
-    ```cmd
-    adb logcat | FINDSTR "auth%2Fphotos.native"
-    ```
+   ```cmd
+   adb logcat | FINDSTR "auth%2Fphotos.native"
+   ```
 
-    Linux/Mac
+   Linux/Mac
 
-    ```shell
-    adb logcat | grep "auth%2Fphotos.native"
-    ```
+   ```shell
+   adb logcat | grep "auth%2Fphotos.native"
+   ```
 
 4. If you are already using ReVanced - remove Google Account from GmsCore.
 5. Open Google Photos ReVanced on your device and log into your account.
@@ -98,31 +98,36 @@ You only need to do this once.
 <details>
   <summary><strong>Click to expand</strong></summary>
 
-1. Get a rooted android device or an emulator. Recommended Android versions 9-13
+1. Get a rooted android device or an emulator.
 2. Connect the device to your PC via ADB.
 3. Install [HTTP Toolkit](https://httptoolkit.com)
 4. In HTTP Toolkit, select Intercept - `Android Device via ADB`. Filter traffic with
 
-    ```text
-    contains(https://www.googleapis.com/auth/photos.native)
-    ```
+   ```text
+   contains(https://www.googleapis.com/auth/photos.native)
+   ```
 
-    Or if you have an older version of Google Photos, try
+   Or if you have an older version of Google Photos, try
 
-    ```text
-    contains(www.googleapis.com%2Fauth%2Fplus.photos.readwrite)
-    ```
+   ```text
+   contains(www.googleapis.com%2Fauth%2Fplus.photos.readwrite)
+   ```
 
 5. Open Google Photos app and login with your account.
 6. A single request should appear.  
    Copy request body as text.
+7. Add that credential string in gotohp.
+8. If gotohp asks for a token binding key, keep the rooted device connected and click `Read from ADB`. gotohp will read the account's `lstBindingKeyAlias` from Android AccountManager and save it into the credential.
 
 #### Troubleshooting
 
-- **No Auth Request Intercepted**  
+- **No Auth Request Intercepted**
   1. Log out of your Google account.
   2. Log in again.
   3. Try `Android App via Frida` interception method in HTTP Toolkit.
+- **Token binding key not found**
+  1. Make sure the same Google account is present on the connected device.
+  2. Make sure root is available to ADB.
 
 </details>
 

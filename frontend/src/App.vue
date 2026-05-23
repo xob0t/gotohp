@@ -36,6 +36,8 @@ const selectedOption = ref('')
 const options = ref<string[]>([])
 const credentialMap = ref<Record<string, string>>({})
 const albumNameOrKey = ref('')
+const tokenBindingEmail = ref('')
+const isExtractingTokenBinding = ref(false)
 
 function extractEmailFromCredential(credential: string): string | null {
   try {
@@ -51,13 +53,28 @@ watch(selectedOption, async (newValue) => {
   if (newValue) {
     try {
       await ConfigManager.SetSelected(newValue)
+      await updateTokenBindingPrompt(newValue)
       console.log('Successfully updated selected value:', newValue)
     } catch (error) {
       console.error('Failed to update selected value:', error)
       toast.error('Failed to update selected account.')
     }
+  } else {
+    tokenBindingEmail.value = ''
   }
 })
+
+async function updateTokenBindingPrompt(email: string) {
+  const credential = credentialMap.value[email]
+  if (!credential) {
+    tokenBindingEmail.value = ''
+    return
+  }
+
+  tokenBindingEmail.value = await ConfigManager.CredentialNeedsTokenBinding(credential)
+    ? email
+    : ''
+}
 
 async function addCredentials(authString: string) {
   try {
@@ -70,6 +87,7 @@ async function addCredentials(authString: string) {
         options.value = [...options.value, email]
       }
       selectedOption.value = email
+      await updateTokenBindingPrompt(email)
     }
     toast.success('Credentials added successfully!')
     return true
@@ -79,6 +97,46 @@ async function addCredentials(authString: string) {
       description: error instanceof Error ? error.message : String(error),
     })
     return false
+  }
+}
+
+async function refreshCredentials() {
+  const config = await ConfigManager.GetConfig()
+  credentialMap.value = {}
+  options.value = []
+
+  if (config.credentials?.length) {
+    config.credentials.forEach(credential => {
+      const email = extractEmailFromCredential(credential)
+      if (email) {
+        credentialMap.value[email] = credential
+        options.value.push(email)
+      }
+    })
+  }
+
+  if (config.selected) {
+    selectedOption.value = config.selected
+    await updateTokenBindingPrompt(config.selected)
+  }
+}
+
+async function addTokenBindingAliasFromADB() {
+  if (!tokenBindingEmail.value) return
+
+  isExtractingTokenBinding.value = true
+  try {
+    await ConfigManager.AddTokenBindingAliasFromADB(tokenBindingEmail.value)
+    await refreshCredentials()
+    tokenBindingEmail.value = ''
+    toast.success('Token binding key added.')
+  } catch (error) {
+    console.error('Failed to add token binding key:', error)
+    toast.error('Failed to add token binding key', {
+      description: error instanceof Error ? error.message : String(error),
+    })
+  } finally {
+    isExtractingTokenBinding.value = false
   }
 }
 
@@ -92,6 +150,9 @@ async function removeCredentials(email: string) {
       if (selectedOption.value === email) {
         selectedOption.value = ''
       }
+      if (tokenBindingEmail.value === email) {
+        tokenBindingEmail.value = ''
+      }
     }
     toast.success('Credentials removed.')
     return true
@@ -103,23 +164,7 @@ async function removeCredentials(email: string) {
 }
 
 onMounted(async () => {
-  const config = await ConfigManager.GetConfig()
-  if (config.credentials?.length) {
-    credentialMap.value = {}
-    options.value = []
-
-    config.credentials.forEach(credential => {
-      const email = extractEmailFromCredential(credential)
-      if (email) {
-        credentialMap.value[email] = credential
-        options.value.push(email)
-      }
-    })
-
-    if (config.selected) {
-      selectedOption.value = config.selected
-    }
-  }
+  await refreshCredentials()
 
 })
 
@@ -326,6 +371,22 @@ onUnmounted(() => {
           @item-added="addCredentials"
           @item-removed="removeCredentials"
         />
+        <div
+          v-if="tokenBindingEmail"
+          class="w-full max-w-xs border rounded-lg p-3 flex flex-col gap-3"
+          style="--wails-draggable: none"
+        >
+          <p class="text-sm text-muted-foreground">
+            This credential needs a token binding key from the rooted Android device it was captured from.
+          </p>
+          <Button
+            class="cursor-pointer select-none"
+            :disabled="isExtractingTokenBinding"
+            @click="addTokenBindingAliasFromADB"
+          >
+            {{ isExtractingTokenBinding ? 'Reading ADB...' : 'Read from ADB' }}
+          </Button>
+        </div>
       </template>
 
       <template v-else>
@@ -386,6 +447,22 @@ onUnmounted(() => {
             @item-added="addCredentials"
             @item-removed="removeCredentials"
           />
+          <div
+            v-if="tokenBindingEmail"
+            class="w-full max-w-xs border rounded-lg p-3 flex flex-col gap-3"
+            style="--wails-draggable: none"
+          >
+            <p class="text-sm text-muted-foreground">
+              This credential needs a token binding key from the rooted Android device it was captured from.
+            </p>
+            <Button
+              class="cursor-pointer select-none"
+              :disabled="isExtractingTokenBinding"
+              @click="addTokenBindingAliasFromADB"
+            >
+              {{ isExtractingTokenBinding ? 'Reading ADB...' : 'Read from ADB' }}
+            </Button>
+          </div>
 
           <Sheet>
             <SheetTrigger>
