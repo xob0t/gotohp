@@ -130,6 +130,22 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		TotalBytes: 0,
 	})
 
+	if _, err := NewApi(); err != nil {
+		for _, path := range targetPaths {
+			app.EmitEvent("FileStatus", FileUploadResult{
+				IsError:      true,
+				Error:        err,
+				ErrorMessage: err.Error(),
+				Path:         path,
+			})
+		}
+		app.EmitEvent("uploadStop", nil)
+		m.mu.Lock()
+		m.running = false
+		m.mu.Unlock()
+		return
+	}
+
 	// Calculate total bytes asynchronously and emit update when complete
 	go func() {
 		var totalBytes int64
