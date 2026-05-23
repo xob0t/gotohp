@@ -25,6 +25,7 @@ Windows releases include a dedicated CLI executable (`gotohp-cli.exe`) for comma
 
 ```cmd
 gotohp-cli.exe upload C:\path\to\photos --recursive --threads 5
+gotohp-cli.exe upload C:\path\to\photos --recursive --exclude @eaDir
 gotohp-cli.exe creds list
 gotohp-cli.exe creds add "androidId=..."
 gotohp-cli.exe creds set user@gmail.com
@@ -40,6 +41,7 @@ gotohp-cli.exe version
   - `-d, --delete` - Delete from host after upload
   - `-df, --disable-filter` - Disable file type filtering
   - `--date-from-filename` - Set media date from filename (e.g. `20240709_182027.jpg`)
+  - `-e, --exclude <pattern>` - Skip directories with this exact name during recursive upload (e.g. `@eaDir`)
   - `-a, --album <name>` - Add uploaded files to album (use `AUTO` for folder-based albums)
   - `-l, --log-level <level>` - Set log level: debug, info, warn, error (default: info)
   - `-c, --config <path>` - Path to config file
@@ -56,6 +58,7 @@ The main executable supports CLI mode:
 
 ```bash
 ./gotohp upload /path/to/photos --recursive --threads 5
+./gotohp upload /path/to/photos --recursive --exclude @eaDir
 ./gotohp creds list
 ./gotohp version
 ```
