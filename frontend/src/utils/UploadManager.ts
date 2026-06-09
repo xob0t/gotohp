@@ -42,6 +42,18 @@ export interface AlbumError {
   Error: string;
 }
 
+export interface CompareProgress {
+  Status: string;
+  Count: number;
+}
+
+export interface CompareResult {
+  TotalLocal: number;
+  TotalGooglePhotos: number;
+  MissingCount: number;
+  MissingFilesPath: string;
+}
+
 export interface UploadState {
   isUploading: boolean;
   totalFiles: number;
@@ -61,6 +73,9 @@ export interface UploadState {
   // Album creation
   albumStatus: AlbumStatus | null;
   isCreatingAlbum: boolean;
+  // Compare state
+  compareProgress: CompareProgress | null;
+  compareResult: CompareResult | null;
 }
 
 class UploadManager {
@@ -82,6 +97,8 @@ class UploadManager {
     uploadSpeed: 0,
     albumStatus: null,
     isCreatingAlbum: false,
+    compareProgress: null,
+    compareResult: null,
   });
 
   // For speed calculation
@@ -126,6 +143,23 @@ class UploadManager {
       this.completedBytes = 0;
       this.fileBytes.clear();
       this.resetUploadResults();
+      this.state.compareProgress = null;
+    });
+
+    // Handle compare progress
+    Events.On("compareProgress", (event: { data: CompareProgress }) => {
+      this.state.compareProgress = event.data;
+      if (event.data.Status === "loading_cache") {
+        this.state.compareResult = null;
+      }
+    });
+
+    // Handle compare result
+    Events.On("compareResult", (event: { data: CompareResult }) => {
+      this.state.compareResult = event.data;
+      if (event.data.MissingCount === 0) {
+        window.dispatchEvent(new CustomEvent('compareFinishedNoMissing', { detail: event.data }));
+      }
     });
 
     // Handle async total bytes update (calculated after uploadStart)
@@ -172,6 +206,7 @@ class UploadManager {
     // Handle upload stop
     Events.On("uploadStop", () => {
       this.state.isUploading = false;
+      this.state.compareProgress = null;
     });
 
     // Handle album creation progress

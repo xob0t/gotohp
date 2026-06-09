@@ -16,4 +16,6 @@ func init() {
 	application.RegisterEvent[int64]("uploadTotalBytes")
 	application.RegisterEvent[FilesDroppedEvent]("files-dropped")
 	application.RegisterEvent[StartUploadEvent]("startUpload")
+	application.RegisterEvent[CompareProgress]("compareProgress")
+	application.RegisterEvent[CompareResult]("compareResult")
 }

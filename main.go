@@ -55,7 +55,7 @@ func runGUI() {
 		Width:               400,
 		Height:              600,
 		EnableFileDrop:      true,
-		DisableResize:       true,
+		DisableResize:       false,
 		MaximiseButtonState: application.ButtonDisabled,
 		BackgroundType:      application.BackgroundTypeTranslucent,
 		Mac: application.MacWindow{

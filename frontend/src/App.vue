@@ -277,6 +277,14 @@ const uploadErrorHandler = (e: Event) => {
     important: true,
   })
 }
+const compareFinishedNoMissingHandler = (e: Event) => {
+  const event = e as CustomEvent<{ TotalLocal: number; TotalGooglePhotos: number }>
+  const { TotalLocal } = event.detail
+  toast.success('All files up to date', {
+    description: `All ${TotalLocal} dropped files already exist in Google Photos.`,
+    duration: 5000,
+  })
+}
 
 onMounted(() => {
   document.addEventListener('dragenter', onDragEnter)
@@ -285,6 +293,7 @@ onMounted(() => {
   document.addEventListener('drop', onDrop)
   window.addEventListener('albumError', albumErrorHandler)
   window.addEventListener('uploadError', uploadErrorHandler)
+  window.addEventListener('compareFinishedNoMissing', compareFinishedNoMissingHandler)
 
   // Listen for files-dropped event from backend
   Events.On('files-dropped', (event: { data: { files: string[]; dropZone: string } }) => {
@@ -316,10 +325,12 @@ onUnmounted(() => {
   document.removeEventListener('drop', onDrop)
   window.removeEventListener('albumError', albumErrorHandler)
   window.removeEventListener('uploadError', uploadErrorHandler)
+  window.removeEventListener('compareFinishedNoMissing', compareFinishedNoMissingHandler)
   if (dragLeaveTimeout) {
     clearTimeout(dragLeaveTimeout)
   }
 })
+
 </script>
 
 <template>
@@ -373,7 +384,7 @@ onUnmounted(() => {
 
     <!-- Normal UI (not dragging) -->
     <div
-      v-else-if="!uploadState.isUploading"
+      v-else-if="!uploadState.isUploading && !uploadState.compareProgress"
       class="w-screen h-screen flex flex-col items-center gap-4 max-w-md pt-30"
       data-file-drop-target
     >
@@ -513,7 +524,7 @@ onUnmounted(() => {
       </template>
     </div>
     <div
-      v-if="uploadState.isUploading"
+      v-if="uploadState.isUploading || uploadState.compareProgress"
       class="w-full h-full"
     >
       <Upload />

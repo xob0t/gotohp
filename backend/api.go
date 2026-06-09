@@ -202,7 +202,7 @@ func (a *Api) getAuthToken() (map[string]string, error) {
 }
 
 // Obtain a file upload token from the Google Photos API.
-func (a *Api) GetUploadToken(shaHashB64 string, fileSize int64) (string, error) {
+func (a *Api) GetUploadToken(ctx context.Context, shaHashB64 string, fileSize int64) (string, error) {
 	// Create the protobuf message
 	protoBody := generated.GetUploadToken{
 		F1:            2,
@@ -235,47 +235,71 @@ func (a *Api) GetUploadToken(shaHashB64 string, fileSize int64) (string, error) 
 		"X-Upload-Content-Length": strconv.Itoa(int(fileSize)),
 	}
 
-	// Create the request
-	req, err := http.NewRequest(
-		"POST",
-		"https://photos.googleapis.com/data/upload/uploadmedia/interactive",
-		bytes.NewReader(serializedData),
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+	retryConfig := DefaultRetryConfig()
+	var lastErr error
+
+	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
+		// Check context before each attempt
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
+
+		if attempt > 0 {
+			delay := CalculateBackoff(attempt-1, retryConfig)
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(delay):
+			}
+		}
+
+		req, err := http.NewRequestWithContext(
+			ctx,
+			"POST",
+			"https://photos.googleapis.com/data/upload/uploadmedia/interactive",
+			bytes.NewReader(serializedData),
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to create request: %w", err)
+		}
+
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+
+		resp, err := a.client.Do(req)
+		if !ShouldRetry(resp, err) {
+			if err != nil {
+				return "", fmt.Errorf("request failed: %w", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+				body, _ := ReadResponseBody(resp)
+				return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+			}
+
+			uploadToken := resp.Header.Get("X-GUploader-UploadID")
+			if uploadToken == "" {
+				return "", errors.New("response missing X-GUploader-UploadID header")
+			}
+			return uploadToken, nil
+		}
+
+		if err != nil {
+			lastErr = err
+		} else {
+			body, _ := ReadResponseBody(resp)
+			lastErr = fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+			resp.Body.Close()
+		}
 	}
 
-	// Set headers
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-
-	// Make the request
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	// Check for errors
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := ReadResponseBody(resp)
-		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	// Get the upload token from headers
-	uploadToken := resp.Header.Get("X-GUploader-UploadID")
-	if uploadToken == "" {
-		return "", errors.New("response missing X-GUploader-UploadID header")
-	}
-
-	return uploadToken, nil
+	return "", fmt.Errorf("failed to get upload token after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
 }
 
 // Check library for existing files with the hash
-func (a *Api) FindRemoteMediaByHash(shaHash []byte) (string, error) {
-	// Create the protobuf message
-
+func (a *Api) FindRemoteMediaByHash(ctx context.Context, shaHash []byte) (string, error) {
 	// Create and initialize the protobuf message with all required nested structures
 	protoBody := generated.HashCheck{
 		Field1: &generated.HashCheckField1Type{
@@ -307,48 +331,74 @@ func (a *Api) FindRemoteMediaByHash(shaHash []byte) (string, error) {
 		"Authorization":   "Bearer " + bearerToken,
 	}
 
-	// Create the request
-	req, err := http.NewRequest(
-		"POST",
-		"https://photosdata-pa.googleapis.com/6439526531001121323/5084965799730810217",
-		bytes.NewReader(serializedData),
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+	retryConfig := DefaultRetryConfig()
+	var lastErr error
+
+	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
+		// Check context before each attempt
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
+
+		if attempt > 0 {
+			delay := CalculateBackoff(attempt-1, retryConfig)
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(delay):
+			}
+		}
+
+		// Recreate body reader for each attempt
+		req, err := http.NewRequestWithContext(
+			ctx,
+			"POST",
+			"https://photosdata-pa.googleapis.com/6439526531001121323/5084965799730810217",
+			bytes.NewReader(serializedData),
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to create request: %w", err)
+		}
+
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+
+		resp, err := a.client.Do(req)
+		if !ShouldRetry(resp, err) {
+			if err != nil {
+				return "", fmt.Errorf("request failed: %w", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+				body, _ := ReadResponseBody(resp)
+				return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+			}
+
+			bodyBytes, err := ReadResponseBody(resp)
+			if err != nil {
+				return "", fmt.Errorf("failed to read response body: %w", err)
+			}
+
+			var pbResp generated.RemoteMatches
+			if err := proto.Unmarshal(bodyBytes, &pbResp); err != nil {
+				return "", fmt.Errorf("failed to unmarshal protobuf: %w", err)
+			}
+
+			return pbResp.GetMediaKey(), nil
+		}
+
+		if err != nil {
+			lastErr = err
+		} else {
+			body, _ := ReadResponseBody(resp)
+			lastErr = fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+			resp.Body.Close()
+		}
 	}
 
-	// Set headers
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-
-	// Make the request
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	// Check for errors
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := ReadResponseBody(resp)
-		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	// Parse the response body
-	bodyBytes, err := ReadResponseBody(resp)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	var pbResp generated.RemoteMatches
-	if err := proto.Unmarshal(bodyBytes, &pbResp); err != nil {
-		return "", fmt.Errorf("failed to unmarshal protobuf: %w", err)
-	}
-
-	mediaKey := pbResp.GetMediaKey()
-
-	return mediaKey, nil
+	return "", fmt.Errorf("hash check failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
 }
 
 // UploadProgressCallback is called with progress updates during file upload
@@ -476,6 +526,7 @@ func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.R
 
 // CommitUpload commits the upload to Google Photos
 func (a *Api) CommitUpload(
+	ctx context.Context,
 	uploadResponseDecoded *generated.CommitToken,
 	fileName string,
 	sha1Hash []byte,
@@ -530,11 +581,19 @@ func (a *Api) CommitUpload(
 	retryConfig := DefaultRetryConfig()
 	var lastErr error
 	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
+
 		if attempt > 0 {
 			delay := CalculateBackoff(attempt-1, retryConfig)
-			time.Sleep(delay)
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(delay):
+			}
 		}
-		mediaKey, err := a.doCommitRequest(serializedData)
+		mediaKey, err := a.doCommitRequest(ctx, serializedData)
 		if err == nil {
 			return mediaKey, nil
 		}
@@ -543,7 +602,7 @@ func (a *Api) CommitUpload(
 	return "", fmt.Errorf("commit failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
 }
 
-func (a *Api) doCommitRequest(serializedData []byte) (string, error) {
+func (a *Api) doCommitRequest(ctx context.Context, serializedData []byte) (string, error) {
 	bearerToken, err := a.BearerToken()
 	if err != nil {
 		return "", fmt.Errorf("failed to get bearer token: %w", err)
@@ -559,45 +618,78 @@ func (a *Api) doCommitRequest(serializedData []byte) (string, error) {
 		"x-goog-ext-174067345-bin": "CgIIAg==",
 	}
 
-	req, err := http.NewRequest("POST",
-		"https://photosdata-pa.googleapis.com/6439526531001121323/16538846908252377752",
-		bytes.NewReader(serializedData))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-	for k, v := range headers {
-		req.Header.Set(k, v)
+	retryConfig := DefaultRetryConfig()
+	var lastErr error
+
+	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
+
+		if attempt > 0 {
+			delay := CalculateBackoff(attempt-1, retryConfig)
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(delay):
+			}
+		}
+
+		req, err := http.NewRequestWithContext(
+			ctx,
+			"POST",
+			"https://photosdata-pa.googleapis.com/6439526531001121323/16538846908252377752",
+			bytes.NewReader(serializedData),
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to create request: %w", err)
+		}
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+
+		resp, err := a.client.Do(req)
+		if !ShouldRetry(resp, err) {
+			if err != nil {
+				return "", fmt.Errorf("request failed: %w", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+				body, _ := ReadResponseBody(resp)
+				return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+			}
+
+			bodyBytes, err := ReadResponseBody(resp)
+			if err != nil {
+				return "", fmt.Errorf("failed to read response body: %w", err)
+			}
+
+			var pbResp generated.CommitUploadResponse
+			if err := proto.Unmarshal(bodyBytes, &pbResp); err != nil {
+				return "", fmt.Errorf("failed to unmarshal protobuf: %w", err)
+			}
+
+			if pbResp.GetField1() == nil || pbResp.GetField1().GetField3() == nil {
+				return "", fmt.Errorf("upload rejected by API: invalid response structure")
+			}
+			mediaKey := pbResp.GetField1().GetField3().GetMediaKey()
+			if mediaKey == "" {
+				return "", fmt.Errorf("upload rejected by API: no media key returned")
+			}
+			return mediaKey, nil
+		}
+
+		if err != nil {
+			lastErr = err
+		} else {
+			body, _ := ReadResponseBody(resp)
+			lastErr = fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+			resp.Body.Close()
+		}
 	}
 
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := ReadResponseBody(resp)
-		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	bodyBytes, err := ReadResponseBody(resp)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	var pbResp generated.CommitUploadResponse
-	if err := proto.Unmarshal(bodyBytes, &pbResp); err != nil {
-		return "", fmt.Errorf("failed to unmarshal protobuf: %w", err)
-	}
-
-	if pbResp.GetField1() == nil || pbResp.GetField1().GetField3() == nil {
-		return "", fmt.Errorf("upload rejected by API: invalid response structure")
-	}
-	mediaKey := pbResp.GetField1().GetField3().GetMediaKey()
-	if mediaKey == "" {
-		return "", fmt.Errorf("upload rejected by API: no media key returned")
-	}
-	return mediaKey, nil
+	return "", fmt.Errorf("doCommitRequest failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
 }
 
 // CreateAlbum creates a new album with the given name and initial media items.

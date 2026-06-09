@@ -31,6 +31,7 @@ type Config struct {
 	AlbumAutoMode                 bool     `json:"albumAutoMode" koanf:"album_auto_mode"`
 	SetDateFromFilename           bool     `json:"setDateFromFilename" koanf:"set_date_from_filename"`
 	ExcludePattern                string   `json:"excludePattern" koanf:"exclude_pattern"`
+	UploadFolder                  string   `json:"uploadFolder" koanf:"upload_folder"`
 }
 
 type ConfigManager struct{}
@@ -95,8 +96,14 @@ func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
 	if uploadThreads < 1 {
 		return
 	}
+	configMu.Lock()
 	AppConfig.UploadThreads = uploadThreads
+	configMu.Unlock()
 	_ = saveAppConfig()
+
+	if activeUploadManager != nil {
+		activeUploadManager.AdjustWorkers(uploadThreads)
+	}
 }
 
 func (g *ConfigManager) SetAlbumName(albumName string) {
@@ -134,6 +141,17 @@ func GetAlbumConfig() (albumName string, autoMode bool) {
 func (g *ConfigManager) SetSetDateFromFilename(v bool) {
 	AppConfig.SetDateFromFilename = v
 	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetUploadFolder(folder string) {
+	AppConfig.UploadFolder = folder
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) GetUploadFolder() string {
+	configMu.RLock()
+	defer configMu.RUnlock()
+	return AppConfig.UploadFolder
 }
 
 func (g *ConfigManager) SetExcludePattern(pattern string) {

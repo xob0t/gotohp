@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -24,19 +25,53 @@ type StartUploadEvent struct {
 // ProgressCallback is a function type for upload progress updates
 type ProgressCallback func(event string, data any)
 
+var activeUploadManager *UploadManager
+
 type UploadManager struct {
-	mu       sync.Mutex
-	wg       sync.WaitGroup
-	cancel   chan struct{}
-	canceled bool
-	running  bool
-	app      AppInterface
+	mu            sync.Mutex
+	wg            sync.WaitGroup
+	cancel        chan struct{}
+	canceled      bool
+	running       bool
+	app           AppInterface
+	activeWorkers map[int]bool
+	workChan      chan string
+	results       chan FileUploadResult
 }
 
 func NewUploadManager(app AppInterface) *UploadManager {
-	return &UploadManager{
-		app: app,
+	mgr := &UploadManager{
+		app:           app,
+		activeWorkers: make(map[int]bool),
 	}
+	activeUploadManager = mgr
+	return mgr
+}
+
+func (m *UploadManager) AdjustWorkers(newCount int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if !m.running {
+		return
+	}
+
+	m.app.GetLogger().Info(fmt.Sprintf("Adjusting workers to %d. Active workers map: %v", newCount, m.activeWorkers))
+
+	// Spawn workers for any ID from 0 to newCount-1 that is not currently active
+	for i := 0; i < newCount; i++ {
+		if !m.activeWorkers[i] {
+			m.activeWorkers[i] = true
+			m.wg.Add(1)
+			go startUploadWorker(i, m.workChan, m.results, m.cancel, &m.wg, m.app)
+		}
+	}
+}
+
+func (m *UploadManager) workerExit(workerID int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.activeWorkers, workerID)
 }
 
 func (m *UploadManager) IsRunning() bool {
@@ -135,13 +170,9 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		return
 	}
 
-	// Emit uploadStart immediately with TotalBytes=0 for responsive UI
-	app.EmitEvent("uploadStart", UploadBatchStart{
-		Total:      len(targetPaths),
-		TotalBytes: 0,
-	})
-
-	if _, err := NewApi(); err != nil {
+	// Initialize API client early for comparison
+	api, err := NewApi()
+	if err != nil {
 		for _, path := range targetPaths {
 			app.EmitEvent("FileStatus", FileUploadResult{
 				IsError:      true,
@@ -156,6 +187,113 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		m.mu.Unlock()
 		return
 	}
+
+	// Emit compareProgress starting event
+	app.EmitEvent("compareProgress", CompareProgress{Status: "loading_cache", Count: 0})
+
+	cachePath := getCompareFileListPath()
+	var gpFilenames []string
+	cacheExists := false
+	if _, statErr := os.Stat(cachePath); statErr == nil {
+		cacheExists = true
+	}
+
+	if cacheExists {
+		gpFilenames, err = readCompareFileList(cachePath)
+		if err != nil {
+			app.GetLogger().Error(fmt.Sprintf("Failed to read cache: %v. Re-fetching.", err))
+			cacheExists = false
+		}
+	}
+
+	if !cacheExists {
+		// Create a cancelable context linked to the upload cancellation channel
+		compareCtx, compareCancel := context.WithCancel(context.Background())
+		go func() {
+			select {
+			case <-m.getCancelChan():
+				compareCancel()
+			case <-compareCtx.Done():
+			}
+		}()
+
+		app.EmitEvent("compareProgress", CompareProgress{Status: "fetching", Count: 0})
+		gpFilenames, err = api.FetchAllFilenames(compareCtx, func(count int) {
+			app.EmitEvent("compareProgress", CompareProgress{Status: "fetching", Count: count})
+		})
+		compareCancel() // Clean up context resources
+
+		if err != nil {
+			for _, path := range targetPaths {
+				app.EmitEvent("FileStatus", FileUploadResult{
+					IsError:      true,
+					Error:        err,
+					ErrorMessage: fmt.Sprintf("Failed to fetch library from Google Photos: %v", err),
+					Path:         path,
+				})
+			}
+			app.EmitEvent("uploadStop", nil)
+			m.mu.Lock()
+			m.running = false
+			m.mu.Unlock()
+			return
+		}
+		// Write to cache
+		if writeErr := writeCompareFileList(cachePath, gpFilenames); writeErr != nil {
+			app.GetLogger().Error(fmt.Sprintf("Failed to write CompareFileList cache: %v", writeErr))
+		}
+	}
+
+	app.EmitEvent("compareProgress", CompareProgress{Status: "comparing", Count: 0})
+
+	// Build map of Google Photos filenames
+	gpSet := make(map[string]bool)
+	for _, filename := range gpFilenames {
+		gpSet[filename] = true
+	}
+
+	var missingPaths []string
+	for _, path := range targetPaths {
+		localName := filepath.Base(path)
+		if !gpSet[localName] {
+			missingPaths = append(missingPaths, path)
+		}
+	}
+
+	// Save missing files to missing_files.txt
+	missingFilesPath := filepath.Join(filepath.Dir(ConfigPath), "missing_files.txt")
+	var missingBuf bytes.Buffer
+	for _, path := range missingPaths {
+		missingBuf.WriteString(path + "\n")
+	}
+	if err := os.WriteFile(missingFilesPath, missingBuf.Bytes(), 0644); err != nil {
+		app.GetLogger().Error(fmt.Sprintf("Failed to write missing_files.txt: %v", err))
+	}
+
+	// Emit compareResult
+	app.EmitEvent("compareResult", CompareResult{
+		TotalLocal:        len(targetPaths),
+		TotalGooglePhotos: len(gpFilenames),
+		MissingCount:      len(missingPaths),
+		MissingFilesPath:  missingFilesPath,
+	})
+
+	// Filter queue to only upload missing files
+	targetPaths = missingPaths
+
+	if len(targetPaths) == 0 {
+		app.EmitEvent("uploadStop", nil)
+		m.mu.Lock()
+		m.running = false
+		m.mu.Unlock()
+		return
+	}
+
+	// Emit uploadStart immediately with TotalBytes=0 for responsive UI
+	app.EmitEvent("uploadStart", UploadBatchStart{
+		Total:      len(targetPaths),
+		TotalBytes: 0,
+	})
 
 	// Calculate total bytes asynchronously and emit update when complete
 	go func() {
@@ -176,13 +314,19 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	numWorkers := min(AppConfig.UploadThreads, len(targetPaths))
 
 	// Create a worker pool for concurrent uploads
-	workChan := make(chan string, len(targetPaths))
-	results := make(chan FileUploadResult, len(targetPaths))
+	m.mu.Lock()
+	m.workChan = make(chan string, len(targetPaths))
+	m.results = make(chan FileUploadResult, len(targetPaths))
+	m.activeWorkers = make(map[int]bool)
+	for i := 0; i < numWorkers; i++ {
+		m.activeWorkers[i] = true
+	}
+	m.mu.Unlock()
 
 	// Start workers
-	for i := range numWorkers {
+	for i := 0; i < numWorkers; i++ {
 		m.wg.Add(1)
-		go startUploadWorker(i, workChan, results, m.cancel, &m.wg, app)
+		go startUploadWorker(i, m.workChan, m.results, m.cancel, &m.wg, app)
 	}
 
 	// Send work to workers
@@ -192,10 +336,10 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 			select {
 			case <-m.cancel:
 				break LOOP
-			case workChan <- path:
+			case m.workChan <- path:
 			}
 		}
-		close(workChan)
+		close(m.workChan)
 	}()
 
 	// Handle results, wait for completion, and create album if configured
@@ -206,11 +350,11 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		// Wait for all workers to finish in a separate goroutine, then close results
 		go func() {
 			m.wg.Wait()
-			close(results)
+			close(m.results)
 		}()
 
 		// Process all results (this blocks until results channel is closed)
-		for result := range results {
+		for result := range m.results {
 			app.EmitEvent("FileStatus", result)
 			if result.IsError {
 				s := fmt.Sprintf("upload error: %v", result.Error)
@@ -221,6 +365,7 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 				if result.MediaKey != "" {
 					successfulUploads[result.Path] = result.MediaKey
 				}
+				_ = AppendToCompareFileList(filepath.Base(result.Path))
 			}
 		}
 
@@ -472,7 +617,7 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 			Message:  "Checking if file exists in library...",
 		})
 
-		mediakey, err = api.FindRemoteMediaByHash(sha1_hash_bytes)
+		mediakey, err = api.FindRemoteMediaByHash(ctx, sha1_hash_bytes)
 		if err != nil {
 			// Non-fatal: log via callback and continue with upload
 			callback("ThreadStatus", ThreadStatus{
@@ -517,7 +662,7 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 		BytesTotal:    fileSize,
 	})
 
-	token, err := api.GetUploadToken(sha1_hash_b64, fileSize)
+	token, err := api.GetUploadToken(ctx, sha1_hash_b64, fileSize)
 	if err != nil {
 		return "", fmt.Errorf("error uploading file: %w", err)
 	}
@@ -554,7 +699,7 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 		Message:  "Committing upload...",
 	})
 
-	mediaKey, err := api.CommitUpload(CommitToken, fileInfo.Name(), sha1_hash_bytes, uploadTimestamp)
+	mediaKey, err := api.CommitUpload(ctx, CommitToken, fileInfo.Name(), sha1_hash_bytes, uploadTimestamp)
 	if err != nil {
 		return "", fmt.Errorf("error committing file: %w", err)
 	}
@@ -574,6 +719,9 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 
 func startUploadWorker(workerID int, workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app AppInterface) {
 	defer wg.Done()
+	if activeUploadManager != nil {
+		defer activeUploadManager.workerExit(workerID)
+	}
 
 	// Emit idle status initially
 	app.EmitEvent("ThreadStatus", ThreadStatus{
@@ -598,7 +746,21 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 		app.EmitEvent(event, data)
 	}
 
-	for path := range workChan {
+	for {
+		// Read thread limit dynamically under configMu
+		configMu.RLock()
+		currentThreadLimit := AppConfig.UploadThreads
+		configMu.RUnlock()
+
+		if workerID >= currentThreadLimit {
+			app.EmitEvent("ThreadStatus", ThreadStatus{
+				WorkerID: workerID,
+				Status:   "idle",
+				Message:  "Stopped (thread count reduced)",
+			})
+			return
+		}
+
 		select {
 		case <-cancel:
 			app.EmitEvent("ThreadStatus", ThreadStatus{
@@ -606,8 +768,18 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 				Status:   "idle",
 				Message:  "Cancelled",
 			})
-			return // Stop if cancellation is requested
-		default:
+			return
+		case path, ok := <-workChan:
+			if !ok {
+				// Final idle status when no more work
+				app.EmitEvent("ThreadStatus", ThreadStatus{
+					WorkerID: workerID,
+					Status:   "idle",
+					Message:  "Finished",
+				})
+				return
+			}
+
 			ctx, cancelUpload := context.WithCancel(context.Background())
 			go func() {
 				select {
@@ -648,11 +820,4 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 			})
 		}
 	}
-
-	// Final idle status when no more work
-	app.EmitEvent("ThreadStatus", ThreadStatus{
-		WorkerID: workerID,
-		Status:   "idle",
-		Message:  "Finished",
-	})
 }
