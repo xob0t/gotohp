@@ -315,26 +315,15 @@ func extractTokenBindingAliasFromADB(email string) (string, error) {
 	for _, device := range devices {
 		_ = exec.Command("adb", "-s", device, "root").Run()
 
-		dbPath, cleanup, err := pullAccountsDB(device)
-		if err != nil {
-			// A non-root failure means we did reach the device with root but
-			// something else went wrong (e.g. the db file is missing).
-			if !errors.Is(err, errADBRootUnavailable) {
-				reachableRoot = true
-			}
-			failures = append(failures, fmt.Sprintf("%s: %s", device, cleanADBError(err.Error())))
-			continue
-		}
-
-		alias, err := queryTokenBindingAlias(dbPath, query)
-		cleanup()
-		if err != nil {
+		alias, rooted, err := readTokenBindingAliasFromDevice(device, query)
+		if rooted {
 			reachableRoot = true
+		}
+		if err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %s", device, cleanADBError(err.Error())))
 			continue
 		}
 
-		reachableRoot = true
 		alias = strings.TrimSpace(alias)
 		if alias == "" {
 			failures = append(failures, fmt.Sprintf("%s: no token binding key for %s", device, email))
@@ -352,6 +341,28 @@ func extractTokenBindingAliasFromADB(email string) (string, error) {
 		return "", fmt.Errorf("token binding alias not found for %s on any connected adb device (%s)", email, strings.Join(failures, "; "))
 	}
 	return "", fmt.Errorf("could not read Android AccountManager on any connected adb device; root is required (%s)", strings.Join(failures, "; "))
+}
+
+// readTokenBindingAliasFromDevice pulls the AccountManager database from a single
+// device and runs the lookup against the local copy. The pulled database is
+// sensitive (it holds auth material for every account on the device), so the
+// temporary copy is always removed via defer — including on a panic. The rooted
+// return reports whether the device was reachable with root, used to produce an
+// accurate error message.
+func readTokenBindingAliasFromDevice(device, query string) (alias string, rooted bool, err error) {
+	dbPath, cleanup, err := pullAccountsDB(device)
+	if err != nil {
+		// A non-root failure means we did reach the device with root but
+		// something else went wrong (e.g. the db file is missing).
+		return "", !errors.Is(err, errADBRootUnavailable), err
+	}
+	defer cleanup()
+
+	alias, err = queryTokenBindingAlias(dbPath, query)
+	if err != nil {
+		return "", true, err
+	}
+	return alias, true, nil
 }
 
 func listADBDevices() ([]string, error) {
