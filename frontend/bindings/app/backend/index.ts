@@ -12,6 +12,7 @@ export {
     Config,
     FileUploadResult,
     FilesDroppedEvent,
+    PreflightWarning,
     StartUploadEvent,
     ThreadStatus,
     UploadBatchStart

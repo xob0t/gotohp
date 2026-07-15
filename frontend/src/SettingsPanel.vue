@@ -19,6 +19,8 @@ interface Settings {
     saver: boolean
     recursive: boolean
     forceUpload: boolean
+    pairLivePhotos: boolean
+    skipIncompleteLivePhotos: boolean
     deleteFromHost: boolean
     disableUnsupportedFilesFilter: boolean
     setDateFromFilename: boolean
@@ -31,6 +33,8 @@ const settings = ref<Settings>({
     saver: false,
     recursive: false,
     forceUpload: false,
+    pairLivePhotos: false,
+    skipIncompleteLivePhotos: false,
     deleteFromHost: false,
     disableUnsupportedFilesFilter: false,
     setDateFromFilename: false,
@@ -45,6 +49,8 @@ onMounted(async () => {
         saver: config.saver || false,
         recursive: config.recursive || false,
         forceUpload: config.forceUpload || false,
+        pairLivePhotos: config.pairLivePhotos || false,
+        skipIncompleteLivePhotos: config.skipIncompleteLivePhotos || false,
         deleteFromHost: config.deleteFromHost || false,
         disableUnsupportedFilesFilter: config.disableUnsupportedFilesFilter || false,
         setDateFromFilename: config.setDateFromFilename || false,
@@ -72,6 +78,14 @@ watch(() => settings.value.recursive, async (newValue) => {
 
 watch(() => settings.value.forceUpload, async (newValue) => {
     await ConfigManager.SetForceUpload(newValue)
+})
+
+watch(() => settings.value.pairLivePhotos, async (newValue) => {
+    await ConfigManager.SetPairLivePhotos(newValue)
+})
+
+watch(() => settings.value.skipIncompleteLivePhotos, async (newValue) => {
+    await ConfigManager.SetSkipIncompleteLivePhotos(newValue)
 })
 
 watch(() => settings.value.deleteFromHost, async (newValue) => {
@@ -152,6 +166,43 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       <Switch
         id="force-upload"
         v-model="settings.forceUpload"
+      />
+    </div>
+    <p class="-mt-1 text-[11px] leading-snug text-muted-foreground">
+      Applies to single files. Live Photo pairs always check both components for duplicates.
+    </p>
+    <div class="flex items-center justify-between">
+      <div class="pr-4">
+        <Label
+          for="pair-live-photos"
+          class="cursor-pointer"
+        >Pair Live Photos</Label>
+        <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+          Match Apple photos and MOV files by embedded metadata and upload them as one item.
+        </p>
+      </div>
+      <Switch
+        id="pair-live-photos"
+        v-model="settings.pairLivePhotos"
+      />
+    </div>
+    <div
+      class="flex items-center justify-between pl-4 transition-opacity"
+      :class="settings.pairLivePhotos ? 'opacity-100' : 'opacity-45'"
+    >
+      <div class="pr-4">
+        <Label
+          for="skip-incomplete-live-photos"
+          class="cursor-pointer"
+        >Skip Incomplete Live Photos</Label>
+        <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+          Skip metadata-confirmed Live Photo files when their matching component is absent.
+        </p>
+      </div>
+      <Switch
+        id="skip-incomplete-live-photos"
+        v-model="settings.skipIncompleteLivePhotos"
+        :disabled="!settings.pairLivePhotos"
       />
     </div>
     <div class="flex items-center justify-between">

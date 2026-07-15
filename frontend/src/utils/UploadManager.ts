@@ -15,8 +15,17 @@ export interface ThreadStatus {
 export interface FileUploadResult {
   MediaKey: string;
   IsError: boolean;
+  IsLivePhoto: boolean;
+  Skipped: boolean;
   ErrorMessage: string;
   Path: string;
+  Paths: string[];
+}
+
+export interface PreflightWarning {
+  Paths: string[];
+  Code: string;
+  Message: string;
 }
 
 export interface UploadBatchStart {
@@ -50,7 +59,9 @@ export interface UploadState {
   results: {
     success: UploadSuccess[];
     fail: string[];
+    skipped: string[];
   };
+  preflightWarnings: PreflightWarning[];
   // Byte tracking
   totalBytes: number;
   uploadedBytes: number;
@@ -75,7 +86,9 @@ class UploadManager {
     results: {
       success: [],
       fail: [],
+      skipped: [],
     },
+    preflightWarnings: [],
     totalBytes: 0,
     uploadedBytes: 0,
     startTime: 0,
@@ -126,11 +139,16 @@ class UploadManager {
       this.completedBytes = 0;
       this.fileBytes.clear();
       this.resetUploadResults();
+      this.state.preflightWarnings = [];
     });
 
     // Handle async total bytes update (calculated after uploadStart)
     Events.On("uploadTotalBytes", (event: { data: number }) => {
       this.state.totalBytes = event.data;
+    });
+
+    Events.On("livePhotoPreflightWarning", (event: { data: PreflightWarning }) => {
+      this.state.preflightWarnings.push(event.data);
     });
 
     // Handle thread status updates
@@ -152,11 +170,15 @@ class UploadManager {
 
     // Handle file status updates
     Events.On("FileStatus", (event: { data: FileUploadResult }) => {
-      const { IsError, Path, MediaKey } = event.data;
+      const { IsError, Path, Paths, MediaKey, Skipped } = event.data;
 
       if (!IsError) {
         this.state.uploadedFiles += 1;
-        this.state.results.success.push({ path: Path, mediaKey: MediaKey });
+        if (Skipped) {
+          this.state.results.skipped.push(Path);
+        } else {
+          this.state.results.success.push({ path: Path, mediaKey: MediaKey });
+        }
         const completedFileBytes = this.fileBytes.get(Path);
         if (completedFileBytes && completedFileBytes > 0) {
           this.completedBytes += completedFileBytes;
@@ -165,7 +187,9 @@ class UploadManager {
         const errorMessage = event.data.ErrorMessage;
         this.state.results.fail.push(errorMessage ? `${Path}: ${errorMessage}` : Path);
       }
-      this.fileBytes.delete(Path);
+      for (const completedPath of Paths?.length ? Paths : [Path]) {
+        this.fileBytes.delete(completedPath);
+      }
       this.updateBytesAndSpeed();
     });
 
@@ -236,6 +260,7 @@ class UploadManager {
   public resetUploadResults() {
     this.state.results.success = [];
     this.state.results.fail = [];
+    this.state.results.skipped = [];
   }
 
   public cancelUpload() {
