@@ -28,6 +28,8 @@ type Config struct {
 	Saver                         bool     `json:"saver" koanf:"saver"`
 	Recursive                     bool     `json:"recursive" koanf:"recursive"`
 	ForceUpload                   bool     `json:"forceUpload" koanf:"force_upload"`
+	PairLivePhotos                bool     `json:"pairLivePhotos" koanf:"pair_live_photos"`
+	SkipIncompleteLivePhotos      bool     `json:"skipIncompleteLivePhotos" koanf:"skip_incomplete_live_photos"`
 	UploadThreads                 int      `json:"uploadThreads" koanf:"upload_threads"`
 	DeleteFromHost                bool     `json:"deleteFromHost" koanf:"delete_from_host"`
 	DisableUnsupportedFilesFilter bool     `json:"disableUnsupportedFilesFilter" koanf:"disable_unsupported_files_filter"`
@@ -82,6 +84,16 @@ func (g *ConfigManager) SetRecursive(recursive bool) {
 
 func (g *ConfigManager) SetForceUpload(forceUpload bool) {
 	AppConfig.ForceUpload = forceUpload
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetPairLivePhotos(pairLivePhotos bool) {
+	AppConfig.PairLivePhotos = pairLivePhotos
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetSkipIncompleteLivePhotos(skipIncompleteLivePhotos bool) {
+	AppConfig.SkipIncompleteLivePhotos = skipIncompleteLivePhotos
 	_ = saveAppConfig()
 }
 
