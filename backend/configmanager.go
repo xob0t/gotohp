@@ -1,6 +1,9 @@
 package backend
 
 import (
+	"bytes"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -14,6 +17,7 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
+	_ "modernc.org/sqlite"
 )
 
 type Config struct {
@@ -282,13 +286,21 @@ func credentialNeedsTokenBinding(params url.Values) bool {
 		params.Get("check_tb_upgrade_eligible") != ""
 }
 
+// accountsCEDBPath is the credential-encrypted AccountManager database for the
+// primary (user 0) Android profile.
+const accountsCEDBPath = "/data/system_ce/0/accounts_ce.db"
+
+// errADBRootUnavailable signals that the device could not be read because root
+// access was denied, as opposed to the database simply not containing the key.
+var errADBRootUnavailable = errors.New("root access unavailable")
+
 func extractTokenBindingAliasFromADB(email string) (string, error) {
 	if _, err := exec.LookPath("adb"); err != nil {
 		return "", fmt.Errorf("adb was not found in PATH")
 	}
 
 	escapedEmail := strings.ReplaceAll(email, "'", "''")
-	sql := fmt.Sprintf(
+	query := fmt.Sprintf(
 		"select extras.value from extras join accounts on accounts._id=extras.accounts_id where accounts.name='%s' and extras.key='lstBindingKeyAlias';",
 		escapedEmail,
 	)
@@ -303,17 +315,16 @@ func extractTokenBindingAliasFromADB(email string) (string, error) {
 	for _, device := range devices {
 		_ = exec.Command("adb", "-s", device, "root").Run()
 
-		out, err := runADBSQLite(device, sql, false)
-		if err != nil {
-			out, err = runADBSQLite(device, sql, true)
+		alias, rooted, err := readTokenBindingAliasFromDevice(device, query)
+		if rooted {
+			reachableRoot = true
 		}
 		if err != nil {
-			failures = append(failures, fmt.Sprintf("%s: %s", device, cleanADBError(out)))
+			failures = append(failures, fmt.Sprintf("%s: %s", device, cleanADBError(err.Error())))
 			continue
 		}
 
-		reachableRoot = true
-		alias := strings.TrimSpace(out)
+		alias = strings.TrimSpace(alias)
 		if alias == "" {
 			failures = append(failures, fmt.Sprintf("%s: no token binding key for %s", device, email))
 			continue
@@ -330,6 +341,28 @@ func extractTokenBindingAliasFromADB(email string) (string, error) {
 		return "", fmt.Errorf("token binding alias not found for %s on any connected adb device (%s)", email, strings.Join(failures, "; "))
 	}
 	return "", fmt.Errorf("could not read Android AccountManager on any connected adb device; root is required (%s)", strings.Join(failures, "; "))
+}
+
+// readTokenBindingAliasFromDevice pulls the AccountManager database from a single
+// device and runs the lookup against the local copy. The pulled database is
+// sensitive (it holds auth material for every account on the device), so the
+// temporary copy is always removed via defer — including on a panic. The rooted
+// return reports whether the device was reachable with root, used to produce an
+// accurate error message.
+func readTokenBindingAliasFromDevice(device, query string) (alias string, rooted bool, err error) {
+	dbPath, cleanup, err := pullAccountsDB(device)
+	if err != nil {
+		// A non-root failure means we did reach the device with root but
+		// something else went wrong (e.g. the db file is missing).
+		return "", !errors.Is(err, errADBRootUnavailable), err
+	}
+	defer cleanup()
+
+	alias, err = queryTokenBindingAlias(dbPath, query)
+	if err != nil {
+		return "", true, err
+	}
+	return alias, true, nil
 }
 
 func listADBDevices() ([]string, error) {
@@ -365,15 +398,92 @@ func listADBDevices() ([]string, error) {
 	return devices, nil
 }
 
-func runADBSQLite(device string, sql string, useSU bool) (string, error) {
-	args := []string{"-s", device, "shell", "sqlite3", "/data/system_ce/0/accounts_ce.db"}
-	if useSU {
-		args = []string{"-s", device, "shell", "su", "-c", "sqlite3 /data/system_ce/0/accounts_ce.db"}
+// pullAccountsDB streams the AccountManager database off the device via root and
+// writes it to a local temporary directory. Modern Android no longer ships the
+// sqlite3 binary, so the database is queried locally instead of on-device. The
+// returned cleanup function removes the temporary files.
+func pullAccountsDB(device string) (string, func(), error) {
+	tmpDir, err := os.MkdirTemp("", "gotohp-adb-")
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
-	cmd := exec.Command("adb", args...)
-	cmd.Stdin = strings.NewReader(sql)
-	out, err := cmd.CombinedOutput()
-	return string(out), err
+	cleanup := func() { _ = os.RemoveAll(tmpDir) }
+
+	mainDest := filepath.Join(tmpDir, "accounts_ce.db")
+	if err := streamDeviceFile(device, accountsCEDBPath, mainDest); err != nil {
+		cleanup()
+		return "", nil, err
+	}
+
+	// accounts_ce.db is typically in WAL mode; copy the companion files so the
+	// local query observes the latest writes. They may not exist, so ignore
+	// failures here.
+	_ = streamDeviceFile(device, accountsCEDBPath+"-wal", mainDest+"-wal")
+	_ = streamDeviceFile(device, accountsCEDBPath+"-shm", mainDest+"-shm")
+
+	return mainDest, cleanup, nil
+}
+
+// streamDeviceFile copies a single root-owned file off the device to localPath.
+// adb exec-out is used (rather than adb shell) to avoid the CRLF translation
+// that would corrupt the binary database.
+func streamDeviceFile(device, remotePath, localPath string) error {
+	cmd := exec.Command("adb", "-s", device, "exec-out", "su", "-c", fmt.Sprintf("cat %q", remotePath))
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	runErr := cmd.Run()
+	// Some su builds exit 0 even when cat fails, so also treat stderr-with-no-
+	// output as a failure.
+	if runErr != nil || (stderr.Len() > 0 && stdout.Len() == 0) {
+		msg := cleanADBError(stderr.String())
+		if msg == "" && runErr != nil {
+			msg = runErr.Error()
+		}
+		if isADBRootFailure(msg) {
+			return fmt.Errorf("%w: %s", errADBRootUnavailable, msg)
+		}
+		return fmt.Errorf("failed to read %s: %s", remotePath, msg)
+	}
+
+	if err := os.WriteFile(localPath, stdout.Bytes(), 0o600); err != nil {
+		return fmt.Errorf("failed to write local copy: %w", err)
+	}
+	return nil
+}
+
+// isADBRootFailure reports whether a device error indicates missing/denied root
+// rather than a missing file (which means root worked but the data is absent).
+func isADBRootFailure(msg string) bool {
+	m := strings.ToLower(msg)
+	if strings.Contains(m, "no such file") {
+		return false
+	}
+	return strings.Contains(m, "su:") ||
+		strings.Contains(m, "permission denied") ||
+		strings.Contains(m, "not allowed") ||
+		strings.Contains(m, "inaccessible or not found")
+}
+
+// queryTokenBindingAlias opens the pulled database locally with a pure-Go SQLite
+// driver and runs the lookup query. The local copy is private to this process,
+// so it is opened read-write to allow WAL recovery.
+func queryTokenBindingAlias(dbPath, query string) (string, error) {
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open accounts db: %w", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	var alias string
+	if err := db.QueryRow(query).Scan(&alias); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", nil
+		}
+		return "", fmt.Errorf("failed to query token binding alias: %w", err)
+	}
+	return alias, nil
 }
 
 func cleanADBError(out string) string {
