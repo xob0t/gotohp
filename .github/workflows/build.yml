@@ -80,7 +80,7 @@ jobs:
           cache: true
 
       - name: Install Wails3
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.95
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
 
       - name: Build macOS App (Production)
         run: |
@@ -196,7 +196,7 @@ jobs:
 
       - name: Install Wails3
         shell: cmd
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.95
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
 
       - name: Build Windows App (Production)
         shell: pwsh
@@ -317,7 +317,7 @@ jobs:
         run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
       - name: Install Wails3
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.95
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
 
       - name: Build Linux App (Production)
         run: |
