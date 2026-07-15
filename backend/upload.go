@@ -540,9 +540,13 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 		})
 	}
 
-	CommitToken, err := api.UploadFileWithProgress(ctx, filePath, token, progressCallback)
+	finalizeToken, err := api.UploadFileWithProgress(ctx, filePath, token, progressCallback)
 	if err != nil {
 		return "", fmt.Errorf("error uploading file: %w", err)
+	}
+	commitToken, err := finalizeToken.legacyCommitToken()
+	if err != nil {
+		return "", fmt.Errorf("error decoding upload finalize token: %w", err)
 	}
 
 	// Stage 4: Finalizing
@@ -554,7 +558,7 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 		Message:  "Committing upload...",
 	})
 
-	mediaKey, err := api.CommitUpload(CommitToken, fileInfo.Name(), sha1_hash_bytes, uploadTimestamp)
+	mediaKey, err := api.CommitUpload(commitToken, fileInfo.Name(), sha1_hash_bytes, uploadTimestamp)
 	if err != nil {
 		return "", fmt.Errorf("error committing file: %w", err)
 	}
