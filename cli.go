@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 
 	"app/backend"
@@ -11,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/term"
 )
 
 // CLI flags and config
@@ -25,6 +27,7 @@ type cliConfig struct {
 	logLevel                      string
 	configPath                    string
 	albumName                     string
+	noTUI                         bool
 }
 
 // Messages for bubbletea
@@ -259,6 +262,12 @@ func parseLogLevel(level string) slog.Level {
 	}
 }
 
+func shouldUseTUI(config cliConfig) bool {
+	return !config.noTUI &&
+		term.IsTerminal(os.Stdin.Fd()) &&
+		term.IsTerminal(os.Stdout.Fd())
+}
+
 // CLI upload implementation
 func runCLIUpload(filePaths []string, config cliConfig) error {
 	// Set custom config path if provided
@@ -293,9 +302,17 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	// Parse log level
 	logLevel := parseLogLevel(config.logLevel)
 
-	// Start bubbletea program
+	// Start the upload event loop, with rendering and input only when interactive.
 	model := initialModel()
-	p := tea.NewProgram(model)
+	programOptions := []tea.ProgramOption{}
+	if !shouldUseTUI(config) {
+		programOptions = append(
+			programOptions,
+			tea.WithInput(nil),
+			tea.WithoutRenderer(),
+		)
+	}
+	p := tea.NewProgram(model, programOptions...)
 
 	// Create CLI app with event callback to bubbletea
 	eventCallback := func(event string, data any) {
@@ -360,13 +377,13 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 		uploadManager.Upload(cliApp, filePaths)
 	}()
 
-	// Run the TUI
+	// Run until the upload manager emits uploadStop.
 	finalModel, err := p.Run()
 	if err != nil {
-		return fmt.Errorf("error running TUI: %w", err)
+		return fmt.Errorf("error running upload program: %w", err)
 	}
 
-	// Print JSON summary after TUI completes
+	// Print JSON summary after the upload program completes.
 	if m, ok := finalModel.(uploadModel); ok {
 		summary := uploadSummary{
 			Total:     m.totalFiles,
