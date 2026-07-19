@@ -55,6 +55,7 @@ func runCLI() {
 			fmt.Println("                               Use 'AUTO' to create albums based on folder names")
 			fmt.Println("  -l, --log-level <level>      Set log level: debug, info, warn, error (default: info)")
 			fmt.Println("  -c, --config <path>          Path to config file")
+			fmt.Println("  --no-tui                     Disable the interactive progress UI")
 			return
 		}
 
@@ -93,6 +94,8 @@ func runCLI() {
 				config.disableUnsupportedFilesFilter = true
 			case "--date-from-filename":
 				config.setDateFromFilename = true
+			case "--no-tui":
+				config.noTUI = true
 			case "--exclude", "-e":
 				if i+1 < len(os.Args) {
 					config.excludePattern = os.Args[i+1]

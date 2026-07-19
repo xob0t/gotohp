@@ -43,6 +43,7 @@ gotohp-cli version
   - `-a, --album <name>` - Add uploaded files to album (use `AUTO` for folder-based albums)
   - `-l, --log-level <level>` - Set log level: debug, info, warn, error (default: info)
   - `-c, --config <path>` - Path to config file
+  - `--no-tui` - Disable the interactive progress UI (selected automatically when stdin or stdout is not a terminal)
 - `creds list` (alias: `ls`) - List all credentials
 - `creds add <auth-string>` - Add new credentials
 - `creds remove <email>` (alias: `rm`) - Remove credentials
