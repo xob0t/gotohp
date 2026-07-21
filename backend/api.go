@@ -18,6 +18,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// PhotosCreateMediaItems is the shared commit RPC observed for both ordinary
+// images and linked Live Photos; pairing changes the request body, not the RPC.
+const photosCreateMediaItemsEndpoint = "https://photosdata-pa.googleapis.com/6439526531001121323/16538846908252377752"
+
 type Api struct {
 	androidAPIVersion int64
 	model             string
@@ -28,6 +32,8 @@ type Api struct {
 	authData          string
 	client            *http.Client
 	authResponseCache map[string]string
+	commitEndpoint    string
+	commitRetryConfig *RetryConfig
 }
 
 type AuthResponse struct {
@@ -525,26 +531,44 @@ func (a *Api) CommitUpload(
 		return "", fmt.Errorf("failed to marshal protobuf: %w", err)
 	}
 
+	return a.commitSerialized(serializedData)
+}
+
+func (a *Api) CommitLivePhoto(input LivePhotoCreateRequest) (string, error) {
+	serializedData, err := BuildLivePhotoCreateMediaItemsRequest(input)
+	if err != nil {
+		return "", fmt.Errorf("build Live Photo create request: %w", err)
+	}
+	return a.commitSerialized(serializedData)
+}
+
+func (a *Api) commitSerialized(serializedData []byte) (string, error) {
 	retryConfig := DefaultRetryConfig()
+	if a.commitRetryConfig != nil {
+		retryConfig = *a.commitRetryConfig
+	}
 	var lastErr error
 	for attempt := 0; attempt <= retryConfig.MaxRetries; attempt++ {
 		if attempt > 0 {
 			delay := CalculateBackoff(attempt-1, retryConfig)
 			time.Sleep(delay)
 		}
-		mediaKey, err := a.doCommitRequest(serializedData)
+		mediaKey, retryable, err := a.doCommitRequest(serializedData)
 		if err == nil {
 			return mediaKey, nil
 		}
 		lastErr = err
+		if !retryable {
+			return "", fmt.Errorf("commit failed after %d attempt(s): %w", attempt+1, lastErr)
+		}
 	}
 	return "", fmt.Errorf("commit failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
 }
 
-func (a *Api) doCommitRequest(serializedData []byte) (string, error) {
+func (a *Api) doCommitRequest(serializedData []byte) (mediaKey string, retryable bool, err error) {
 	bearerToken, err := a.BearerToken()
 	if err != nil {
-		return "", fmt.Errorf("failed to get bearer token: %w", err)
+		return "", true, fmt.Errorf("failed to get bearer token: %w", err)
 	}
 
 	headers := map[string]string{
@@ -557,11 +581,13 @@ func (a *Api) doCommitRequest(serializedData []byte) (string, error) {
 		"x-goog-ext-174067345-bin": "CgIIAg==",
 	}
 
-	req, err := http.NewRequest("POST",
-		"https://photosdata-pa.googleapis.com/6439526531001121323/16538846908252377752",
-		bytes.NewReader(serializedData))
+	endpoint := a.commitEndpoint
+	if endpoint == "" {
+		endpoint = photosCreateMediaItemsEndpoint
+	}
+	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(serializedData))
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", false, fmt.Errorf("failed to create request: %w", err)
 	}
 	for k, v := range headers {
 		req.Header.Set(k, v)
@@ -569,33 +595,43 @@ func (a *Api) doCommitRequest(serializedData []byte) (string, error) {
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
+		return "", true, fmt.Errorf("request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := ReadResponseBody(resp)
-		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+		return "", ShouldRetry(resp, nil), fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	bodyBytes, err := ReadResponseBody(resp)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %w", err)
+		return "", false, fmt.Errorf("failed to read accepted response body: %w", err)
 	}
 
-	var pbResp generated.CommitUploadResponse
-	if err := proto.Unmarshal(bodyBytes, &pbResp); err != nil {
-		return "", fmt.Errorf("failed to unmarshal protobuf: %w", err)
+	// HTTP success may mean the media item already exists even when the minimal
+	// response schema cannot validate it. Do not retry and risk a duplicate commit.
+	mediaKey, err = parseCreateMediaItemsResponse(bodyBytes)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to parse accepted response: %w", err)
 	}
+	return mediaKey, false, nil
+}
 
-	if pbResp.GetField1() == nil || pbResp.GetField1().GetField3() == nil {
-		return "", fmt.Errorf("upload rejected by API: invalid response structure")
+// parseCreateMediaItemsResponse decodes only the verified media-key path. The
+// generated minimal schema leaves every other private response field unknown,
+// so proto.Unmarshal preserves forward compatibility without guessing types.
+func parseCreateMediaItemsResponse(responseBytes []byte) (string, error) {
+	var response generated.CreateMediaItemsResponse
+	if err := proto.Unmarshal(responseBytes, &response); err != nil {
+		return "", fmt.Errorf("unmarshal create-media response: %w", err)
 	}
-	mediaKey := pbResp.GetField1().GetField3().GetMediaKey()
-	if mediaKey == "" {
-		return "", fmt.Errorf("upload rejected by API: no media key returned")
+	for _, item := range response.GetItem() {
+		if mediaKey := item.GetResultItem().GetMediaKey(); mediaKey != "" {
+			return mediaKey, nil
+		}
 	}
-	return mediaKey, nil
+	return "", fmt.Errorf("upload rejected by API: media key is empty or missing")
 }
 
 // CreateAlbum creates a new album with the given name and initial media items.
