@@ -84,16 +84,21 @@ type UploadBatchStart struct {
 }
 
 type FileUploadResult struct {
-	MediaKey     string `json:"MediaKey"`
-	IsError      bool   `json:"IsError"`
-	Error        error  `json:"-"`
-	ErrorMessage string `json:"ErrorMessage"`
-	Path         string `json:"Path"`
+	MediaKey     string   `json:"MediaKey"`
+	IsError      bool     `json:"IsError"`
+	IsLivePhoto  bool     `json:"IsLivePhoto"`
+	Skipped      bool     `json:"Skipped"`
+	SkipCode     string   `json:"SkipCode"`
+	SkipReason   string   `json:"SkipReason"`
+	Error        error    `json:"-"`
+	ErrorMessage string   `json:"ErrorMessage"`
+	Path         string   `json:"Path"`
+	Paths        []string `json:"Paths"`
 }
 
 type ThreadStatus struct {
 	WorkerID      int    `json:"WorkerID"`
-	Status        string `json:"Status"` // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
+	Status        string `json:"Status"` // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "skipped", "error"
 	FilePath      string `json:"FilePath"`
 	FileName      string `json:"FileName"`
 	Message       string `json:"Message"`
@@ -126,8 +131,13 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		m.mu.Unlock()
 		return
 	}
+	workItems, preflightWarnings := ClassifyUploadWork(targetPaths, LivePhotoClassificationOptions{
+		Enabled:        AppConfig.PairLivePhotos,
+		SkipIncomplete: AppConfig.SkipIncompleteLivePhotos,
+	}, nil)
+	emitUploadPreflight(app, len(workItems), preflightWarnings)
 
-	if len(targetPaths) == 0 {
+	if len(workItems) == 0 {
 		app.EmitEvent("uploadStop", nil)
 		m.mu.Lock()
 		m.running = false
@@ -137,12 +147,13 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 
 	// Emit uploadStart immediately with TotalBytes=0 for responsive UI
 	app.EmitEvent("uploadStart", UploadBatchStart{
-		Total:      len(targetPaths),
+		Total:      len(workItems),
 		TotalBytes: 0,
 	})
 
 	if _, err := NewApi(); err != nil {
-		for _, path := range targetPaths {
+		for _, item := range workItems {
+			path := uploadWorkPrimaryPath(item)
 			app.EmitEvent("FileStatus", FileUploadResult{
 				IsError:      true,
 				Error:        err,
@@ -160,9 +171,11 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	// Calculate total bytes asynchronously and emit update when complete
 	go func() {
 		var totalBytes int64
-		for _, path := range targetPaths {
-			if info, err := os.Stat(path); err == nil {
-				totalBytes += info.Size()
+		for _, item := range workItems {
+			for _, path := range uploadWorkPaths(item) {
+				if info, err := os.Stat(path); err == nil {
+					totalBytes += info.Size()
+				}
 			}
 		}
 		app.EmitEvent("uploadTotalBytes", totalBytes)
@@ -173,11 +186,11 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	}
 
 	// Don't start more threads than files to process
-	numWorkers := min(AppConfig.UploadThreads, len(targetPaths))
+	numWorkers := min(AppConfig.UploadThreads, len(workItems))
 
 	// Create a worker pool for concurrent uploads
-	workChan := make(chan string, len(targetPaths))
-	results := make(chan FileUploadResult, len(targetPaths))
+	workChan := make(chan UploadWorkItem, len(workItems))
+	results := make(chan FileUploadResult, len(workItems))
 
 	// Start workers
 	for i := range numWorkers {
@@ -188,11 +201,11 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	// Send work to workers
 	go func() {
 	LOOP:
-		for _, path := range targetPaths {
+		for _, item := range workItems {
 			select {
 			case <-m.cancel:
 				break LOOP
-			case workChan <- path:
+			case workChan <- item:
 			}
 		}
 		close(workChan)
@@ -239,6 +252,40 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		m.running = false
 		m.mu.Unlock()
 	}()
+}
+
+func emitUploadPreflight(app AppInterface, uploadItemCount int, warnings []PreflightWarning) {
+	skippedCount := 0
+	for _, warning := range warnings {
+		if warning.Code == "incomplete-live-photo-skipped" {
+			skippedCount++
+		}
+	}
+
+	// Start before emitting warnings/results so the frontend resets its previous
+	// batch while retaining every event from this preflight.
+	app.EmitEvent("uploadStart", UploadBatchStart{
+		Total:      uploadItemCount + skippedCount,
+		TotalBytes: 0,
+	})
+	for _, warning := range warnings {
+		app.EmitEvent("livePhotoPreflightWarning", warning)
+		if warning.Code != "incomplete-live-photo-skipped" {
+			continue
+		}
+		primaryPath := ""
+		if len(warning.Paths) > 0 {
+			primaryPath = warning.Paths[0]
+		}
+		app.EmitEvent("FileStatus", FileUploadResult{
+			IsLivePhoto: true,
+			Skipped:     true,
+			SkipCode:    warning.Code,
+			SkipReason:  warning.Message,
+			Path:        primaryPath,
+			Paths:       warning.Paths,
+		})
+	}
 }
 
 // handleAlbumCreation handles album creation based on config (manual name/key or AUTO mode)
@@ -576,7 +623,7 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 	return mediaKey, nil
 }
 
-func startUploadWorker(workerID int, workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app AppInterface) {
+func startUploadWorker(workerID int, workChan <-chan UploadWorkItem, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app AppInterface) {
 	defer wg.Done()
 
 	// Emit idle status initially
@@ -602,7 +649,7 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 		app.EmitEvent(event, data)
 	}
 
-	for path := range workChan {
+	for item := range workChan {
 		select {
 		case <-cancel:
 			app.EmitEvent("ThreadStatus", ThreadStatus{
@@ -622,9 +669,12 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 				}
 			}()
 
-			mediaKey, err := uploadFileWithCallback(ctx, api, path, workerID, callback)
+			path := uploadWorkPrimaryPath(item)
+			paths := uploadWorkPaths(item)
+			isLivePhoto := item.Kind == UploadWorkLivePhoto
+			mediaKey, skipped, err := uploadWorkItem(ctx, api, item, workerID, callback)
 			if err != nil {
-				results <- FileUploadResult{IsError: true, Error: err, ErrorMessage: err.Error(), Path: path}
+				results <- FileUploadResult{IsError: true, IsLivePhoto: isLivePhoto, Error: err, ErrorMessage: err.Error(), Path: path, Paths: paths}
 				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
 					Status:   "error",
@@ -632,8 +682,23 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 					FileName: filepath.Base(path),
 					Message:  fmt.Sprintf("Error: %v", err),
 				})
+			} else if skipped {
+				skipCode := "remote-duplicate"
+				skipReason := "Skipped because this file already exists remotely"
+				if isLivePhoto {
+					skipCode = "remote-live-photo-component-exists"
+					skipReason = "Skipped because a Live Photo component already exists remotely"
+				}
+				results <- FileUploadResult{
+					IsLivePhoto: isLivePhoto,
+					Skipped:     true,
+					SkipCode:    skipCode,
+					SkipReason:  skipReason,
+					Path:        path,
+					Paths:       paths,
+				}
 			} else {
-				results <- FileUploadResult{IsError: false, Path: path, MediaKey: mediaKey}
+				results <- FileUploadResult{IsLivePhoto: isLivePhoto, Path: path, Paths: paths, MediaKey: mediaKey}
 				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
 					Status:   "completed",
@@ -659,4 +724,44 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 		Status:   "idle",
 		Message:  "Finished",
 	})
+}
+
+func uploadWorkItem(ctx context.Context, api *Api, item UploadWorkItem, workerID int, callback ProgressCallback) (string, bool, error) {
+	switch item.Kind {
+	case UploadWorkSingle:
+		if item.Single == nil || item.LivePhoto != nil {
+			return "", false, fmt.Errorf("invalid single-media work item")
+		}
+		mediaKey, err := uploadFileWithCallback(ctx, api, item.Single.Path, workerID, callback)
+		return mediaKey, false, err
+	case UploadWorkLivePhoto:
+		if item.LivePhoto == nil || item.Single != nil {
+			return "", false, fmt.Errorf("invalid Live Photo work item")
+		}
+		return uploadLivePhotoWithCallback(ctx, api, *item.LivePhoto, LivePhotoUploadOptions{
+			Policy:              buildLivePhotoCommitPolicy(api, AppConfig),
+			DeleteFromHost:      AppConfig.DeleteFromHost,
+			SetDateFromFilename: AppConfig.SetDateFromFilename,
+		}, workerID, callback)
+	default:
+		return "", false, fmt.Errorf("unsupported upload work kind %q", item.Kind)
+	}
+}
+
+func uploadWorkPaths(item UploadWorkItem) []string {
+	if item.Kind == UploadWorkLivePhoto && item.LivePhoto != nil {
+		return []string{item.LivePhoto.PhotoPath, item.LivePhoto.VideoPath}
+	}
+	if item.Single != nil {
+		return []string{item.Single.Path}
+	}
+	return nil
+}
+
+func uploadWorkPrimaryPath(item UploadWorkItem) string {
+	paths := uploadWorkPaths(item)
+	if len(paths) == 0 {
+		return ""
+	}
+	return paths[0]
 }
