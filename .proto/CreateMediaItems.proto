@@ -14,8 +14,21 @@ message MediaItemBlueprint {
   UploadTimestamp filesystem_create_time = 5;
   UploadTimestamp filesystem_mod_time = 6;
   int64 storage_policy = 7;
+  ReconcileInfo reconcile_info = 9;
   int64 upload_quality = 10;
   LivePhotoInfo live_photo_info = 24;
+}
+
+enum ReconcileType {
+  RECONCILE_TYPE_UNKNOWN = 0;
+  RECONCILE_TYPE_PHODEO = 1;
+  RECONCILE_TYPE_VIDEO_ORIGINAL = 2;
+}
+
+message ReconcileInfo {
+  ReconcileType reconcile_type = 2;
+  bytes source_sha1 = 3;
+  MediaItemBlueprint photo_upload_blueprint = 4;
 }
 
 message UploadTimestamp {

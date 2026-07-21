@@ -542,6 +542,14 @@ func (a *Api) CommitLivePhoto(input LivePhotoCreateRequest) (string, error) {
 	return a.commitSerialized(serializedData)
 }
 
+func (a *Api) ReconcileLivePhoto(input LivePhotoReconcileRequest) (string, error) {
+	serializedData, err := BuildLivePhotoReconcileMediaItemsRequest(input)
+	if err != nil {
+		return "", fmt.Errorf("build Live Photo reconcile request: %w", err)
+	}
+	return a.commitSerialized(serializedData)
+}
+
 func (a *Api) commitSerialized(serializedData []byte) (string, error) {
 	retryConfig := DefaultRetryConfig()
 	if a.commitRetryConfig != nil {

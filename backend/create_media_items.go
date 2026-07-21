@@ -35,6 +35,18 @@ type LivePhotoCreateRequest struct {
 	UploadDeviceInfo UploadDeviceInfo
 }
 
+type LivePhotoReconcileRequest struct {
+	VideoToken       ScottyFinalizeToken
+	FileName         string
+	PhotoSHA1        []byte
+	VideoSHA1        []byte
+	CreatedAt        time.Time
+	ModifiedAt       time.Time
+	StoragePolicy    int64
+	UploadQuality    int64
+	UploadDeviceInfo UploadDeviceInfo
+}
+
 type LivePhotoCommitPolicy struct {
 	StoragePolicy    int64
 	UploadQuality    int64
@@ -123,6 +135,62 @@ func BuildLivePhotoCreateMediaItemsRequest(input LivePhotoCreateRequest) ([]byte
 	serialized, err := proto.Marshal(&request)
 	if err != nil {
 		return nil, fmt.Errorf("marshal Live Photo create-media request: %w", err)
+	}
+	return serialized, nil
+}
+
+func BuildLivePhotoReconcileMediaItemsRequest(input LivePhotoReconcileRequest) ([]byte, error) {
+	if _, err := ParseScottyFinalizeToken(input.VideoToken.Raw); err != nil {
+		return nil, fmt.Errorf("invalid video finalize token: %w", err)
+	}
+	if strings.TrimSpace(input.FileName) == "" {
+		return nil, fmt.Errorf("video filename is required")
+	}
+	if len(input.PhotoSHA1) != sha1.Size || len(input.VideoSHA1) != sha1.Size {
+		return nil, fmt.Errorf("photo and video SHA-1 values must each contain %d bytes", sha1.Size)
+	}
+	if input.CreatedAt.IsZero() || input.ModifiedAt.IsZero() {
+		return nil, fmt.Errorf("video creation and modification times are required")
+	}
+	if input.StoragePolicy <= 0 || input.UploadQuality <= 0 {
+		return nil, fmt.Errorf("storage policy and upload quality must be positive")
+	}
+	if input.UploadDeviceInfo.Model == "" || input.UploadDeviceInfo.Make == "" || input.UploadDeviceInfo.AndroidAPIVersion <= 0 {
+		return nil, fmt.Errorf("complete Android upload device information is required")
+	}
+
+	resultItemMask, err := base64.StdEncoding.DecodeString(livePhotoResultItemMaskBase64)
+	if err != nil {
+		return nil, fmt.Errorf("decode result item mask: %w", err)
+	}
+
+	// The verified HEIC-first reconciliation shape is video-led. Google accepts
+	// the MOV as the primary blueprint and locates the existing still by SHA-1;
+	// livePhotoInfo and the recursive photoUploadBlueprint must remain absent.
+	request := generated.CreateMediaItemsRequest{
+		BlueprintArray: []*generated.MediaItemBlueprint{{
+			UploadToken:          input.VideoToken.Raw,
+			FileName:             input.FileName,
+			SourceSha1:           input.VideoSHA1,
+			FilesystemCreateTime: createMediaItemsTimestamp(input.CreatedAt),
+			FilesystemModTime:    createMediaItemsTimestamp(input.ModifiedAt),
+			StoragePolicy:        input.StoragePolicy,
+			UploadQuality:        input.UploadQuality,
+			ReconcileInfo: &generated.ReconcileInfo{
+				ReconcileType: generated.ReconcileType_RECONCILE_TYPE_PHODEO,
+				SourceSha1:    input.PhotoSHA1,
+			},
+		}},
+		UploadDeviceInfo: &generated.UploadDeviceInfo{
+			Model:             input.UploadDeviceInfo.Model,
+			Make:              input.UploadDeviceInfo.Make,
+			AndroidApiVersion: input.UploadDeviceInfo.AndroidAPIVersion,
+		},
+		ResultItemMask: resultItemMask,
+	}
+	serialized, err := proto.Marshal(&request)
+	if err != nil {
+		return nil, fmt.Errorf("marshal Live Photo reconcile request: %w", err)
 	}
 	return serialized, nil
 }

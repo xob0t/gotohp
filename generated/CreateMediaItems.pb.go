@@ -21,6 +21,55 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ReconcileType int32
+
+const (
+	ReconcileType_RECONCILE_TYPE_UNKNOWN        ReconcileType = 0
+	ReconcileType_RECONCILE_TYPE_PHODEO         ReconcileType = 1
+	ReconcileType_RECONCILE_TYPE_VIDEO_ORIGINAL ReconcileType = 2
+)
+
+// Enum value maps for ReconcileType.
+var (
+	ReconcileType_name = map[int32]string{
+		0: "RECONCILE_TYPE_UNKNOWN",
+		1: "RECONCILE_TYPE_PHODEO",
+		2: "RECONCILE_TYPE_VIDEO_ORIGINAL",
+	}
+	ReconcileType_value = map[string]int32{
+		"RECONCILE_TYPE_UNKNOWN":        0,
+		"RECONCILE_TYPE_PHODEO":         1,
+		"RECONCILE_TYPE_VIDEO_ORIGINAL": 2,
+	}
+)
+
+func (x ReconcileType) Enum() *ReconcileType {
+	p := new(ReconcileType)
+	*p = x
+	return p
+}
+
+func (x ReconcileType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReconcileType) Descriptor() protoreflect.EnumDescriptor {
+	return file___proto_CreateMediaItems_proto_enumTypes[0].Descriptor()
+}
+
+func (ReconcileType) Type() protoreflect.EnumType {
+	return &file___proto_CreateMediaItems_proto_enumTypes[0]
+}
+
+func (x ReconcileType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReconcileType.Descriptor instead.
+func (ReconcileType) EnumDescriptor() ([]byte, []int) {
+	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{0}
+}
+
 type CreateMediaItemsRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	BlueprintArray   []*MediaItemBlueprint  `protobuf:"bytes,1,rep,name=blueprint_array,json=blueprintArray,proto3" json:"blueprint_array,omitempty"`
@@ -89,6 +138,7 @@ type MediaItemBlueprint struct {
 	FilesystemCreateTime *UploadTimestamp       `protobuf:"bytes,5,opt,name=filesystem_create_time,json=filesystemCreateTime,proto3" json:"filesystem_create_time,omitempty"`
 	FilesystemModTime    *UploadTimestamp       `protobuf:"bytes,6,opt,name=filesystem_mod_time,json=filesystemModTime,proto3" json:"filesystem_mod_time,omitempty"`
 	StoragePolicy        int64                  `protobuf:"varint,7,opt,name=storage_policy,json=storagePolicy,proto3" json:"storage_policy,omitempty"`
+	ReconcileInfo        *ReconcileInfo         `protobuf:"bytes,9,opt,name=reconcile_info,json=reconcileInfo,proto3" json:"reconcile_info,omitempty"`
 	UploadQuality        int64                  `protobuf:"varint,10,opt,name=upload_quality,json=uploadQuality,proto3" json:"upload_quality,omitempty"`
 	LivePhotoInfo        *LivePhotoInfo         `protobuf:"bytes,24,opt,name=live_photo_info,json=livePhotoInfo,proto3" json:"live_photo_info,omitempty"`
 	unknownFields        protoimpl.UnknownFields
@@ -167,6 +217,13 @@ func (x *MediaItemBlueprint) GetStoragePolicy() int64 {
 	return 0
 }
 
+func (x *MediaItemBlueprint) GetReconcileInfo() *ReconcileInfo {
+	if x != nil {
+		return x.ReconcileInfo
+	}
+	return nil
+}
+
 func (x *MediaItemBlueprint) GetUploadQuality() int64 {
 	if x != nil {
 		return x.UploadQuality
@@ -181,6 +238,66 @@ func (x *MediaItemBlueprint) GetLivePhotoInfo() *LivePhotoInfo {
 	return nil
 }
 
+type ReconcileInfo struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ReconcileType        ReconcileType          `protobuf:"varint,2,opt,name=reconcile_type,json=reconcileType,proto3,enum=ReconcileType" json:"reconcile_type,omitempty"`
+	SourceSha1           []byte                 `protobuf:"bytes,3,opt,name=source_sha1,json=sourceSha1,proto3" json:"source_sha1,omitempty"`
+	PhotoUploadBlueprint *MediaItemBlueprint    `protobuf:"bytes,4,opt,name=photo_upload_blueprint,json=photoUploadBlueprint,proto3" json:"photo_upload_blueprint,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ReconcileInfo) Reset() {
+	*x = ReconcileInfo{}
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReconcileInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReconcileInfo) ProtoMessage() {}
+
+func (x *ReconcileInfo) ProtoReflect() protoreflect.Message {
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReconcileInfo.ProtoReflect.Descriptor instead.
+func (*ReconcileInfo) Descriptor() ([]byte, []int) {
+	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ReconcileInfo) GetReconcileType() ReconcileType {
+	if x != nil {
+		return x.ReconcileType
+	}
+	return ReconcileType_RECONCILE_TYPE_UNKNOWN
+}
+
+func (x *ReconcileInfo) GetSourceSha1() []byte {
+	if x != nil {
+		return x.SourceSha1
+	}
+	return nil
+}
+
+func (x *ReconcileInfo) GetPhotoUploadBlueprint() *MediaItemBlueprint {
+	if x != nil {
+		return x.PhotoUploadBlueprint
+	}
+	return nil
+}
+
 type UploadTimestamp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Seconds       int64                  `protobuf:"varint,1,opt,name=seconds,proto3" json:"seconds,omitempty"`
@@ -191,7 +308,7 @@ type UploadTimestamp struct {
 
 func (x *UploadTimestamp) Reset() {
 	*x = UploadTimestamp{}
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[2]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -203,7 +320,7 @@ func (x *UploadTimestamp) String() string {
 func (*UploadTimestamp) ProtoMessage() {}
 
 func (x *UploadTimestamp) ProtoReflect() protoreflect.Message {
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[2]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,7 +333,7 @@ func (x *UploadTimestamp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadTimestamp.ProtoReflect.Descriptor instead.
 func (*UploadTimestamp) Descriptor() ([]byte, []int) {
-	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{2}
+	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *UploadTimestamp) GetSeconds() int64 {
@@ -243,7 +360,7 @@ type LivePhotoInfo struct {
 
 func (x *LivePhotoInfo) Reset() {
 	*x = LivePhotoInfo{}
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[3]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -255,7 +372,7 @@ func (x *LivePhotoInfo) String() string {
 func (*LivePhotoInfo) ProtoMessage() {}
 
 func (x *LivePhotoInfo) ProtoReflect() protoreflect.Message {
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[3]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -268,7 +385,7 @@ func (x *LivePhotoInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LivePhotoInfo.ProtoReflect.Descriptor instead.
 func (*LivePhotoInfo) Descriptor() ([]byte, []int) {
-	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{3}
+	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *LivePhotoInfo) GetVideoUploadToken() []byte {
@@ -296,7 +413,7 @@ type UploadDeviceInfo struct {
 
 func (x *UploadDeviceInfo) Reset() {
 	*x = UploadDeviceInfo{}
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[4]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -308,7 +425,7 @@ func (x *UploadDeviceInfo) String() string {
 func (*UploadDeviceInfo) ProtoMessage() {}
 
 func (x *UploadDeviceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[4]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,7 +438,7 @@ func (x *UploadDeviceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadDeviceInfo.ProtoReflect.Descriptor instead.
 func (*UploadDeviceInfo) Descriptor() ([]byte, []int) {
-	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{4}
+	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UploadDeviceInfo) GetModel() string {
@@ -354,7 +471,7 @@ type CreateMediaItemsResponse struct {
 
 func (x *CreateMediaItemsResponse) Reset() {
 	*x = CreateMediaItemsResponse{}
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[5]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -366,7 +483,7 @@ func (x *CreateMediaItemsResponse) String() string {
 func (*CreateMediaItemsResponse) ProtoMessage() {}
 
 func (x *CreateMediaItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[5]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -379,7 +496,7 @@ func (x *CreateMediaItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMediaItemsResponse.ProtoReflect.Descriptor instead.
 func (*CreateMediaItemsResponse) Descriptor() ([]byte, []int) {
-	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{5}
+	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateMediaItemsResponse) GetItem() []*CreateMediaItemResponseItem {
@@ -398,7 +515,7 @@ type CreateMediaItemResponseItem struct {
 
 func (x *CreateMediaItemResponseItem) Reset() {
 	*x = CreateMediaItemResponseItem{}
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[6]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -410,7 +527,7 @@ func (x *CreateMediaItemResponseItem) String() string {
 func (*CreateMediaItemResponseItem) ProtoMessage() {}
 
 func (x *CreateMediaItemResponseItem) ProtoReflect() protoreflect.Message {
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[6]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -423,7 +540,7 @@ func (x *CreateMediaItemResponseItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMediaItemResponseItem.ProtoReflect.Descriptor instead.
 func (*CreateMediaItemResponseItem) Descriptor() ([]byte, []int) {
-	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{6}
+	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateMediaItemResponseItem) GetResultItem() *CreateMediaItemResult {
@@ -442,7 +559,7 @@ type CreateMediaItemResult struct {
 
 func (x *CreateMediaItemResult) Reset() {
 	*x = CreateMediaItemResult{}
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[7]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -454,7 +571,7 @@ func (x *CreateMediaItemResult) String() string {
 func (*CreateMediaItemResult) ProtoMessage() {}
 
 func (x *CreateMediaItemResult) ProtoReflect() protoreflect.Message {
-	mi := &file___proto_CreateMediaItems_proto_msgTypes[7]
+	mi := &file___proto_CreateMediaItems_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -467,7 +584,7 @@ func (x *CreateMediaItemResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMediaItemResult.ProtoReflect.Descriptor instead.
 func (*CreateMediaItemResult) Descriptor() ([]byte, []int) {
-	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{7}
+	return file___proto_CreateMediaItems_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateMediaItemResult) GetMediaKey() string {
@@ -485,7 +602,7 @@ const file___proto_CreateMediaItems_proto_rawDesc = "" +
 	"\x17CreateMediaItemsRequest\x12<\n" +
 	"\x0fblueprint_array\x18\x01 \x03(\v2\x13.MediaItemBlueprintR\x0eblueprintArray\x12?\n" +
 	"\x12upload_device_info\x18\x02 \x01(\v2\x11.UploadDeviceInfoR\x10uploadDeviceInfo\x12(\n" +
-	"\x10result_item_mask\x18\x05 \x01(\fR\x0eresultItemMaskJ\x04\b\x03\x10\x04\"\x85\x03\n" +
+	"\x10result_item_mask\x18\x05 \x01(\fR\x0eresultItemMaskJ\x04\b\x03\x10\x04\"\xbc\x03\n" +
 	"\x12MediaItemBlueprint\x12!\n" +
 	"\fupload_token\x18\x01 \x01(\fR\vuploadToken\x12\x1b\n" +
 	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1f\n" +
@@ -493,10 +610,16 @@ const file___proto_CreateMediaItems_proto_rawDesc = "" +
 	"sourceSha1\x12F\n" +
 	"\x16filesystem_create_time\x18\x05 \x01(\v2\x10.UploadTimestampR\x14filesystemCreateTime\x12@\n" +
 	"\x13filesystem_mod_time\x18\x06 \x01(\v2\x10.UploadTimestampR\x11filesystemModTime\x12%\n" +
-	"\x0estorage_policy\x18\a \x01(\x03R\rstoragePolicy\x12%\n" +
+	"\x0estorage_policy\x18\a \x01(\x03R\rstoragePolicy\x125\n" +
+	"\x0ereconcile_info\x18\t \x01(\v2\x0e.ReconcileInfoR\rreconcileInfo\x12%\n" +
 	"\x0eupload_quality\x18\n" +
 	" \x01(\x03R\ruploadQuality\x126\n" +
-	"\x0flive_photo_info\x18\x18 \x01(\v2\x0e.LivePhotoInfoR\rlivePhotoInfo\"M\n" +
+	"\x0flive_photo_info\x18\x18 \x01(\v2\x0e.LivePhotoInfoR\rlivePhotoInfo\"\xb2\x01\n" +
+	"\rReconcileInfo\x125\n" +
+	"\x0ereconcile_type\x18\x02 \x01(\x0e2\x0e.ReconcileTypeR\rreconcileType\x12\x1f\n" +
+	"\vsource_sha1\x18\x03 \x01(\fR\n" +
+	"sourceSha1\x12I\n" +
+	"\x16photo_upload_blueprint\x18\x04 \x01(\v2\x13.MediaItemBlueprintR\x14photoUploadBlueprint\"M\n" +
 	"\x0fUploadTimestamp\x12\x18\n" +
 	"\aseconds\x18\x01 \x01(\x03R\aseconds\x12 \n" +
 	"\vnanoseconds\x18\x02 \x01(\x03R\vnanoseconds\"o\n" +
@@ -513,7 +636,11 @@ const file___proto_CreateMediaItems_proto_rawDesc = "" +
 	"\vresult_item\x18\x03 \x01(\v2\x16.CreateMediaItemResultR\n" +
 	"resultItem\"4\n" +
 	"\x15CreateMediaItemResult\x12\x1b\n" +
-	"\tmedia_key\x18\x01 \x01(\tR\bmediaKeyb\x06proto3"
+	"\tmedia_key\x18\x01 \x01(\tR\bmediaKey*i\n" +
+	"\rReconcileType\x12\x1a\n" +
+	"\x16RECONCILE_TYPE_UNKNOWN\x10\x00\x12\x19\n" +
+	"\x15RECONCILE_TYPE_PHODEO\x10\x01\x12!\n" +
+	"\x1dRECONCILE_TYPE_VIDEO_ORIGINAL\x10\x02b\x06proto3"
 
 var (
 	file___proto_CreateMediaItems_proto_rawDescOnce sync.Once
@@ -527,30 +654,36 @@ func file___proto_CreateMediaItems_proto_rawDescGZIP() []byte {
 	return file___proto_CreateMediaItems_proto_rawDescData
 }
 
-var file___proto_CreateMediaItems_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file___proto_CreateMediaItems_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file___proto_CreateMediaItems_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file___proto_CreateMediaItems_proto_goTypes = []any{
-	(*CreateMediaItemsRequest)(nil),     // 0: CreateMediaItemsRequest
-	(*MediaItemBlueprint)(nil),          // 1: MediaItemBlueprint
-	(*UploadTimestamp)(nil),             // 2: UploadTimestamp
-	(*LivePhotoInfo)(nil),               // 3: LivePhotoInfo
-	(*UploadDeviceInfo)(nil),            // 4: UploadDeviceInfo
-	(*CreateMediaItemsResponse)(nil),    // 5: CreateMediaItemsResponse
-	(*CreateMediaItemResponseItem)(nil), // 6: CreateMediaItemResponseItem
-	(*CreateMediaItemResult)(nil),       // 7: CreateMediaItemResult
+	(ReconcileType)(0),                  // 0: ReconcileType
+	(*CreateMediaItemsRequest)(nil),     // 1: CreateMediaItemsRequest
+	(*MediaItemBlueprint)(nil),          // 2: MediaItemBlueprint
+	(*ReconcileInfo)(nil),               // 3: ReconcileInfo
+	(*UploadTimestamp)(nil),             // 4: UploadTimestamp
+	(*LivePhotoInfo)(nil),               // 5: LivePhotoInfo
+	(*UploadDeviceInfo)(nil),            // 6: UploadDeviceInfo
+	(*CreateMediaItemsResponse)(nil),    // 7: CreateMediaItemsResponse
+	(*CreateMediaItemResponseItem)(nil), // 8: CreateMediaItemResponseItem
+	(*CreateMediaItemResult)(nil),       // 9: CreateMediaItemResult
 }
 var file___proto_CreateMediaItems_proto_depIdxs = []int32{
-	1, // 0: CreateMediaItemsRequest.blueprint_array:type_name -> MediaItemBlueprint
-	4, // 1: CreateMediaItemsRequest.upload_device_info:type_name -> UploadDeviceInfo
-	2, // 2: MediaItemBlueprint.filesystem_create_time:type_name -> UploadTimestamp
-	2, // 3: MediaItemBlueprint.filesystem_mod_time:type_name -> UploadTimestamp
-	3, // 4: MediaItemBlueprint.live_photo_info:type_name -> LivePhotoInfo
-	6, // 5: CreateMediaItemsResponse.item:type_name -> CreateMediaItemResponseItem
-	7, // 6: CreateMediaItemResponseItem.result_item:type_name -> CreateMediaItemResult
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	2,  // 0: CreateMediaItemsRequest.blueprint_array:type_name -> MediaItemBlueprint
+	6,  // 1: CreateMediaItemsRequest.upload_device_info:type_name -> UploadDeviceInfo
+	4,  // 2: MediaItemBlueprint.filesystem_create_time:type_name -> UploadTimestamp
+	4,  // 3: MediaItemBlueprint.filesystem_mod_time:type_name -> UploadTimestamp
+	3,  // 4: MediaItemBlueprint.reconcile_info:type_name -> ReconcileInfo
+	5,  // 5: MediaItemBlueprint.live_photo_info:type_name -> LivePhotoInfo
+	0,  // 6: ReconcileInfo.reconcile_type:type_name -> ReconcileType
+	2,  // 7: ReconcileInfo.photo_upload_blueprint:type_name -> MediaItemBlueprint
+	8,  // 8: CreateMediaItemsResponse.item:type_name -> CreateMediaItemResponseItem
+	9,  // 9: CreateMediaItemResponseItem.result_item:type_name -> CreateMediaItemResult
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file___proto_CreateMediaItems_proto_init() }
@@ -563,13 +696,14 @@ func file___proto_CreateMediaItems_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file___proto_CreateMediaItems_proto_rawDesc), len(file___proto_CreateMediaItems_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   8,
+			NumEnums:      1,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file___proto_CreateMediaItems_proto_goTypes,
 		DependencyIndexes: file___proto_CreateMediaItems_proto_depIdxs,
+		EnumInfos:         file___proto_CreateMediaItems_proto_enumTypes,
 		MessageInfos:      file___proto_CreateMediaItems_proto_msgTypes,
 	}.Build()
 	File___proto_CreateMediaItems_proto = out.File
