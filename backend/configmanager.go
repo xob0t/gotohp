@@ -30,6 +30,7 @@ type Config struct {
 	ForceUpload                   bool     `json:"forceUpload" koanf:"force_upload"`
 	PairLivePhotos                bool     `json:"pairLivePhotos" koanf:"pair_live_photos"`
 	SkipIncompleteLivePhotos      bool     `json:"skipIncompleteLivePhotos" koanf:"skip_incomplete_live_photos"`
+	UpdateExistingPhotosToLive    bool     `json:"updateExistingPhotosToLive" koanf:"update_existing_photos_to_live"`
 	UploadThreads                 int      `json:"uploadThreads" koanf:"upload_threads"`
 	DeleteFromHost                bool     `json:"deleteFromHost" koanf:"delete_from_host"`
 	DisableUnsupportedFilesFilter bool     `json:"disableUnsupportedFilesFilter" koanf:"disable_unsupported_files_filter"`
@@ -95,6 +96,11 @@ func (g *ConfigManager) SetPairLivePhotos(pairLivePhotos bool) {
 
 func (g *ConfigManager) SetSkipIncompleteLivePhotos(skipIncompleteLivePhotos bool) {
 	AppConfig.SkipIncompleteLivePhotos = skipIncompleteLivePhotos
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetUpdateExistingPhotosToLive(updateExistingPhotosToLive bool) {
+	AppConfig.UpdateExistingPhotosToLive = updateExistingPhotosToLive
 	_ = saveAppConfig()
 }
 

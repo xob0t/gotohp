@@ -733,9 +733,10 @@ func uploadWorkItem(ctx context.Context, api *Api, item UploadWorkItem, workerID
 			return "", false, fmt.Errorf("invalid Live Photo work item")
 		}
 		return uploadLivePhotoWithCallback(ctx, api, *item.LivePhoto, LivePhotoUploadOptions{
-			Policy:              buildLivePhotoCommitPolicy(api, AppConfig),
-			DeleteFromHost:      AppConfig.DeleteFromHost,
-			SetDateFromFilename: AppConfig.SetDateFromFilename,
+			Policy:                     buildLivePhotoCommitPolicy(api, AppConfig),
+			DeleteFromHost:             AppConfig.DeleteFromHost,
+			SetDateFromFilename:        AppConfig.SetDateFromFilename,
+			UpdateExistingPhotosToLive: AppConfig.UpdateExistingPhotosToLive,
 		}, workerID, callback)
 	default:
 		return "", false, fmt.Errorf("unsupported upload work kind %q", item.Kind)

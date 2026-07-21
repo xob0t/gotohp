@@ -87,6 +87,7 @@ export class Config {
     "forceUpload": boolean;
     "pairLivePhotos": boolean;
     "skipIncompleteLivePhotos": boolean;
+    "updateExistingPhotosToLive": boolean;
     "uploadThreads": number;
     "deleteFromHost": boolean;
     "disableUnsupportedFilesFilter": boolean;
@@ -123,6 +124,9 @@ export class Config {
         }
         if (!("skipIncompleteLivePhotos" in $$source)) {
             this["skipIncompleteLivePhotos"] = false;
+        }
+        if (!("updateExistingPhotosToLive" in $$source)) {
+            this["updateExistingPhotosToLive"] = false;
         }
         if (!("uploadThreads" in $$source)) {
             this["uploadThreads"] = 0;

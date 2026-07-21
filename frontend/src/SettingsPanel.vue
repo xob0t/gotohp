@@ -21,6 +21,7 @@ interface Settings {
     forceUpload: boolean
     pairLivePhotos: boolean
     skipIncompleteLivePhotos: boolean
+    updateExistingPhotosToLive: boolean
     deleteFromHost: boolean
     disableUnsupportedFilesFilter: boolean
     setDateFromFilename: boolean
@@ -35,6 +36,7 @@ const settings = ref<Settings>({
     forceUpload: false,
     pairLivePhotos: false,
     skipIncompleteLivePhotos: false,
+    updateExistingPhotosToLive: false,
     deleteFromHost: false,
     disableUnsupportedFilesFilter: false,
     setDateFromFilename: false,
@@ -51,6 +53,7 @@ onMounted(async () => {
         forceUpload: config.forceUpload || false,
         pairLivePhotos: config.pairLivePhotos || false,
         skipIncompleteLivePhotos: config.skipIncompleteLivePhotos || false,
+        updateExistingPhotosToLive: config.updateExistingPhotosToLive || false,
         deleteFromHost: config.deleteFromHost || false,
         disableUnsupportedFilesFilter: config.disableUnsupportedFilesFilter || false,
         setDateFromFilename: config.setDateFromFilename || false,
@@ -86,6 +89,10 @@ watch(() => settings.value.pairLivePhotos, async (newValue) => {
 
 watch(() => settings.value.skipIncompleteLivePhotos, async (newValue) => {
     await ConfigManager.SetSkipIncompleteLivePhotos(newValue)
+})
+
+watch(() => settings.value.updateExistingPhotosToLive, async (newValue) => {
+    await ConfigManager.SetUpdateExistingPhotosToLive(newValue)
 })
 
 watch(() => settings.value.deleteFromHost, async (newValue) => {
@@ -203,6 +210,25 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       <Switch
         id="skip-incomplete-live-photos"
         v-model="settings.skipIncompleteLivePhotos"
+        :disabled="!settings.pairLivePhotos"
+      />
+    </div>
+    <div
+      class="flex items-center justify-between pl-4 transition-opacity"
+      :class="settings.pairLivePhotos ? 'opacity-100' : 'opacity-45'"
+    >
+      <div class="pr-4">
+        <Label
+          for="update-existing-photos-to-live"
+          class="cursor-pointer"
+        >Update Existing Photos to Live</Label>
+        <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+          If the matching photo already exists in Google Photos, upload and attach its Live Photo video.
+        </p>
+      </div>
+      <Switch
+        id="update-existing-photos-to-live"
+        v-model="settings.updateExistingPhotosToLive"
         :disabled="!settings.pairLivePhotos"
       />
     </div>
