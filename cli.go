@@ -27,6 +27,8 @@ type cliConfig struct {
 	pairLivePhotosSet             bool
 	skipIncompleteLivePhotos      bool
 	skipIncompleteLivePhotosSet   bool
+	updateExistingPhotosToLive    bool
+	ignoreAppleMetadata           bool
 	excludePattern                string
 	logLevel                      string
 	configPath                    string
@@ -315,6 +317,8 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	if config.skipIncompleteLivePhotosSet {
 		backend.AppConfig.SkipIncompleteLivePhotos = config.skipIncompleteLivePhotos
 	}
+	backend.AppConfig.UpdateExistingPhotosToLive = config.updateExistingPhotosToLive
+	backend.AppConfig.IgnoreAppleMetadata = config.ignoreAppleMetadata
 
 	// Handle album option - check for AUTO mode
 	if strings.ToUpper(config.albumName) == "AUTO" {

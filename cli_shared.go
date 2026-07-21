@@ -50,6 +50,8 @@ func runCLI() {
 			fmt.Println("  --pair-live-photos           Pair Apple Live Photo files; incomplete pairs are skipped")
 			fmt.Println("  --skip-incomplete-live-photos  Skip incomplete Live Photo members")
 			fmt.Println("  --upload-incomplete-live-photos  Upload an unmatched member as a single file")
+			fmt.Println("  --update-existing-photos-to-live  Attach matching MOV files to existing photos")
+			fmt.Println("  --ignore-apple-metadata      Match Live Photo pairs by filename stem instead of Apple metadata")
 			fmt.Println("  -d, --delete                 Delete from host after upload")
 			fmt.Println("  -df, --disable-filter        Disable file type filtering")
 			fmt.Println("  --date-from-filename         Set media date from filename (e.g. 20240709_182027.jpg)")

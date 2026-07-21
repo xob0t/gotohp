@@ -132,8 +132,9 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		return
 	}
 	workItems, preflightWarnings := ClassifyUploadWork(targetPaths, LivePhotoClassificationOptions{
-		Enabled:        AppConfig.PairLivePhotos,
-		SkipIncomplete: AppConfig.SkipIncompleteLivePhotos,
+		Enabled:             AppConfig.PairLivePhotos,
+		SkipIncomplete:      AppConfig.SkipIncompleteLivePhotos,
+		IgnoreAppleMetadata: AppConfig.IgnoreAppleMetadata,
 	}, nil)
 	emitUploadPreflight(app, len(workItems), preflightWarnings)
 

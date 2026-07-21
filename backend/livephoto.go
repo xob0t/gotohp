@@ -38,8 +38,9 @@ type PreflightWarning struct {
 }
 
 type LivePhotoClassificationOptions struct {
-	Enabled        bool
-	SkipIncomplete bool
+	Enabled             bool
+	SkipIncomplete      bool
+	IgnoreAppleMetadata bool
 }
 
 type LivePhotoMetadataReader interface {
@@ -67,8 +68,9 @@ type livePhotoCandidates struct {
 	videos []indexedLivePhotoMedia
 }
 
-// ClassifyUploadWork pairs files by their embedded Apple content identifier.
-// Filenames are deliberately ignored because iOS exports can rename either half.
+// ClassifyUploadWork normally pairs files by their embedded Apple content
+// identifier. The explicit CLI override uses case-insensitive filename stems;
+// it remains one-to-one and still requires valid Live Photo video timing data.
 func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, reader LivePhotoMetadataReader) ([]UploadWorkItem, []PreflightWarning) {
 	if !options.Enabled {
 		return singleUploadWork(paths), nil
@@ -82,6 +84,11 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 	for index, path := range paths {
 		switch livePhotoCandidateType(path) {
 		case "photo":
+			if options.IgnoreAppleMetadata {
+				candidates := candidatesForIdentifier(candidatesByIdentifier, livePhotoFilenameMatchKey(path))
+				candidates.photos = append(candidates.photos, indexedLivePhotoMedia{path: path, index: index})
+				continue
+			}
 			identifier, err := reader.PhotoContentIdentifier(path)
 			if errors.Is(err, ErrContentIdentifierMissing) {
 				continue
@@ -94,10 +101,10 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 			candidates.photos = append(candidates.photos, indexedLivePhotoMedia{path: path, index: index})
 		case "video":
 			metadata, err := reader.VideoLivePhotoMetadata(path)
-			if errors.Is(err, ErrContentIdentifierMissing) {
+			if errors.Is(err, ErrContentIdentifierMissing) && !options.IgnoreAppleMetadata {
 				continue
 			}
-			if err != nil {
+			if err != nil && !errors.Is(err, ErrContentIdentifierMissing) {
 				warnings = append(warnings, metadataReadWarning(path, err))
 				continue
 			}
@@ -109,7 +116,11 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 				})
 				continue
 			}
-			candidates := candidatesForIdentifier(candidatesByIdentifier, metadata.ContentIdentifier)
+			identifier := metadata.ContentIdentifier
+			if options.IgnoreAppleMetadata {
+				identifier = livePhotoFilenameMatchKey(path)
+			}
+			candidates := candidatesForIdentifier(candidatesByIdentifier, identifier)
 			candidates.videos = append(candidates.videos, indexedLivePhotoMedia{path: path, index: index})
 		}
 	}
@@ -123,8 +134,12 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 			photo := candidates.photos[0]
 			video := candidates.videos[0]
 			pairIndex := min(photo.index, video.index)
+			contentIdentifier := identifier
+			if options.IgnoreAppleMetadata {
+				contentIdentifier = ""
+			}
 			pairsByIndex[pairIndex] = LivePhotoPair{
-				ContentIdentifier: identifier,
+				ContentIdentifier: contentIdentifier,
 				PhotoPath:         photo.path,
 				VideoPath:         video.path,
 			}
@@ -134,10 +149,16 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 		}
 		if len(candidates.photos) > 1 || len(candidates.videos) > 1 {
 			ambiguousPaths := candidatePaths(candidates)
+			code := "ambiguous-identifier"
+			message := "multiple photo or video candidates share one Live Photo identifier"
+			if options.IgnoreAppleMetadata {
+				code = "ambiguous-filename-stem"
+				message = "multiple photo or video candidates share one filename stem"
+			}
 			warnings = append(warnings, PreflightWarning{
 				Paths:   ambiguousPaths,
-				Code:    "ambiguous-identifier",
-				Message: "multiple photo or video candidates share one Live Photo identifier",
+				Code:    code,
+				Message: message,
 			})
 			continue
 		}
@@ -211,6 +232,11 @@ func livePhotoCandidateType(path string) string {
 	default:
 		return ""
 	}
+}
+
+func livePhotoFilenameMatchKey(path string) string {
+	cleanPath := filepath.Clean(path)
+	return strings.ToLower(strings.TrimSuffix(cleanPath, filepath.Ext(cleanPath)))
 }
 
 func candidatesForIdentifier(candidatesByIdentifier map[string]*livePhotoCandidates, identifier string) *livePhotoCandidates {

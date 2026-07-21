@@ -38,6 +38,8 @@ type Config struct {
 	AlbumAutoMode                 bool     `json:"albumAutoMode" koanf:"album_auto_mode"`
 	SetDateFromFilename           bool     `json:"setDateFromFilename" koanf:"set_date_from_filename"`
 	ExcludePattern                string   `json:"excludePattern" koanf:"exclude_pattern"`
+	// IgnoreAppleMetadata is a CLI-only per-command override and is never persisted.
+	IgnoreAppleMetadata bool `json:"-" koanf:"-"`
 }
 
 type ConfigManager struct{}
