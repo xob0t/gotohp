@@ -24,6 +24,7 @@ Releases include a standalone CLI executable for command-line usage. Use the `go
 ```shell
 gotohp-cli upload /path/to/photos --recursive --threads 5
 gotohp-cli upload /path/to/photos --recursive --exclude @eaDir
+gotohp-cli upload IMG_0001.HEIC IMG_0001.MOV --pair-live-photos
 gotohp-cli creds list
 gotohp-cli creds add "androidId=..."
 gotohp-cli creds set user@gmail.com
@@ -32,13 +33,16 @@ gotohp-cli version
 
 **Available commands:**
 
-- `upload <filepath>` - Upload files or directories
+- `upload <path> [<path> ...]` - Upload one or more files or directories
   - `-r, --recursive` - Include subdirectories
   - `-t, --threads <n>` - Number of upload threads (default: 3)
   - `-f, --force` - Force upload even if file exists
   - `-d, --delete` - Delete from host after upload
   - `-df, --disable-filter` - Disable file type filtering
   - `--date-from-filename` - Set media date from filename (e.g. `20240709_182027.jpg`)
+  - `--pair-live-photos` - Pair Apple Live Photo components; incomplete pairs are skipped by default
+  - `--skip-incomplete-live-photos` - Skip metadata-confirmed Live Photo components whose match is absent
+  - `--upload-incomplete-live-photos` - Upload unmatched Live Photo components as ordinary single files
   - `-e, --exclude <pattern>` - Skip directories with this exact name during recursive upload (e.g. `@eaDir`)
   - `-a, --album <name>` - Add uploaded files to album (use `AUTO` for folder-based albums)
   - `-l, --log-level <level>` - Set log level: debug, info, warn, error (default: info)
