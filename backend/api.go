@@ -355,15 +355,15 @@ func (a *Api) FindRemoteMediaByHash(shaHash []byte) (string, error) {
 // attempt is 1-based (1 = first attempt, 2 = first retry, etc.)
 type UploadProgressCallback func(bytesUploaded, bytesTotal int64, attempt int)
 
-func (a *Api) UploadFile(ctx context.Context, filePath string, uploadToken string) (*generated.CommitToken, error) {
+func (a *Api) UploadFile(ctx context.Context, filePath string, uploadToken string) (ScottyFinalizeToken, error) {
 	return a.UploadFileWithProgress(ctx, filePath, uploadToken, nil)
 }
 
-func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploadToken string, onProgress UploadProgressCallback) (*generated.CommitToken, error) {
+func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploadToken string, onProgress UploadProgressCallback) (ScottyFinalizeToken, error) {
 	// Get file size first (needed for progress tracking)
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("error getting file info: %w", err)
+		return ScottyFinalizeToken{}, fmt.Errorf("error getting file info: %w", err)
 	}
 	fileSize := fileInfo.Size()
 
@@ -376,7 +376,7 @@ func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploa
 
 		// Check context before each attempt
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return ScottyFinalizeToken{}, ctx.Err()
 		}
 
 		// Wait before retry (skip on first attempt)
@@ -384,7 +384,7 @@ func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploa
 			delay := CalculateBackoff(attempt-1, retryConfig)
 			select {
 			case <-ctx.Done():
-				return nil, ctx.Err()
+				return ScottyFinalizeToken{}, ctx.Err()
 			case <-time.After(delay):
 			}
 		}
@@ -397,7 +397,7 @@ func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploa
 		// Open file fresh for each attempt - this is the key to not loading into memory
 		file, err := os.Open(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("error opening file: %w", err)
+			return ScottyFinalizeToken{}, fmt.Errorf("error opening file: %w", err)
 		}
 
 		// Wrap file in progress reader if callback provided
@@ -411,7 +411,7 @@ func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploa
 		result, err := a.doUploadRequest(ctx, uploadURL, reader)
 		closeErr := file.Close() // Close file after request completes (success or fail)
 		if err == nil && closeErr != nil {
-			return nil, fmt.Errorf("error closing file: %w", closeErr)
+			return ScottyFinalizeToken{}, fmt.Errorf("error closing file: %w", closeErr)
 		}
 
 		if err == nil {
@@ -422,18 +422,18 @@ func (a *Api) UploadFileWithProgress(ctx context.Context, filePath string, uploa
 
 		// Don't retry on context cancellation
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return ScottyFinalizeToken{}, ctx.Err()
 		}
 	}
 
-	return nil, fmt.Errorf("upload failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
+	return ScottyFinalizeToken{}, fmt.Errorf("upload failed after %d attempts: %w", retryConfig.MaxRetries+1, lastErr)
 }
 
 // doUploadRequest performs a single upload attempt
-func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.Reader) (*generated.CommitToken, error) {
+func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.Reader) (ScottyFinalizeToken, error) {
 	req, err := http.NewRequestWithContext(ctx, "PUT", uploadURL, reader)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
+		return ScottyFinalizeToken{}, fmt.Errorf("error creating request: %w", err)
 	}
 
 	// Use chunked transfer encoding (don't set ContentLength)
@@ -441,7 +441,7 @@ func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.R
 
 	bearerToken, err := a.BearerToken()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get bearer token: %w", err)
+		return ScottyFinalizeToken{}, fmt.Errorf("failed to get bearer token: %w", err)
 	}
 
 	req.Header.Set("Accept-Encoding", "gzip")
@@ -451,27 +451,25 @@ func (a *Api) doUploadRequest(ctx context.Context, uploadURL string, reader io.R
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return ScottyFinalizeToken{}, fmt.Errorf("request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	// Check for non-success status codes (includes retryable 5xx/429 and non-retryable 4xx)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := ReadResponseBody(resp)
-		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+		return ScottyFinalizeToken{}, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	bodyBytes, err := ReadResponseBody(resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return ScottyFinalizeToken{}, fmt.Errorf("failed to read response body: %w", err)
 	}
-
-	var pbResp generated.CommitToken
-	if err := proto.Unmarshal(bodyBytes, &pbResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal protobuf: %w", err)
+	token, err := ParseScottyFinalizeToken(bodyBytes)
+	if err != nil {
+		return ScottyFinalizeToken{}, fmt.Errorf("invalid upload finalize response: %w", err)
 	}
-
-	return &pbResp, nil
+	return token, nil
 }
 
 // CommitUpload commits the upload to Google Photos
