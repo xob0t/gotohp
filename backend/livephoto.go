@@ -154,6 +154,14 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 			if options.IgnoreAppleMetadata {
 				code = "ambiguous-filename-stem"
 				message = "multiple photo or video candidates share one filename stem"
+				// Filename matching is an explicit override, so ambiguity must skip
+				// every candidate instead of silently falling back to single uploads.
+				for _, photo := range candidates.photos {
+					consumed[photo.index] = true
+				}
+				for _, video := range candidates.videos {
+					consumed[video.index] = true
+				}
 			}
 			warnings = append(warnings, PreflightWarning{
 				Paths:   ambiguousPaths,
@@ -236,7 +244,10 @@ func livePhotoCandidateType(path string) string {
 
 func livePhotoFilenameMatchKey(path string) string {
 	cleanPath := filepath.Clean(path)
-	return strings.ToLower(strings.TrimSuffix(cleanPath, filepath.Ext(cleanPath)))
+	directory := filepath.Dir(cleanPath)
+	baseName := filepath.Base(cleanPath)
+	stem := strings.ToLower(strings.TrimSuffix(baseName, filepath.Ext(baseName)))
+	return filepath.Join(directory, stem)
 }
 
 func candidatesForIdentifier(candidatesByIdentifier map[string]*livePhotoCandidates, identifier string) *livePhotoCandidates {

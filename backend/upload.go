@@ -252,7 +252,7 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 func emitUploadPreflight(app AppInterface, uploadItemCount int, warnings []PreflightWarning) {
 	skippedCount := 0
 	for _, warning := range warnings {
-		if warning.Code == "incomplete-live-photo-skipped" {
+		if isSkippedPreflightWarning(warning.Code) {
 			skippedCount++
 		}
 	}
@@ -265,7 +265,7 @@ func emitUploadPreflight(app AppInterface, uploadItemCount int, warnings []Prefl
 	})
 	for _, warning := range warnings {
 		app.EmitEvent("livePhotoPreflightWarning", warning)
-		if warning.Code != "incomplete-live-photo-skipped" {
+		if !isSkippedPreflightWarning(warning.Code) {
 			continue
 		}
 		primaryPath := ""
@@ -281,6 +281,10 @@ func emitUploadPreflight(app AppInterface, uploadItemCount int, warnings []Prefl
 			Paths:       warning.Paths,
 		})
 	}
+}
+
+func isSkippedPreflightWarning(code string) bool {
+	return code == "incomplete-live-photo-skipped" || code == "ambiguous-filename-stem"
 }
 
 // handleAlbumCreation handles album creation based on config (manual name/key or AUTO mode)
