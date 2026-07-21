@@ -67,6 +67,10 @@ export function SetForceUpload(forceUpload: boolean): $CancellablePromise<void> 
     return $Call.ByID(2189240988, forceUpload);
 }
 
+export function SetPairLivePhotos(pairLivePhotos: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3927958009, pairLivePhotos);
+}
+
 export function SetProxy(proxy: string): $CancellablePromise<void> {
     return $Call.ByID(2532528442, proxy);
 }
@@ -85,6 +89,10 @@ export function SetSelected(email: string): $CancellablePromise<void> {
 
 export function SetSetDateFromFilename(v: boolean): $CancellablePromise<void> {
     return $Call.ByID(1731635347, v);
+}
+
+export function SetSkipIncompleteLivePhotos(skipIncompleteLivePhotos: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2521603022, skipIncompleteLivePhotos);
 }
 
 export function SetUploadThreads(uploadThreads: number): $CancellablePromise<void> {

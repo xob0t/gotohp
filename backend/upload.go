@@ -145,12 +145,6 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		return
 	}
 
-	// Emit uploadStart immediately with TotalBytes=0 for responsive UI
-	app.EmitEvent("uploadStart", UploadBatchStart{
-		Total:      len(workItems),
-		TotalBytes: 0,
-	})
-
 	if _, err := NewApi(); err != nil {
 		for _, item := range workItems {
 			path := uploadWorkPrimaryPath(item)

@@ -13,6 +13,8 @@ const statusConfig = computed(() => {
       return { color: 'text-destructive', bg: 'bg-destructive/10', label: 'Error' }
     case 'completed':
       return { color: 'text-primary', bg: 'bg-primary/10', label: 'Done' }
+    case 'skipped':
+      return { color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-500/10', label: 'Skipped' }
     case 'uploading':
       if (props.thread.Attempt > 1) {
         return { color: 'text-orange-500', bg: 'bg-orange-500/10', label: `Retry ${props.thread.Attempt - 1}` }
@@ -94,8 +96,11 @@ const statusMessage = computed(() => props.thread.Message.replace(/^Error:\s*/, 
       </div>
     </template>
     <p
-      v-else-if="thread.Status === 'error'"
-      class="mt-1 text-[11px] leading-snug text-destructive break-words"
+      v-else-if="thread.Status === 'error' || thread.Status === 'skipped'"
+      :class="[
+        'mt-1 text-[11px] leading-snug break-words',
+        thread.Status === 'error' ? 'text-destructive' : 'text-muted-foreground'
+      ]"
     >
       {{ statusMessage }}
     </p>
