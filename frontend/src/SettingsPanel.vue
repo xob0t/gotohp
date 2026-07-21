@@ -176,7 +176,7 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
         <Label
           for="pair-live-photos"
           class="cursor-pointer"
-        >Pair Live Photos</Label>
+        >Pair Apple Live Photos</Label>
         <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
           Match Apple photos and MOV files by embedded metadata and upload them as one item.
         </p>
@@ -196,7 +196,8 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
           class="cursor-pointer"
         >Skip Incomplete Live Photos</Label>
         <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-          Skip metadata-confirmed Live Photo files when their matching component is absent.
+          Only upload Live Photos when both photo and video are available. If either is missing,
+          don’t upload the remaining file separately.
         </p>
       </div>
       <Switch

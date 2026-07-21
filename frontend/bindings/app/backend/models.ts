@@ -167,6 +167,8 @@ export class FileUploadResult {
     "IsError": boolean;
     "IsLivePhoto": boolean;
     "Skipped": boolean;
+    "SkipCode": string;
+    "SkipReason": string;
     "ErrorMessage": string;
     "Path": string;
     "Paths": string[];
@@ -185,6 +187,12 @@ export class FileUploadResult {
         if (!("Skipped" in $$source)) {
             this["Skipped"] = false;
         }
+        if (!("SkipCode" in $$source)) {
+            this["SkipCode"] = "";
+        }
+        if (!("SkipReason" in $$source)) {
+            this["SkipReason"] = "";
+        }
         if (!("ErrorMessage" in $$source)) {
             this["ErrorMessage"] = "";
         }
@@ -202,10 +210,10 @@ export class FileUploadResult {
      * Creates a new FileUploadResult instance from a string or object.
      */
     static createFrom($$source: any = {}): FileUploadResult {
-        const $$createField6_0 = $$createType0;
+        const $$createField8_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("Paths" in $$parsedSource) {
-            $$parsedSource["Paths"] = $$createField6_0($$parsedSource["Paths"]);
+            $$parsedSource["Paths"] = $$createField8_0($$parsedSource["Paths"]);
         }
         return new FileUploadResult($$parsedSource as Partial<FileUploadResult>);
     }

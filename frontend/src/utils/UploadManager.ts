@@ -1,5 +1,9 @@
 import { Clipboard, Events } from "@wailsio/runtime";
 import { reactive } from "vue";
+import {
+  recordUploadResult,
+  type UploadResults,
+} from "./uploadResults";
 
 export interface ThreadStatus {
   WorkerID: number;
@@ -18,6 +22,8 @@ export interface FileUploadResult {
   IsLivePhoto: boolean;
   Skipped: boolean;
   ErrorMessage: string;
+  SkipCode: string;
+  SkipReason: string;
   Path: string;
   Paths: string[];
 }
@@ -31,11 +37,6 @@ export interface PreflightWarning {
 export interface UploadBatchStart {
   Total: number;
   TotalBytes: number;
-}
-
-export interface UploadSuccess {
-  path: string;
-  mediaKey: string;
 }
 
 export interface AlbumStatus {
@@ -56,11 +57,7 @@ export interface UploadState {
   totalFiles: number;
   uploadedFiles: number;
   threads: Map<number, ThreadStatus>;
-  results: {
-    success: UploadSuccess[];
-    fail: string[];
-    skipped: string[];
-  };
+  results: UploadResults;
   preflightWarnings: PreflightWarning[];
   // Byte tracking
   totalBytes: number;
@@ -170,27 +167,30 @@ class UploadManager {
 
     // Handle file status updates
     Events.On("FileStatus", (event: { data: FileUploadResult }) => {
-      const { IsError, Path, Paths, MediaKey, Skipped } = event.data;
+      const { Path, Paths } = event.data;
 
-      if (!IsError) {
-        this.state.uploadedFiles += 1;
-        if (Skipped) {
-          this.state.results.skipped.push(Path);
-        } else {
-          this.state.results.success.push({ path: Path, mediaKey: MediaKey });
-        }
+      this.state.uploadedFiles += recordUploadResult(this.state.results, event.data);
+      if (!event.data.IsError) {
         const completedFileBytes = this.fileBytes.get(Path);
         if (completedFileBytes && completedFileBytes > 0) {
           this.completedBytes += completedFileBytes;
         }
-      } else {
-        const errorMessage = event.data.ErrorMessage;
-        this.state.results.fail.push(errorMessage ? `${Path}: ${errorMessage}` : Path);
       }
       for (const completedPath of Paths?.length ? Paths : [Path]) {
         this.fileBytes.delete(completedPath);
       }
       this.updateBytesAndSpeed();
+
+      // Skipped-only batches can begin and end within one backend event burst.
+      // Finishing locally prevents a missed terminal event from leaving the timer running.
+      if (
+        this.state.totalFiles > 0
+        && this.state.uploadedFiles >= this.state.totalFiles
+        && this.state.results.success.length === 0
+        && this.state.results.fail.length === 0
+      ) {
+        this.state.isUploading = false;
+      }
     });
 
     // Handle upload stop

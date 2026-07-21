@@ -47,7 +47,8 @@ var (
 	UploadRunning bool = false
 	ConfigPath    string
 	DefaultConfig = Config{
-		UploadThreads: 3,
+		SkipIncompleteLivePhotos: true,
+		UploadThreads:            3,
 	}
 )
 
