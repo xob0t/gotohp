@@ -591,7 +591,7 @@ func saveAppConfig() error {
 }
 
 func loadAppConfig() Config {
-	var c Config
+	c := DefaultConfig
 	k := koanf.New(".")
 	if err := k.Load(file.Provider(ConfigPath), yaml.Parser()); err != nil {
 		log.Printf("error parsing app config: %v", err)
@@ -601,6 +601,10 @@ func loadAppConfig() Config {
 	if err != nil {
 		log.Printf("error unmarshaling app config: %v", err)
 		return DefaultConfig
+	}
+
+	if !k.Exists("skip_incomplete_live_photos") {
+		c.SkipIncompleteLivePhotos = DefaultConfig.SkipIncompleteLivePhotos
 	}
 
 	if c.UploadThreads < 1 {

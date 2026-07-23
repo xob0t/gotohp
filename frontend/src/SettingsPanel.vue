@@ -35,7 +35,7 @@ const settings = ref<Settings>({
     recursive: false,
     forceUpload: false,
     pairLivePhotos: false,
-    skipIncompleteLivePhotos: false,
+    skipIncompleteLivePhotos: true,
     updateExistingPhotosToLive: false,
     deleteFromHost: false,
     disableUnsupportedFilesFilter: false,
@@ -52,7 +52,7 @@ onMounted(async () => {
         recursive: config.recursive || false,
         forceUpload: config.forceUpload || false,
         pairLivePhotos: config.pairLivePhotos || false,
-        skipIncompleteLivePhotos: config.skipIncompleteLivePhotos || false,
+        skipIncompleteLivePhotos: config.skipIncompleteLivePhotos ?? true,
         updateExistingPhotosToLive: config.updateExistingPhotosToLive || false,
         deleteFromHost: config.deleteFromHost || false,
         disableUnsupportedFilesFilter: config.disableUnsupportedFilesFilter || false,
@@ -85,6 +85,10 @@ watch(() => settings.value.forceUpload, async (newValue) => {
 
 watch(() => settings.value.pairLivePhotos, async (newValue) => {
     await ConfigManager.SetPairLivePhotos(newValue)
+    if (newValue && !settings.value.skipIncompleteLivePhotos) {
+        settings.value.skipIncompleteLivePhotos = true
+        await ConfigManager.SetSkipIncompleteLivePhotos(true)
+    }
 })
 
 watch(() => settings.value.skipIncompleteLivePhotos, async (newValue) => {
@@ -185,7 +189,7 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
           class="cursor-pointer"
         >Pair Apple Live Photos</Label>
         <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-          Match Apple photos and MOV files by embedded metadata and upload them as one item.
+          Identify Apple Live Photo image and MOV pairs via embedded metadata and upload them as one item.
         </p>
       </div>
       <Switch
@@ -221,9 +225,9 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
         <Label
           for="update-existing-photos-to-live"
           class="cursor-pointer"
-        >Update Existing Photos to Live</Label>
+        >Update Existing Photos to Live Photos</Label>
         <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-          If the matching photo already exists in Google Photos, upload and attach its Live Photo video.
+          If a static photo was already uploaded, re-upload it alongside its MOV companion to upgrade it to a Live Photo. Both local photo and video files are required.
         </p>
       </div>
       <Switch
