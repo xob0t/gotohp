@@ -493,7 +493,7 @@ onUnmounted(() => {
           </Sheet>
 
           <div
-            v-if="uploadState.uploadedFiles > 0"
+            v-if="uploadState.uploadedFiles > 0 || uploadState.results.fail.length > 0"
             class="flex flex-col items-center gap-2 border rounded-lg p-5 mt-5"
           >
             <h2 class="text-l font-semibold select-none ">
@@ -501,6 +501,8 @@ onUnmounted(() => {
             </h2>
             <Label class="text-muted-foreground">Successful: {{ uploadState.results.success.length }}</Label>
             <Label class="text-muted-foreground">Failed: {{ uploadState.results.fail.length }}</Label>
+            <Label class="text-muted-foreground">Skipped: {{ uploadState.results.skipped.length }}</Label>
+            <Label class="text-muted-foreground">Warnings: {{ uploadState.results.warnings.length }}</Label>
             <Button
               variant="outline"
               class="cursor-pointer select-none min-w-[125px]"

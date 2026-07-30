@@ -1,5 +1,9 @@
 import { Clipboard, Events } from "@wailsio/runtime";
 import { reactive } from "vue";
+import {
+  recordUploadResult,
+  type UploadResults,
+} from "./uploadResults";
 
 export interface ThreadStatus {
   WorkerID: number;
@@ -15,18 +19,24 @@ export interface ThreadStatus {
 export interface FileUploadResult {
   MediaKey: string;
   IsError: boolean;
+  IsLivePhoto: boolean;
+  Skipped: boolean;
   ErrorMessage: string;
+  SkipCode: string;
+  SkipReason: string;
   Path: string;
+  Paths: string[];
+}
+
+export interface PreflightWarning {
+  Paths: string[];
+  Code: string;
+  Message: string;
 }
 
 export interface UploadBatchStart {
   Total: number;
   TotalBytes: number;
-}
-
-export interface UploadSuccess {
-  path: string;
-  mediaKey: string;
 }
 
 export interface AlbumStatus {
@@ -42,15 +52,17 @@ export interface AlbumError {
   Error: string;
 }
 
+function isSkippedUploadWarning(code: string): boolean {
+  return code === "incomplete-live-photo-skipped" || code === "ambiguous-filename-stem";
+}
+
 export interface UploadState {
   isUploading: boolean;
   totalFiles: number;
   uploadedFiles: number;
   threads: Map<number, ThreadStatus>;
-  results: {
-    success: UploadSuccess[];
-    fail: string[];
-  };
+  results: UploadResults;
+  warnings: PreflightWarning[];
   // Byte tracking
   totalBytes: number;
   uploadedBytes: number;
@@ -75,7 +87,10 @@ class UploadManager {
     results: {
       success: [],
       fail: [],
+      skipped: [],
+      warnings: [],
     },
+    warnings: [],
     totalBytes: 0,
     uploadedBytes: 0,
     startTime: 0,
@@ -92,6 +107,8 @@ class UploadManager {
   private completedBytes: number = 0;
   // Track the last known BytesTotal for each file
   private fileBytes: Map<string, number> = new Map();
+  // Dedupe decisions can change the bytes that will actually be uploaded.
+  private totalBytesAdjustment: number = 0;
 
   private constructor() {
     // Bind all methods to ensure 'this' context is preserved
@@ -125,12 +142,30 @@ class UploadManager {
       this.speedSamples = [];
       this.completedBytes = 0;
       this.fileBytes.clear();
+      this.totalBytesAdjustment = 0;
       this.resetUploadResults();
+      this.state.warnings = [];
     });
 
     // Handle async total bytes update (calculated after uploadStart)
     Events.On("uploadTotalBytes", (event: { data: number }) => {
-      this.state.totalBytes = event.data;
+      this.state.totalBytes = Math.max(0, event.data + this.totalBytesAdjustment);
+    });
+
+    Events.On("uploadTotalBytesDelta", (event: { data: number }) => {
+      this.totalBytesAdjustment += event.data;
+      this.state.totalBytes = Math.max(0, this.state.totalBytes + event.data);
+    });
+
+    Events.On("uploadWarning", (event: { data: PreflightWarning }) => {
+      this.state.warnings.push(event.data);
+      if (!isSkippedUploadWarning(event.data.Code)) {
+        this.state.results.warnings.push({
+          paths: event.data.Paths,
+          code: event.data.Code,
+          reason: event.data.Message,
+        });
+      }
     });
 
     // Handle thread status updates
@@ -152,21 +187,30 @@ class UploadManager {
 
     // Handle file status updates
     Events.On("FileStatus", (event: { data: FileUploadResult }) => {
-      const { IsError, Path, MediaKey } = event.data;
+      const { Path, Paths } = event.data;
 
-      if (!IsError) {
-        this.state.uploadedFiles += 1;
-        this.state.results.success.push({ path: Path, mediaKey: MediaKey });
+      this.state.uploadedFiles += recordUploadResult(this.state.results, event.data);
+      if (!event.data.IsError) {
         const completedFileBytes = this.fileBytes.get(Path);
         if (completedFileBytes && completedFileBytes > 0) {
           this.completedBytes += completedFileBytes;
         }
-      } else {
-        const errorMessage = event.data.ErrorMessage;
-        this.state.results.fail.push(errorMessage ? `${Path}: ${errorMessage}` : Path);
       }
-      this.fileBytes.delete(Path);
+      for (const completedPath of Paths?.length ? Paths : [Path]) {
+        this.fileBytes.delete(completedPath);
+      }
       this.updateBytesAndSpeed();
+
+      // Skipped-only batches can begin and end within one backend event burst.
+      // Finishing locally prevents a missed terminal event from leaving the timer running.
+      if (
+        this.state.totalFiles > 0
+        && this.state.uploadedFiles >= this.state.totalFiles
+        && this.state.results.success.length === 0
+        && this.state.results.fail.length === 0
+      ) {
+        this.state.isUploading = false;
+      }
     });
 
     // Handle upload stop
@@ -236,6 +280,8 @@ class UploadManager {
   public resetUploadResults() {
     this.state.results.success = [];
     this.state.results.fail = [];
+    this.state.results.skipped = [];
+    this.state.results.warnings = [];
   }
 
   public cancelUpload() {

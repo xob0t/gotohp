@@ -12,8 +12,10 @@ func init() {
 	application.RegisterEvent[application.Void]("uploadStop")
 	application.RegisterEvent[FileUploadResult]("FileStatus")
 	application.RegisterEvent[ThreadStatus]("ThreadStatus")
+	application.RegisterEvent[PreflightWarning]("uploadWarning")
 	application.RegisterEvent[application.Void]("uploadCancel")
 	application.RegisterEvent[int64]("uploadTotalBytes")
+	application.RegisterEvent[int64]("uploadTotalBytesDelta")
 	application.RegisterEvent[FilesDroppedEvent]("files-dropped")
 	application.RegisterEvent[StartUploadEvent]("startUpload")
 }

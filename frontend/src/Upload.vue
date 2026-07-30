@@ -5,7 +5,7 @@ import { Progress } from "./components/ui/progress"
 import { ScrollArea } from "./components/ui/scroll-area"
 import ThreadProgress from "./components/ThreadProgress.vue"
 import { uploadManager } from './utils/UploadManager'
-import { X, Clock, Zap, FolderPlus } from '@lucide/vue'
+import { X, Clock, Zap, FolderPlus, AlertTriangle } from '@lucide/vue'
 
 const { state } = uploadManager
 
@@ -76,6 +76,10 @@ const albumProgressPercent = computed(() => {
   if (!state.albumStatus || state.albumStatus.TotalItems === 0) return 0
   return Math.round((state.albumStatus.ItemsAdded / state.albumStatus.TotalItems) * 100)
 })
+
+function warningFiles(paths: string[]): string {
+  return paths.map(path => path.split(/[\\/]/).pop()).filter(Boolean).join(', ')
+}
 </script>
 
 <template>
@@ -86,7 +90,7 @@ const albumProgressPercent = computed(() => {
         {{ state.uploadedFiles }}<span class="text-muted-foreground font-normal">/</span><span class="text-muted-foreground">{{ state.totalFiles }}</span>
       </p>
       <p class="text-xs text-muted-foreground">
-        files uploaded
+        items processed
       </p>
     </div>
 
@@ -140,6 +144,30 @@ const albumProgressPercent = computed(() => {
       <p class="text-xs text-muted-foreground mt-1">
         {{ state.albumStatus.ItemsAdded }} / {{ state.albumStatus.TotalItems }} items
       </p>
+    </div>
+
+    <div
+      v-if="state.warnings.length"
+      class="mb-3 space-y-1.5"
+    >
+      <div
+        v-for="(warning, index) in state.warnings"
+        :key="`${warning.Code}-${index}`"
+        class="flex gap-2 rounded-md bg-amber-500/10 px-2.5 py-2 text-amber-700 dark:text-amber-300"
+      >
+        <AlertTriangle
+          :size="14"
+          class="mt-0.5 shrink-0"
+        />
+        <div class="min-w-0">
+          <p class="text-xs leading-snug">
+            {{ warning.Message }}
+          </p>
+          <p class="truncate text-[10px] opacity-75">
+            {{ warningFiles(warning.Paths) }}
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- Thread list - scrollable -->

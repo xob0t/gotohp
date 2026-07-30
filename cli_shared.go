@@ -42,11 +42,16 @@ func runCLI() {
 	case "upload":
 		// Check for help flag first
 		if len(os.Args) > 2 && (os.Args[2] == "--help" || os.Args[2] == "-h") {
-			fmt.Printf("Usage: %s upload <filepath> [flags]\n", cliExecutableName)
+			fmt.Printf("Usage: %s upload <path> [<path> ...] [flags]\n", cliExecutableName)
 			fmt.Println("\nFlags:")
 			fmt.Println("  -r, --recursive              Include subdirectories")
 			fmt.Println("  -t, --threads <n>            Number of upload threads (default: 3)")
 			fmt.Println("  -f, --force                  Force upload even if file exists")
+			fmt.Println("  --pair-live-photos           Pair Apple Live Photo files; incomplete pairs are skipped")
+			fmt.Println("  --skip-incomplete-live-photos  Skip incomplete Live Photo members")
+			fmt.Println("  --upload-incomplete-live-photos  Upload an unmatched member as a single file")
+			fmt.Println("  --update-existing-photos-to-live  Attach matching MOV files to existing photos")
+			fmt.Println("  --ignore-apple-metadata      Match Live Photo pairs by filename stem instead of Apple metadata")
 			fmt.Println("  -d, --delete                 Delete from host after upload")
 			fmt.Println("  -df, --disable-filter        Disable file type filtering")
 			fmt.Println("  --date-from-filename         Set media date from filename (e.g. 20240709_182027.jpg)")
@@ -60,72 +65,20 @@ func runCLI() {
 		}
 
 		if len(os.Args) < 3 {
-			fmt.Println("Error: filepath required")
-			fmt.Printf("Usage: %s upload <filepath> [flags]\n", cliExecutableName)
+			fmt.Println("Error: at least one path is required")
+			fmt.Printf("Usage: %s upload <path> [<path> ...] [flags]\n", cliExecutableName)
 			fmt.Printf("\nRun '%s upload --help' for more information\n", cliExecutableName)
 			os.Exit(1)
 		}
 
-		// Parse arguments
-		filePath := os.Args[2]
-
-		// Validate that filepath exists
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "Error: file or directory does not exist: %s\n", filePath)
+		filePaths, config, err := parseUploadArgs(os.Args[2:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		filePaths := []string{filePath}
-		config := cliConfig{
-			threads:  3,
-			logLevel: "info", // Default to info for CLI
-		}
-
-		// Parse flags
-		for i := 3; i < len(os.Args); i++ {
-			switch os.Args[i] {
-			case "--recursive", "-r":
-				config.recursive = true
-			case "--force", "-f":
-				config.forceUpload = true
-			case "--delete", "-d":
-				config.deleteFromHost = true
-			case "--disable-filter", "-df":
-				config.disableUnsupportedFilesFilter = true
-			case "--date-from-filename":
-				config.setDateFromFilename = true
-			case "--no-tui":
-				config.noTUI = true
-			case "--exclude", "-e":
-				if i+1 < len(os.Args) {
-					config.excludePattern = os.Args[i+1]
-					i++
-				}
-			case "--threads", "-t":
-				if i+1 < len(os.Args) {
-					_, _ = fmt.Sscanf(os.Args[i+1], "%d", &config.threads)
-					i++
-				}
-			case "--log-level", "-l":
-				if i+1 < len(os.Args) {
-					config.logLevel = os.Args[i+1]
-					i++
-				}
-			case "--config", "-c":
-				if i+1 < len(os.Args) {
-					config.configPath = os.Args[i+1]
-					i++
-				}
-			case "--album", "-a":
-				if i+1 < len(os.Args) {
-					config.albumName = os.Args[i+1]
-					i++
-				}
-			}
-		}
-
 		// Run upload
-		err := runCLIUpload(filePaths, config)
+		err = runCLIUpload(filePaths, config)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Upload failed: %v\n", err)
 			os.Exit(1)
@@ -183,7 +136,7 @@ func printCLIHelp() {
 	fmt.Printf("  %s <command>    Run CLI command\n", cliExecutableName)
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  upload <filepath>   Upload a file to Google Photos")
+	fmt.Println("  upload <path> [<path> ...]   Upload files or directories")
 	fmt.Println("  creds               Manage Google Photos credentials")
 	fmt.Println("  help                Show this help message")
 	fmt.Println("  version             Show version information")

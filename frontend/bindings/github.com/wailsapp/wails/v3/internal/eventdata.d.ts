@@ -18,11 +18,13 @@ declare module "@wailsio/runtime" {
             "albumError": backend$0.AlbumError;
             "albumProgress": backend$0.AlbumStatus;
             "files-dropped": backend$0.FilesDroppedEvent;
+            "uploadWarning": backend$0.PreflightWarning;
             "startUpload": backend$0.StartUploadEvent;
             "uploadCancel": void;
             "uploadStart": backend$0.UploadBatchStart;
             "uploadStop": void;
             "uploadTotalBytes": number;
+            "uploadTotalBytesDelta": number;
         }
     }
 }

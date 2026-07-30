@@ -3,9 +3,11 @@ package backend
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -84,16 +86,21 @@ type UploadBatchStart struct {
 }
 
 type FileUploadResult struct {
-	MediaKey     string `json:"MediaKey"`
-	IsError      bool   `json:"IsError"`
-	Error        error  `json:"-"`
-	ErrorMessage string `json:"ErrorMessage"`
-	Path         string `json:"Path"`
+	MediaKey     string   `json:"MediaKey"`
+	IsError      bool     `json:"IsError"`
+	IsLivePhoto  bool     `json:"IsLivePhoto"`
+	Skipped      bool     `json:"Skipped"`
+	SkipCode     string   `json:"SkipCode"`
+	SkipReason   string   `json:"SkipReason"`
+	Error        error    `json:"-"`
+	ErrorMessage string   `json:"ErrorMessage"`
+	Path         string   `json:"Path"`
+	Paths        []string `json:"Paths"`
 }
 
 type ThreadStatus struct {
 	WorkerID      int    `json:"WorkerID"`
-	Status        string `json:"Status"` // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
+	Status        string `json:"Status"` // "idle", "hashing", "checking", "uploading", "finalizing", "completed", "skipped", "error"
 	FilePath      string `json:"FilePath"`
 	FileName      string `json:"FileName"`
 	Message       string `json:"Message"`
@@ -113,36 +120,44 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	m.canceled = false
 	m.mu.Unlock()
 
-	targetPaths, err := filterGooglePhotosFiles(paths)
+	// Make preflight visible immediately so a long directory or metadata scan can
+	// be cancelled from the UI.
+	app.EmitEvent("uploadStart", UploadBatchStart{})
+
+	targetPaths, err := filterGooglePhotosFilesWithCancel(paths, m.isCancelled)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			m.finishPreflight(app)
+			return
+		}
 		app.EmitEvent("FileStatus", FileUploadResult{
 			IsError:      true,
 			Error:        err,
 			ErrorMessage: err.Error(),
 		})
-		app.EmitEvent("uploadStop", nil)
-		m.mu.Lock()
-		m.running = false
-		m.mu.Unlock()
+		m.finishPreflight(app)
 		return
 	}
-
-	if len(targetPaths) == 0 {
-		app.EmitEvent("uploadStop", nil)
-		m.mu.Lock()
-		m.running = false
-		m.mu.Unlock()
+	workItems, preflightWarnings := ClassifyUploadWork(targetPaths, LivePhotoClassificationOptions{
+		Enabled:             AppConfig.PairLivePhotos,
+		SkipIncomplete:      AppConfig.SkipIncompleteLivePhotos,
+		IgnoreAppleMetadata: AppConfig.IgnoreAppleMetadata,
+		Cancelled:           m.isCancelled,
+	}, nil)
+	if m.isCancelled() {
+		m.finishPreflight(app)
 		return
 	}
+	emitUploadPreflight(app, len(workItems), preflightWarnings)
 
-	// Emit uploadStart immediately with TotalBytes=0 for responsive UI
-	app.EmitEvent("uploadStart", UploadBatchStart{
-		Total:      len(targetPaths),
-		TotalBytes: 0,
-	})
+	if len(workItems) == 0 {
+		m.finishPreflight(app)
+		return
+	}
 
 	if _, err := NewApi(); err != nil {
-		for _, path := range targetPaths {
+		for _, item := range workItems {
+			path := uploadWorkPrimaryPath(item)
 			app.EmitEvent("FileStatus", FileUploadResult{
 				IsError:      true,
 				Error:        err,
@@ -160,9 +175,11 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	// Calculate total bytes asynchronously and emit update when complete
 	go func() {
 		var totalBytes int64
-		for _, path := range targetPaths {
-			if info, err := os.Stat(path); err == nil {
-				totalBytes += info.Size()
+		for _, item := range workItems {
+			for _, path := range uploadWorkPaths(item) {
+				if info, err := os.Stat(path); err == nil {
+					totalBytes += info.Size()
+				}
 			}
 		}
 		app.EmitEvent("uploadTotalBytes", totalBytes)
@@ -173,11 +190,11 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	}
 
 	// Don't start more threads than files to process
-	numWorkers := min(AppConfig.UploadThreads, len(targetPaths))
+	numWorkers := min(AppConfig.UploadThreads, len(workItems))
 
 	// Create a worker pool for concurrent uploads
-	workChan := make(chan string, len(targetPaths))
-	results := make(chan FileUploadResult, len(targetPaths))
+	workChan := make(chan UploadWorkItem, len(workItems))
+	results := make(chan FileUploadResult, len(workItems))
 
 	// Start workers
 	for i := range numWorkers {
@@ -188,11 +205,11 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	// Send work to workers
 	go func() {
 	LOOP:
-		for _, path := range targetPaths {
+		for _, item := range workItems {
 			select {
 			case <-m.cancel:
 				break LOOP
-			case workChan <- path:
+			case workChan <- item:
 			}
 		}
 		close(workChan)
@@ -239,6 +256,51 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		m.running = false
 		m.mu.Unlock()
 	}()
+}
+
+func (m *UploadManager) finishPreflight(app AppInterface) {
+	app.EmitEvent("uploadStop", nil)
+	m.mu.Lock()
+	m.running = false
+	m.mu.Unlock()
+}
+
+func emitUploadPreflight(app AppInterface, uploadItemCount int, warnings []PreflightWarning) {
+	skippedCount := 0
+	for _, warning := range warnings {
+		if isSkippedPreflightWarning(warning.Code) {
+			skippedCount++
+		}
+	}
+
+	// Start before emitting warnings/results so the frontend resets its previous
+	// batch while retaining every event from this preflight.
+	app.EmitEvent("uploadStart", UploadBatchStart{
+		Total:      uploadItemCount + skippedCount,
+		TotalBytes: 0,
+	})
+	for _, warning := range warnings {
+		app.EmitEvent("uploadWarning", warning)
+		if !isSkippedPreflightWarning(warning.Code) {
+			continue
+		}
+		primaryPath := ""
+		if len(warning.Paths) > 0 {
+			primaryPath = warning.Paths[0]
+		}
+		app.EmitEvent("FileStatus", FileUploadResult{
+			IsLivePhoto: true,
+			Skipped:     true,
+			SkipCode:    warning.Code,
+			SkipReason:  warning.Message,
+			Path:        primaryPath,
+			Paths:       warning.Paths,
+		})
+	}
+}
+
+func isSkippedPreflightWarning(code string) bool {
+	return code == "incomplete-live-photo-skipped" || code == "ambiguous-filename-stem"
 }
 
 // handleAlbumCreation handles album creation based on config (manual name/key or AUTO mode)
@@ -352,23 +414,32 @@ func isSupportedByGooglePhotos(filename string) bool {
 	return supportedFormats[ext[1:]]
 }
 
-func scanDirectoryForFiles(path string, recursive bool, excludePattern string) ([]string, error) {
+func scanDirectoryForFiles(path string, recursive bool, excludePattern string, cancelled func() bool) ([]string, error) {
 	var files []string
 
+	if cancelled != nil && cancelled() {
+		return nil, context.Canceled
+	}
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, entry := range entries {
+		if cancelled != nil && cancelled() {
+			return nil, context.Canceled
+		}
 		fullPath := filepath.Join(path, entry.Name())
 		if entry.IsDir() {
 			if excludePattern != "" && entry.Name() == excludePattern {
 				continue
 			}
 			if recursive {
-				subFiles, err := scanDirectoryForFiles(fullPath, recursive, excludePattern)
+				subFiles, err := scanDirectoryForFiles(fullPath, recursive, excludePattern, cancelled)
 				if err != nil {
+					if errors.Is(err, context.Canceled) {
+						return nil, err
+					}
 					continue
 				}
 				files = append(files, subFiles...)
@@ -388,41 +459,79 @@ func FilterGooglePhotosFiles(paths []string) ([]string, error) {
 
 // filterGooglePhotosFiles returns a list of files that are supported by Google Photos
 func filterGooglePhotosFiles(paths []string) ([]string, error) {
+	return filterGooglePhotosFilesWithCancel(paths, nil)
+}
+
+func filterGooglePhotosFilesWithCancel(paths []string, cancelled func() bool) ([]string, error) {
 	var supportedFiles []string
+	type seenUploadFile struct {
+		canonicalPath string
+		info          os.FileInfo
+	}
+	seenFiles := make(map[string][]seenUploadFile)
+	appendFile := func(path string, info os.FileInfo) {
+		if !AppConfig.DisableUnsupportedFilesFilter && !isSupportedByGooglePhotos(path) {
+			return
+		}
+		canonicalPath := canonicalUploadPath(path)
+		bucketKey := canonicalPath
+		if runtime.GOOS == "windows" {
+			bucketKey = strings.ToLower(bucketKey)
+		}
+		if info == nil {
+			info, _ = os.Stat(path)
+		}
+		for _, seen := range seenFiles[bucketKey] {
+			if canonicalPath == seen.canonicalPath ||
+				(info != nil && seen.info != nil && os.SameFile(info, seen.info)) {
+				return
+			}
+		}
+		seenFiles[bucketKey] = append(seenFiles[bucketKey], seenUploadFile{
+			canonicalPath: canonicalPath,
+			info:          info,
+		})
+		supportedFiles = append(supportedFiles, path)
+	}
 
 	for _, path := range paths {
+		if cancelled != nil && cancelled() {
+			return nil, context.Canceled
+		}
 		fileInfo, err := os.Stat(path)
 		if err != nil {
-			return nil, fmt.Errorf("error accessing path %s: %v", path, err)
+			return nil, fmt.Errorf("error accessing path %s: %w", path, err)
 		}
 
 		if fileInfo.IsDir() {
-			files, err := scanDirectoryForFiles(path, AppConfig.Recursive, AppConfig.ExcludePattern)
+			files, err := scanDirectoryForFiles(path, AppConfig.Recursive, AppConfig.ExcludePattern, cancelled)
 			if err != nil {
-				return nil, fmt.Errorf("error scanning directory %s: %v", path, err)
+				return nil, fmt.Errorf("error scanning directory %s: %w", path, err)
 			}
 
 			for _, file := range files {
-				if AppConfig.DisableUnsupportedFilesFilter {
-					supportedFiles = append(supportedFiles, file)
-				} else {
-					if isSupportedByGooglePhotos(file) {
-						supportedFiles = append(supportedFiles, file)
-					}
+				if cancelled != nil && cancelled() {
+					return nil, context.Canceled
 				}
+				appendFile(file, nil)
 			}
 		} else {
-			if AppConfig.DisableUnsupportedFilesFilter {
-				supportedFiles = append(supportedFiles, path)
-			} else {
-				if isSupportedByGooglePhotos(path) {
-					supportedFiles = append(supportedFiles, path)
-				}
-			}
+			appendFile(path, fileInfo)
 		}
 	}
 
 	return supportedFiles, nil
+}
+
+func canonicalUploadPath(path string) string {
+	canonicalPath, err := filepath.Abs(path)
+	if err != nil {
+		canonicalPath = filepath.Clean(path)
+	}
+	if resolved, err := filepath.EvalSymlinks(canonicalPath); err == nil {
+		canonicalPath = resolved
+	}
+	return filepath.Clean(canonicalPath)
 }
 
 // UploadFile is an exported version for CLI use with callback
@@ -540,9 +649,13 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 		})
 	}
 
-	CommitToken, err := api.UploadFileWithProgress(ctx, filePath, token, progressCallback)
+	finalizeToken, err := api.UploadFileWithProgress(ctx, filePath, token, progressCallback)
 	if err != nil {
 		return "", fmt.Errorf("error uploading file: %w", err)
+	}
+	commitToken, err := finalizeToken.legacyCommitToken()
+	if err != nil {
+		return "", fmt.Errorf("error decoding upload finalize token: %w", err)
 	}
 
 	// Stage 4: Finalizing
@@ -554,7 +667,7 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 		Message:  "Committing upload...",
 	})
 
-	mediaKey, err := api.CommitUpload(CommitToken, fileInfo.Name(), sha1_hash_bytes, uploadTimestamp)
+	mediaKey, err := api.CommitUpload(commitToken, fileInfo.Name(), sha1_hash_bytes, uploadTimestamp)
 	if err != nil {
 		return "", fmt.Errorf("error committing file: %w", err)
 	}
@@ -572,7 +685,7 @@ func uploadFileWithCallback(ctx context.Context, api *Api, filePath string, work
 	return mediaKey, nil
 }
 
-func startUploadWorker(workerID int, workChan <-chan string, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app AppInterface) {
+func startUploadWorker(workerID int, workChan <-chan UploadWorkItem, results chan<- FileUploadResult, cancel <-chan struct{}, wg *sync.WaitGroup, app AppInterface) {
 	defer wg.Done()
 
 	// Emit idle status initially
@@ -598,7 +711,7 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 		app.EmitEvent(event, data)
 	}
 
-	for path := range workChan {
+	for item := range workChan {
 		select {
 		case <-cancel:
 			app.EmitEvent("ThreadStatus", ThreadStatus{
@@ -618,9 +731,26 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 				}
 			}()
 
-			mediaKey, err := uploadFileWithCallback(ctx, api, path, workerID, callback)
-			if err != nil {
-				results <- FileUploadResult{IsError: true, Error: err, ErrorMessage: err.Error(), Path: path}
+			path := uploadWorkPrimaryPath(item)
+			paths := uploadWorkPaths(item)
+			isLivePhoto := item.Kind == UploadWorkLivePhoto
+			mediaKey, skipped, err := uploadWorkItem(ctx, api, item, workerID, callback)
+			if err != nil && mediaKey != "" {
+				results <- FileUploadResult{IsLivePhoto: isLivePhoto, Path: path, Paths: paths, MediaKey: mediaKey}
+				app.EmitEvent("uploadWarning", PreflightWarning{
+					Paths:   paths,
+					Code:    "local-cleanup-failed",
+					Message: err.Error(),
+				})
+				app.EmitEvent("ThreadStatus", ThreadStatus{
+					WorkerID: workerID,
+					Status:   "completed",
+					FilePath: path,
+					FileName: filepath.Base(path),
+					Message:  fmt.Sprintf("Uploaded, but local cleanup failed: %v", err),
+				})
+			} else if err != nil {
+				results <- FileUploadResult{IsError: true, IsLivePhoto: isLivePhoto, Error: err, ErrorMessage: err.Error(), Path: path, Paths: paths}
 				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
 					Status:   "error",
@@ -628,8 +758,23 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 					FileName: filepath.Base(path),
 					Message:  fmt.Sprintf("Error: %v", err),
 				})
+			} else if skipped {
+				skipCode := "remote-duplicate"
+				skipReason := "Skipped because this file already exists remotely"
+				if isLivePhoto {
+					skipCode = "remote-live-photo-component-exists"
+					skipReason = "Skipped because a Live Photo component already exists remotely"
+				}
+				results <- FileUploadResult{
+					IsLivePhoto: isLivePhoto,
+					Skipped:     true,
+					SkipCode:    skipCode,
+					SkipReason:  skipReason,
+					Path:        path,
+					Paths:       paths,
+				}
 			} else {
-				results <- FileUploadResult{IsError: false, Path: path, MediaKey: mediaKey}
+				results <- FileUploadResult{IsLivePhoto: isLivePhoto, Path: path, Paths: paths, MediaKey: mediaKey}
 				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
 					Status:   "completed",
@@ -655,4 +800,45 @@ func startUploadWorker(workerID int, workChan <-chan string, results chan<- File
 		Status:   "idle",
 		Message:  "Finished",
 	})
+}
+
+func uploadWorkItem(ctx context.Context, api *Api, item UploadWorkItem, workerID int, callback ProgressCallback) (string, bool, error) {
+	switch item.Kind {
+	case UploadWorkSingle:
+		if item.Single == nil || item.LivePhoto != nil {
+			return "", false, fmt.Errorf("invalid single-media work item")
+		}
+		mediaKey, err := uploadFileWithCallback(ctx, api, item.Single.Path, workerID, callback)
+		return mediaKey, false, err
+	case UploadWorkLivePhoto:
+		if item.LivePhoto == nil || item.Single != nil {
+			return "", false, fmt.Errorf("invalid Live Photo work item")
+		}
+		return uploadLivePhotoWithCallback(ctx, api, *item.LivePhoto, LivePhotoUploadOptions{
+			Policy:                     buildLivePhotoCommitPolicy(api, AppConfig),
+			DeleteFromHost:             AppConfig.DeleteFromHost,
+			SetDateFromFilename:        AppConfig.SetDateFromFilename,
+			UpdateExistingPhotosToLive: AppConfig.UpdateExistingPhotosToLive,
+		}, workerID, callback)
+	default:
+		return "", false, fmt.Errorf("unsupported upload work kind %q", item.Kind)
+	}
+}
+
+func uploadWorkPaths(item UploadWorkItem) []string {
+	if item.Kind == UploadWorkLivePhoto && item.LivePhoto != nil {
+		return []string{item.LivePhoto.PhotoPath, item.LivePhoto.VideoPath}
+	}
+	if item.Single != nil {
+		return []string{item.Single.Path}
+	}
+	return nil
+}
+
+func uploadWorkPrimaryPath(item UploadWorkItem) string {
+	paths := uploadWorkPaths(item)
+	if len(paths) == 0 {
+		return ""
+	}
+	return paths[0]
 }

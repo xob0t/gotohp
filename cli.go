@@ -23,6 +23,11 @@ type cliConfig struct {
 	deleteFromHost                bool
 	disableUnsupportedFilesFilter bool
 	setDateFromFilename           bool
+	pairLivePhotos                bool
+	skipIncompleteLivePhotos      bool
+	skipIncompleteLivePhotosSet   bool
+	updateExistingPhotosToLive    bool
+	ignoreAppleMetadata           bool
 	excludePattern                string
 	logLevel                      string
 	configPath                    string
@@ -43,10 +48,20 @@ type fileProgressMsg struct {
 }
 
 type fileCompleteMsg struct {
-	success  bool
-	fileName string
-	mediaKey string
-	err      error
+	success    bool
+	skipped    bool
+	fileName   string
+	paths      []string
+	mediaKey   string
+	skipCode   string
+	skipReason string
+	err        error
+}
+
+type preflightWarningMsg struct {
+	paths   []string
+	code    string
+	message string
 }
 
 type uploadCompleteMsg struct{}
@@ -75,9 +90,11 @@ type uploadModel struct {
 	totalFiles   int
 	completed    int
 	failed       int
+	skipped      int
 	currentFiles map[int]string // workerID -> current file
 	workers      map[int]string // workerID -> status message
 	results      []uploadResult // Track all upload results
+	warnings     []uploadWarning
 	width        int
 	quitting     bool
 	// Album state
@@ -90,10 +107,20 @@ type uploadModel struct {
 }
 
 type uploadResult struct {
-	Path     string `json:"path"`
-	Success  bool   `json:"success"`
-	MediaKey string `json:"mediaKey,omitempty"`
-	Error    string `json:"error,omitempty"`
+	Path       string   `json:"path"`
+	Paths      []string `json:"paths,omitempty"`
+	Success    bool     `json:"success"`
+	Skipped    bool     `json:"skipped,omitempty"`
+	MediaKey   string   `json:"mediaKey,omitempty"`
+	SkipCode   string   `json:"skipCode,omitempty"`
+	SkipReason string   `json:"skipReason,omitempty"`
+	Error      string   `json:"error,omitempty"`
+}
+
+type uploadWarning struct {
+	Paths   []string `json:"paths,omitempty"`
+	Code    string   `json:"code"`
+	Message string   `json:"message"`
 }
 
 type albumSummary struct {
@@ -104,11 +131,13 @@ type albumSummary struct {
 }
 
 type uploadSummary struct {
-	Total     int            `json:"total"`
-	Succeeded int            `json:"succeeded"`
-	Failed    int            `json:"failed"`
-	Results   []uploadResult `json:"results"`
-	Album     *albumSummary  `json:"album,omitempty"`
+	Total     int             `json:"total"`
+	Succeeded int             `json:"succeeded"`
+	Failed    int             `json:"failed"`
+	Skipped   int             `json:"skipped"`
+	Results   []uploadResult  `json:"results"`
+	Warnings  []uploadWarning `json:"warnings,omitempty"`
+	Album     *albumSummary   `json:"album,omitempty"`
 }
 
 func initialModel() uploadModel {
@@ -117,6 +146,7 @@ func initialModel() uploadModel {
 		currentFiles: make(map[int]string),
 		workers:      make(map[int]string),
 		results:      []uploadResult{},
+		warnings:     []uploadWarning{},
 		width:        80,
 	}
 }
@@ -145,11 +175,17 @@ func (m uploadModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case fileCompleteMsg:
 		result := uploadResult{
-			Path:     msg.fileName,
-			Success:  msg.success,
-			MediaKey: msg.mediaKey,
+			Path:       msg.fileName,
+			Paths:      msg.paths,
+			Success:    msg.success,
+			Skipped:    msg.skipped,
+			MediaKey:   msg.mediaKey,
+			SkipCode:   msg.skipCode,
+			SkipReason: msg.skipReason,
 		}
-		if msg.success {
+		if msg.skipped {
+			m.skipped++
+		} else if msg.success {
 			m.completed++
 		} else {
 			m.failed++
@@ -158,6 +194,14 @@ func (m uploadModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.results = append(m.results, result)
+		return m, nil
+
+	case preflightWarningMsg:
+		m.warnings = append(m.warnings, uploadWarning{
+			Paths:   msg.paths,
+			Code:    msg.code,
+			Message: msg.message,
+		})
 		return m, nil
 
 	case uploadCompleteMsg:
@@ -206,16 +250,30 @@ func (m uploadModel) View() string {
 
 	// Progress bar
 	if m.totalFiles > 0 {
-		percent := float64(m.completed+m.failed) / float64(m.totalFiles)
+		percent := float64(m.completed+m.failed+m.skipped) / float64(m.totalFiles)
 		b.WriteString(m.progress.ViewAs(percent))
-		fmt.Fprintf(&b, "\n%d/%d files", m.completed+m.failed, m.totalFiles)
-		fmt.Fprintf(&b, " (✓ %d success, ✗ %d failed)\n\n", m.completed, m.failed)
+		fmt.Fprintf(&b, "\n%d/%d items", m.completed+m.failed+m.skipped, m.totalFiles)
+		fmt.Fprintf(&b, " (✓ %d success, ↷ %d skipped, ✗ %d failed)\n\n", m.completed, m.skipped, m.failed)
 	}
 
 	// Worker status
 	for i := 0; i < len(m.workers); i++ {
 		if status, ok := m.workers[i]; ok {
 			b.WriteString(status)
+			b.WriteString("\n")
+		}
+	}
+
+	if len(m.warnings) > 0 {
+		warningStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))
+		b.WriteString("\n")
+		b.WriteString(warningStyle.Render("Upload warnings:"))
+		b.WriteString("\n")
+		for _, warning := range m.warnings {
+			fmt.Fprintf(&b, "- [%s] %s", warning.Code, warning.Message)
+			if len(warning.Paths) > 0 {
+				fmt.Fprintf(&b, " (%s)", strings.Join(warning.Paths, ", "))
+			}
 			b.WriteString("\n")
 		}
 	}
@@ -289,6 +347,12 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	backend.AppConfig.DisableUnsupportedFilesFilter = config.disableUnsupportedFilesFilter
 	backend.AppConfig.SetDateFromFilename = config.setDateFromFilename
 	backend.AppConfig.ExcludePattern = config.excludePattern
+	backend.AppConfig.PairLivePhotos = config.pairLivePhotos
+	if config.skipIncompleteLivePhotosSet {
+		backend.AppConfig.SkipIncompleteLivePhotos = config.skipIncompleteLivePhotos
+	}
+	backend.AppConfig.UpdateExistingPhotosToLive = config.updateExistingPhotosToLive
+	backend.AppConfig.IgnoreAppleMetadata = config.ignoreAppleMetadata
 
 	// Handle album option - check for AUTO mode
 	if strings.ToUpper(config.albumName) == "AUTO" {
@@ -335,10 +399,22 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 		case "FileStatus":
 			if result, ok := data.(backend.FileUploadResult); ok {
 				p.Send(fileCompleteMsg{
-					success:  !result.IsError,
-					fileName: result.Path,
-					mediaKey: result.MediaKey,
-					err:      result.Error,
+					success:    !result.IsError && !result.Skipped,
+					skipped:    result.Skipped,
+					fileName:   result.Path,
+					paths:      result.Paths,
+					mediaKey:   result.MediaKey,
+					skipCode:   result.SkipCode,
+					skipReason: result.SkipReason,
+					err:        result.Error,
+				})
+			}
+		case "uploadWarning":
+			if warning, ok := data.(backend.PreflightWarning); ok {
+				p.Send(preflightWarningMsg{
+					paths:   warning.Paths,
+					code:    warning.Code,
+					message: warning.Message,
 				})
 			}
 		case "uploadStop":
@@ -385,22 +461,7 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 
 	// Print JSON summary after the upload program completes.
 	if m, ok := finalModel.(uploadModel); ok {
-		summary := uploadSummary{
-			Total:     m.totalFiles,
-			Succeeded: m.completed,
-			Failed:    m.failed,
-			Results:   m.results,
-		}
-
-		// Add album info if present
-		if m.albumName != "" {
-			summary.Album = &albumSummary{
-				Name:       m.albumName,
-				ItemsAdded: m.albumItemsAdded,
-				AlbumKeys:  m.albumKeys,
-				Error:      m.albumError,
-			}
-		}
+		summary := buildUploadSummary(m)
 
 		jsonOutput, err := json.MarshalIndent(summary, "", "  ")
 		if err != nil {
@@ -411,4 +472,31 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	}
 
 	return nil
+}
+
+func buildUploadSummary(model uploadModel) uploadSummary {
+	warnings := make([]uploadWarning, 0, len(model.warnings))
+	for _, warning := range model.warnings {
+		if warning.Code == "incomplete-live-photo-skipped" || warning.Code == "ambiguous-filename-stem" {
+			continue
+		}
+		warnings = append(warnings, warning)
+	}
+	summary := uploadSummary{
+		Total:     model.totalFiles,
+		Succeeded: model.completed,
+		Failed:    model.failed,
+		Skipped:   model.skipped,
+		Results:   model.results,
+		Warnings:  warnings,
+	}
+	if model.albumName != "" {
+		summary.Album = &albumSummary{
+			Name:       model.albumName,
+			ItemsAdded: model.albumItemsAdded,
+			AlbumKeys:  model.albumKeys,
+			Error:      model.albumError,
+		}
+	}
+	return summary
 }

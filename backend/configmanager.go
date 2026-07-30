@@ -28,6 +28,9 @@ type Config struct {
 	Saver                         bool     `json:"saver" koanf:"saver"`
 	Recursive                     bool     `json:"recursive" koanf:"recursive"`
 	ForceUpload                   bool     `json:"forceUpload" koanf:"force_upload"`
+	PairLivePhotos                bool     `json:"pairLivePhotos" koanf:"pair_live_photos"`
+	SkipIncompleteLivePhotos      bool     `json:"skipIncompleteLivePhotos" koanf:"skip_incomplete_live_photos"`
+	UpdateExistingPhotosToLive    bool     `json:"updateExistingPhotosToLive" koanf:"update_existing_photos_to_live"`
 	UploadThreads                 int      `json:"uploadThreads" koanf:"upload_threads"`
 	DeleteFromHost                bool     `json:"deleteFromHost" koanf:"delete_from_host"`
 	DisableUnsupportedFilesFilter bool     `json:"disableUnsupportedFilesFilter" koanf:"disable_unsupported_files_filter"`
@@ -35,6 +38,8 @@ type Config struct {
 	AlbumAutoMode                 bool     `json:"albumAutoMode" koanf:"album_auto_mode"`
 	SetDateFromFilename           bool     `json:"setDateFromFilename" koanf:"set_date_from_filename"`
 	ExcludePattern                string   `json:"excludePattern" koanf:"exclude_pattern"`
+	// IgnoreAppleMetadata is a CLI-only per-command override and is never persisted.
+	IgnoreAppleMetadata bool `json:"-" koanf:"-"`
 }
 
 type ConfigManager struct{}
@@ -45,7 +50,8 @@ var (
 	UploadRunning bool = false
 	ConfigPath    string
 	DefaultConfig = Config{
-		UploadThreads: 3,
+		SkipIncompleteLivePhotos: true,
+		UploadThreads:            3,
 	}
 )
 
@@ -82,6 +88,21 @@ func (g *ConfigManager) SetRecursive(recursive bool) {
 
 func (g *ConfigManager) SetForceUpload(forceUpload bool) {
 	AppConfig.ForceUpload = forceUpload
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetPairLivePhotos(pairLivePhotos bool) {
+	AppConfig.PairLivePhotos = pairLivePhotos
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetSkipIncompleteLivePhotos(skipIncompleteLivePhotos bool) {
+	AppConfig.SkipIncompleteLivePhotos = skipIncompleteLivePhotos
+	_ = saveAppConfig()
+}
+
+func (g *ConfigManager) SetUpdateExistingPhotosToLive(updateExistingPhotosToLive bool) {
+	AppConfig.UpdateExistingPhotosToLive = updateExistingPhotosToLive
 	_ = saveAppConfig()
 }
 
@@ -570,7 +591,7 @@ func saveAppConfig() error {
 }
 
 func loadAppConfig() Config {
-	var c Config
+	c := DefaultConfig
 	k := koanf.New(".")
 	if err := k.Load(file.Provider(ConfigPath), yaml.Parser()); err != nil {
 		log.Printf("error parsing app config: %v", err)
@@ -580,6 +601,10 @@ func loadAppConfig() Config {
 	if err != nil {
 		log.Printf("error unmarshaling app config: %v", err)
 		return DefaultConfig
+	}
+
+	if !k.Exists("skip_incomplete_live_photos") {
+		c.SkipIncompleteLivePhotos = DefaultConfig.SkipIncompleteLivePhotos
 	}
 
 	if c.UploadThreads < 1 {

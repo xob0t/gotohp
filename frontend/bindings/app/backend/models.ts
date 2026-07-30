@@ -85,6 +85,9 @@ export class Config {
     "saver": boolean;
     "recursive": boolean;
     "forceUpload": boolean;
+    "pairLivePhotos": boolean;
+    "skipIncompleteLivePhotos": boolean;
+    "updateExistingPhotosToLive": boolean;
     "uploadThreads": number;
     "deleteFromHost": boolean;
     "disableUnsupportedFilesFilter": boolean;
@@ -115,6 +118,15 @@ export class Config {
         }
         if (!("forceUpload" in $$source)) {
             this["forceUpload"] = false;
+        }
+        if (!("pairLivePhotos" in $$source)) {
+            this["pairLivePhotos"] = false;
+        }
+        if (!("skipIncompleteLivePhotos" in $$source)) {
+            this["skipIncompleteLivePhotos"] = false;
+        }
+        if (!("updateExistingPhotosToLive" in $$source)) {
+            this["updateExistingPhotosToLive"] = false;
         }
         if (!("uploadThreads" in $$source)) {
             this["uploadThreads"] = 0;
@@ -157,8 +169,13 @@ export class Config {
 export class FileUploadResult {
     "MediaKey": string;
     "IsError": boolean;
+    "IsLivePhoto": boolean;
+    "Skipped": boolean;
+    "SkipCode": string;
+    "SkipReason": string;
     "ErrorMessage": string;
     "Path": string;
+    "Paths": string[];
 
     /** Creates a new FileUploadResult instance. */
     constructor($$source: Partial<FileUploadResult> = {}) {
@@ -168,11 +185,26 @@ export class FileUploadResult {
         if (!("IsError" in $$source)) {
             this["IsError"] = false;
         }
+        if (!("IsLivePhoto" in $$source)) {
+            this["IsLivePhoto"] = false;
+        }
+        if (!("Skipped" in $$source)) {
+            this["Skipped"] = false;
+        }
+        if (!("SkipCode" in $$source)) {
+            this["SkipCode"] = "";
+        }
+        if (!("SkipReason" in $$source)) {
+            this["SkipReason"] = "";
+        }
         if (!("ErrorMessage" in $$source)) {
             this["ErrorMessage"] = "";
         }
         if (!("Path" in $$source)) {
             this["Path"] = "";
+        }
+        if (!("Paths" in $$source)) {
+            this["Paths"] = [];
         }
 
         Object.assign(this, $$source);
@@ -182,7 +214,11 @@ export class FileUploadResult {
      * Creates a new FileUploadResult instance from a string or object.
      */
     static createFrom($$source: any = {}): FileUploadResult {
+        const $$createField8_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("Paths" in $$parsedSource) {
+            $$parsedSource["Paths"] = $$createField8_0($$parsedSource["Paths"]);
+        }
         return new FileUploadResult($$parsedSource as Partial<FileUploadResult>);
     }
 }
@@ -219,6 +255,39 @@ export class FilesDroppedEvent {
     }
 }
 
+export class PreflightWarning {
+    "Paths": string[];
+    "Code": string;
+    "Message": string;
+
+    /** Creates a new PreflightWarning instance. */
+    constructor($$source: Partial<PreflightWarning> = {}) {
+        if (!("Paths" in $$source)) {
+            this["Paths"] = [];
+        }
+        if (!("Code" in $$source)) {
+            this["Code"] = "";
+        }
+        if (!("Message" in $$source)) {
+            this["Message"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PreflightWarning instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PreflightWarning {
+        const $$createField0_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("Paths" in $$parsedSource) {
+            $$parsedSource["Paths"] = $$createField0_0($$parsedSource["Paths"]);
+        }
+        return new PreflightWarning($$parsedSource as Partial<PreflightWarning>);
+    }
+}
+
 /**
  * StartUploadEvent is received from frontend to start upload
  */
@@ -251,7 +320,7 @@ export class ThreadStatus {
     "WorkerID": number;
 
     /**
-     * "idle", "hashing", "checking", "uploading", "finalizing", "completed", "error"
+     * "idle", "hashing", "checking", "uploading", "finalizing", "completed", "skipped", "error"
      */
     "Status": string;
     "FilePath": string;

@@ -24,6 +24,9 @@ Releases include a standalone CLI executable for command-line usage. Use the `go
 ```shell
 gotohp-cli upload /path/to/photos --recursive --threads 5
 gotohp-cli upload /path/to/photos --recursive --exclude @eaDir
+gotohp-cli upload IMG_0001.HEIC IMG_0001.MOV --pair-live-photos
+gotohp-cli upload IMG_0001.HEIC IMG_0001.MOV --pair-live-photos --update-existing-photos-to-live
+gotohp-cli upload /path/to/export --recursive --pair-live-photos --ignore-apple-metadata
 gotohp-cli creds list
 gotohp-cli creds add "androidId=..."
 gotohp-cli creds set user@gmail.com
@@ -32,13 +35,18 @@ gotohp-cli version
 
 **Available commands:**
 
-- `upload <filepath>` - Upload files or directories
+- `upload <path> [<path> ...]` - Upload one or more files or directories
   - `-r, --recursive` - Include subdirectories
   - `-t, --threads <n>` - Number of upload threads (default: 3)
   - `-f, --force` - Force upload even if file exists
   - `-d, --delete` - Delete from host after upload
   - `-df, --disable-filter` - Disable file type filtering
   - `--date-from-filename` - Set media date from filename (e.g. `20240709_182027.jpg`)
+  - `--pair-live-photos` - Pair Apple Live Photo components; incomplete pairs are skipped by default
+  - `--skip-incomplete-live-photos` - Skip metadata-confirmed Live Photo components whose match is absent
+  - `--upload-incomplete-live-photos` - Upload unmatched Live Photo components as ordinary single files
+  - `--update-existing-photos-to-live` - Upload and attach the matching MOV when the photo already exists; requires `--pair-live-photos`
+  - `--ignore-apple-metadata` - Match pairs by case-insensitive filename stem instead of Apple content identifiers; requires `--pair-live-photos`
   - `-e, --exclude <pattern>` - Skip directories with this exact name during recursive upload (e.g. `@eaDir`)
   - `-a, --album <name>` - Add uploaded files to album (use `AUTO` for folder-based albums)
   - `-l, --log-level <level>` - Set log level: debug, info, warn, error (default: info)
@@ -50,6 +58,40 @@ gotohp-cli version
 - `creds set <email>` (alias: `select`) - Set active credential (supports partial matching)
 - `version` - Show version information
 - `help` - Show help message
+
+## Apple Live Photos
+
+**Pair Apple Live Photos** is disabled by default. When enabled, gotohp matches
+HEIC/JPEG and MOV components using their embedded Apple content identifier and
+uploads each complete pair as one Google Photos item. Both local files must be in
+the same upload queue. Filenames do not need to match in the normal mode.
+
+**Update Existing Photos to Live** is a nested, default-off GUI option. Its CLI
+equivalent is `--update-existing-photos-to-live`. If the byte-identical still
+already exists in Google Photos, gotohp uploads only the matching local MOV and
+attaches it to that existing photo. This operation still requires both local
+components so gotohp can verify their Apple identifiers before using the still's
+SHA-1 to find the correct remote item.
+
+`--ignore-apple-metadata` is an advanced CLI-only override for exports whose
+Apple identifiers are incorrect. It matches one still and one MOV with the same
+case-insensitive filename stem in the same directory. The MOV must still contain
+a valid Live Photo still-image-time marker. Ambiguous groups are skipped rather
+than guessed. Google Photos does not enforce identifier equality for this private
+upload path, so using the override with incorrectly named files can attach the
+wrong video permanently.
+
+Current limitations:
+
+- A MOV by itself cannot locate its matching remote still; both local files are
+  required.
+- If only the MOV exists remotely, the pair is skipped because that reconciliation
+  direction has not been recovered.
+- gotohp cannot currently determine whether a remote photo is already Live.
+  Repeating an update can upload and attach the MOV again.
+- Existing standalone MOV items are not removed when a photo is updated.
+- **Force Upload** remains a single-file option and does not bypass Live Photo
+  pair decisions.
 
 ## Requires mobile app credentials to work
 

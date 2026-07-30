@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+message CreateMediaItemsRequest {
+  repeated MediaItemBlueprint blueprint_array = 1;
+  UploadDeviceInfo upload_device_info = 2;
+  reserved 3; // clientCapabilityArray; absent from the scoped captures.
+  bytes result_item_mask = 5;
+}
+
+message MediaItemBlueprint {
+  bytes upload_token = 1;
+  string file_name = 2;
+  bytes source_sha1 = 3;
+  UploadTimestamp filesystem_create_time = 5;
+  UploadTimestamp filesystem_mod_time = 6;
+  int64 storage_policy = 7;
+  ReconcileInfo reconcile_info = 9;
+  int64 upload_quality = 10;
+  LivePhotoInfo live_photo_info = 24;
+}
+
+enum ReconcileType {
+  RECONCILE_TYPE_UNKNOWN = 0;
+  RECONCILE_TYPE_PHODEO = 1;
+  RECONCILE_TYPE_VIDEO_ORIGINAL = 2;
+}
+
+message ReconcileInfo {
+  ReconcileType reconcile_type = 2;
+  bytes source_sha1 = 3;
+  MediaItemBlueprint photo_upload_blueprint = 4;
+}
+
+message UploadTimestamp {
+  int64 seconds = 1;
+  int64 nanoseconds = 2;
+}
+
+message LivePhotoInfo {
+  bytes video_upload_token = 1;
+  bytes video_source_sha1 = 2;
+  reserved 3; // videoCrc32C; absent from all scoped accepted Live Photo requests.
+}
+
+message UploadDeviceInfo {
+  string model = 3;
+  string make = 4;
+  int64 android_api_version = 5;
+}
+
+message CreateMediaItemsResponse {
+  repeated CreateMediaItemResponseItem item = 1;
+}
+
+message CreateMediaItemResponseItem {
+  CreateMediaItemResult result_item = 3;
+}
+
+message CreateMediaItemResult {
+  string media_key = 1;
+}
