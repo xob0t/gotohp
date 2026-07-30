@@ -41,6 +41,7 @@ type LivePhotoClassificationOptions struct {
 	Enabled             bool
 	SkipIncomplete      bool
 	IgnoreAppleMetadata bool
+	Cancelled           func() bool
 }
 
 type LivePhotoMetadataReader interface {
@@ -73,7 +74,14 @@ type livePhotoCandidates struct {
 // it remains one-to-one and still requires valid Live Photo video timing data.
 func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, reader LivePhotoMetadataReader) ([]UploadWorkItem, []PreflightWarning) {
 	if !options.Enabled {
-		return singleUploadWork(paths), nil
+		work := make([]UploadWorkItem, 0, len(paths))
+		for _, path := range paths {
+			if options.Cancelled != nil && options.Cancelled() {
+				return nil, nil
+			}
+			work = append(work, UploadWorkItem{Kind: UploadWorkSingle, Single: &SingleMedia{Path: path}})
+		}
+		return work, nil
 	}
 	if reader == nil {
 		reader = fileLivePhotoMetadataReader{}
@@ -82,6 +90,9 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 	candidatesByIdentifier := make(map[string]*livePhotoCandidates)
 	warnings := make([]PreflightWarning, 0)
 	for index, path := range paths {
+		if options.Cancelled != nil && options.Cancelled() {
+			return nil, nil
+		}
 		switch livePhotoCandidateType(path) {
 		case "photo":
 			if options.IgnoreAppleMetadata {
@@ -129,6 +140,9 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 	consumed := make(map[int]bool)
 	identifiers := sortedLivePhotoIdentifiers(candidatesByIdentifier)
 	for _, identifier := range identifiers {
+		if options.Cancelled != nil && options.Cancelled() {
+			return nil, nil
+		}
 		candidates := candidatesByIdentifier[identifier]
 		if len(candidates.photos) == 1 && len(candidates.videos) == 1 {
 			photo := candidates.photos[0]
@@ -188,6 +202,9 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 
 	work := make([]UploadWorkItem, 0, len(paths))
 	for index, path := range paths {
+		if options.Cancelled != nil && options.Cancelled() {
+			return nil, nil
+		}
 		if pair, ok := pairsByIndex[index]; ok {
 			pair := pair
 			work = append(work, UploadWorkItem{Kind: UploadWorkLivePhoto, LivePhoto: &pair})
@@ -221,14 +238,6 @@ func candidateFirstIndex(candidates *livePhotoCandidates) int {
 		first = min(first, video.index)
 	}
 	return first
-}
-
-func singleUploadWork(paths []string) []UploadWorkItem {
-	work := make([]UploadWorkItem, 0, len(paths))
-	for _, path := range paths {
-		work = append(work, UploadWorkItem{Kind: UploadWorkSingle, Single: &SingleMedia{Path: path}})
-	}
-	return work
 }
 
 func livePhotoCandidateType(path string) string {

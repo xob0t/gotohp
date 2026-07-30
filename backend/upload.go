@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -119,31 +120,38 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 	m.canceled = false
 	m.mu.Unlock()
 
-	targetPaths, err := filterGooglePhotosFiles(paths)
+	// Make preflight visible immediately so a long directory or metadata scan can
+	// be cancelled from the UI.
+	app.EmitEvent("uploadStart", UploadBatchStart{})
+
+	targetPaths, err := filterGooglePhotosFilesWithCancel(paths, m.isCancelled)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			m.finishPreflight(app)
+			return
+		}
 		app.EmitEvent("FileStatus", FileUploadResult{
 			IsError:      true,
 			Error:        err,
 			ErrorMessage: err.Error(),
 		})
-		app.EmitEvent("uploadStop", nil)
-		m.mu.Lock()
-		m.running = false
-		m.mu.Unlock()
+		m.finishPreflight(app)
 		return
 	}
 	workItems, preflightWarnings := ClassifyUploadWork(targetPaths, LivePhotoClassificationOptions{
 		Enabled:             AppConfig.PairLivePhotos,
 		SkipIncomplete:      AppConfig.SkipIncompleteLivePhotos,
 		IgnoreAppleMetadata: AppConfig.IgnoreAppleMetadata,
+		Cancelled:           m.isCancelled,
 	}, nil)
+	if m.isCancelled() {
+		m.finishPreflight(app)
+		return
+	}
 	emitUploadPreflight(app, len(workItems), preflightWarnings)
 
 	if len(workItems) == 0 {
-		app.EmitEvent("uploadStop", nil)
-		m.mu.Lock()
-		m.running = false
-		m.mu.Unlock()
+		m.finishPreflight(app)
 		return
 	}
 
@@ -248,6 +256,13 @@ func (m *UploadManager) Upload(app AppInterface, paths []string) {
 		m.running = false
 		m.mu.Unlock()
 	}()
+}
+
+func (m *UploadManager) finishPreflight(app AppInterface) {
+	app.EmitEvent("uploadStop", nil)
+	m.mu.Lock()
+	m.running = false
+	m.mu.Unlock()
 }
 
 func emitUploadPreflight(app AppInterface, uploadItemCount int, warnings []PreflightWarning) {
@@ -399,23 +414,32 @@ func isSupportedByGooglePhotos(filename string) bool {
 	return supportedFormats[ext[1:]]
 }
 
-func scanDirectoryForFiles(path string, recursive bool, excludePattern string) ([]string, error) {
+func scanDirectoryForFiles(path string, recursive bool, excludePattern string, cancelled func() bool) ([]string, error) {
 	var files []string
 
+	if cancelled != nil && cancelled() {
+		return nil, context.Canceled
+	}
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, entry := range entries {
+		if cancelled != nil && cancelled() {
+			return nil, context.Canceled
+		}
 		fullPath := filepath.Join(path, entry.Name())
 		if entry.IsDir() {
 			if excludePattern != "" && entry.Name() == excludePattern {
 				continue
 			}
 			if recursive {
-				subFiles, err := scanDirectoryForFiles(fullPath, recursive, excludePattern)
+				subFiles, err := scanDirectoryForFiles(fullPath, recursive, excludePattern, cancelled)
 				if err != nil {
+					if errors.Is(err, context.Canceled) {
+						return nil, err
+					}
 					continue
 				}
 				files = append(files, subFiles...)
@@ -435,6 +459,10 @@ func FilterGooglePhotosFiles(paths []string) ([]string, error) {
 
 // filterGooglePhotosFiles returns a list of files that are supported by Google Photos
 func filterGooglePhotosFiles(paths []string) ([]string, error) {
+	return filterGooglePhotosFilesWithCancel(paths, nil)
+}
+
+func filterGooglePhotosFilesWithCancel(paths []string, cancelled func() bool) ([]string, error) {
 	var supportedFiles []string
 	seenFiles := make(map[string]struct{})
 	appendFile := func(path string) {
@@ -450,18 +478,24 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	}
 
 	for _, path := range paths {
+		if cancelled != nil && cancelled() {
+			return nil, context.Canceled
+		}
 		fileInfo, err := os.Stat(path)
 		if err != nil {
-			return nil, fmt.Errorf("error accessing path %s: %v", path, err)
+			return nil, fmt.Errorf("error accessing path %s: %w", path, err)
 		}
 
 		if fileInfo.IsDir() {
-			files, err := scanDirectoryForFiles(path, AppConfig.Recursive, AppConfig.ExcludePattern)
+			files, err := scanDirectoryForFiles(path, AppConfig.Recursive, AppConfig.ExcludePattern, cancelled)
 			if err != nil {
-				return nil, fmt.Errorf("error scanning directory %s: %v", path, err)
+				return nil, fmt.Errorf("error scanning directory %s: %w", path, err)
 			}
 
 			for _, file := range files {
+				if cancelled != nil && cancelled() {
+					return nil, context.Canceled
+				}
 				appendFile(file)
 			}
 		} else {
