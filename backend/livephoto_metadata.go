@@ -14,6 +14,7 @@ const (
 	appleMakerNoteHeader = "Apple iOS\x00"
 	maxMakerNoteScanSize = 64 << 20
 	maxContentIdentifier = 256
+	maxMP4BoxDepth       = 32
 )
 
 var ErrContentIdentifierMissing = errors.New("live photo content identifier is missing")
@@ -200,6 +201,13 @@ func readVideoLivePhotoMetadata(reader io.ReaderAt, size int64) (LivePhotoMetada
 }
 
 func walkMP4Boxes(reader io.ReaderAt, start, end int64, visit func(mp4Box) error) error {
+	return walkMP4BoxesAtDepth(reader, start, end, 0, visit)
+}
+
+func walkMP4BoxesAtDepth(reader io.ReaderAt, start, end int64, depth int, visit func(mp4Box) error) error {
+	if depth > maxMP4BoxDepth {
+		return fmt.Errorf("QuickTime box nesting exceeds %d levels", maxMP4BoxDepth)
+	}
 	for offset := start; offset < end; {
 		box, err := readMP4Box(reader, offset, end)
 		if err != nil {
@@ -220,7 +228,7 @@ func walkMP4Boxes(reader io.ReaderAt, start, end int64, visit func(mp4Box) error
 			if childStart > box.end {
 				return fmt.Errorf("invalid %s container", string(box.typ[:]))
 			}
-			if err := walkMP4Boxes(reader, childStart, box.end, visit); err != nil {
+			if err := walkMP4BoxesAtDepth(reader, childStart, box.end, depth+1, visit); err != nil {
 				return err
 			}
 		}
