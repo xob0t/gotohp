@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -435,6 +436,18 @@ func FilterGooglePhotosFiles(paths []string) ([]string, error) {
 // filterGooglePhotosFiles returns a list of files that are supported by Google Photos
 func filterGooglePhotosFiles(paths []string) ([]string, error) {
 	var supportedFiles []string
+	seenFiles := make(map[string]struct{})
+	appendFile := func(path string) {
+		if !AppConfig.DisableUnsupportedFilesFilter && !isSupportedByGooglePhotos(path) {
+			return
+		}
+		identity := uploadPathIdentity(path)
+		if _, exists := seenFiles[identity]; exists {
+			return
+		}
+		seenFiles[identity] = struct{}{}
+		supportedFiles = append(supportedFiles, path)
+	}
 
 	for _, path := range paths {
 		fileInfo, err := os.Stat(path)
@@ -449,26 +462,29 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 			}
 
 			for _, file := range files {
-				if AppConfig.DisableUnsupportedFilesFilter {
-					supportedFiles = append(supportedFiles, file)
-				} else {
-					if isSupportedByGooglePhotos(file) {
-						supportedFiles = append(supportedFiles, file)
-					}
-				}
+				appendFile(file)
 			}
 		} else {
-			if AppConfig.DisableUnsupportedFilesFilter {
-				supportedFiles = append(supportedFiles, path)
-			} else {
-				if isSupportedByGooglePhotos(path) {
-					supportedFiles = append(supportedFiles, path)
-				}
-			}
+			appendFile(path)
 		}
 	}
 
 	return supportedFiles, nil
+}
+
+func uploadPathIdentity(path string) string {
+	identity, err := filepath.Abs(path)
+	if err != nil {
+		identity = filepath.Clean(path)
+	}
+	if resolved, err := filepath.EvalSymlinks(identity); err == nil {
+		identity = resolved
+	}
+	identity = filepath.Clean(identity)
+	if runtime.GOOS == "windows" {
+		identity = strings.ToLower(identity)
+	}
+	return identity
 }
 
 // UploadFile is an exported version for CLI use with callback
