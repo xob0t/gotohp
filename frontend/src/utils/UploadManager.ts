@@ -52,6 +52,10 @@ export interface AlbumError {
   Error: string;
 }
 
+function isSkippedUploadWarning(code: string): boolean {
+  return code === "incomplete-live-photo-skipped" || code === "ambiguous-filename-stem";
+}
+
 export interface UploadState {
   isUploading: boolean;
   totalFiles: number;
@@ -155,11 +159,13 @@ class UploadManager {
 
     Events.On("uploadWarning", (event: { data: PreflightWarning }) => {
       this.state.warnings.push(event.data);
-      this.state.results.warnings.push({
-        paths: event.data.Paths,
-        code: event.data.Code,
-        reason: event.data.Message,
-      });
+      if (!isSkippedUploadWarning(event.data.Code)) {
+        this.state.results.warnings.push({
+          paths: event.data.Paths,
+          code: event.data.Code,
+          reason: event.data.Message,
+        });
+      }
     });
 
     // Handle thread status updates

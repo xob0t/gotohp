@@ -475,13 +475,20 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 }
 
 func buildUploadSummary(model uploadModel) uploadSummary {
+	warnings := make([]uploadWarning, 0, len(model.warnings))
+	for _, warning := range model.warnings {
+		if warning.Code == "incomplete-live-photo-skipped" || warning.Code == "ambiguous-filename-stem" {
+			continue
+		}
+		warnings = append(warnings, warning)
+	}
 	summary := uploadSummary{
 		Total:     model.totalFiles,
 		Succeeded: model.completed,
 		Failed:    model.failed,
 		Skipped:   model.skipped,
 		Results:   model.results,
-		Warnings:  model.warnings,
+		Warnings:  warnings,
 	}
 	if model.albumName != "" {
 		summary.Album = &albumSummary{
