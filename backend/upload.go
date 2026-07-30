@@ -688,7 +688,21 @@ func startUploadWorker(workerID int, workChan <-chan UploadWorkItem, results cha
 			paths := uploadWorkPaths(item)
 			isLivePhoto := item.Kind == UploadWorkLivePhoto
 			mediaKey, skipped, err := uploadWorkItem(ctx, api, item, workerID, callback)
-			if err != nil {
+			if err != nil && mediaKey != "" {
+				results <- FileUploadResult{IsLivePhoto: isLivePhoto, Path: path, Paths: paths, MediaKey: mediaKey}
+				app.EmitEvent("livePhotoPreflightWarning", PreflightWarning{
+					Paths:   paths,
+					Code:    "local-cleanup-failed",
+					Message: err.Error(),
+				})
+				app.EmitEvent("ThreadStatus", ThreadStatus{
+					WorkerID: workerID,
+					Status:   "completed",
+					FilePath: path,
+					FileName: filepath.Base(path),
+					Message:  fmt.Sprintf("Uploaded, but local cleanup failed: %v", err),
+				})
+			} else if err != nil {
 				results <- FileUploadResult{IsError: true, IsLivePhoto: isLivePhoto, Error: err, ErrorMessage: err.Error(), Path: path, Paths: paths}
 				app.EmitEvent("ThreadStatus", ThreadStatus{
 					WorkerID: workerID,
