@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { nextTick, ref, onMounted, watch } from 'vue'
 import { ConfigManager } from '../bindings/app/backend'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -42,48 +42,60 @@ const settings = ref<Settings>({
     setDateFromFilename: false,
     uploadThreads: 0
 })
+const isHydrating = ref(true)
 
 onMounted(async () => {
-    const config = await ConfigManager.GetConfig()
-    settings.value = {
-        proxy: config.proxy || '',
-        useQuota: config.useQuota || false,
-        saver: config.saver || false,
-        recursive: config.recursive || false,
-        forceUpload: config.forceUpload || false,
-        pairLivePhotos: config.pairLivePhotos || false,
-        skipIncompleteLivePhotos: config.skipIncompleteLivePhotos ?? true,
-        updateExistingPhotosToLive: config.updateExistingPhotosToLive || false,
-        deleteFromHost: config.deleteFromHost || false,
-        disableUnsupportedFilesFilter: config.disableUnsupportedFilesFilter || false,
-        setDateFromFilename: config.setDateFromFilename || false,
-        uploadThreads: config.uploadThreads || 1
+    try {
+        const config = await ConfigManager.GetConfig()
+        settings.value = {
+            proxy: config.proxy || '',
+            useQuota: config.useQuota || false,
+            saver: config.saver || false,
+            recursive: config.recursive || false,
+            forceUpload: config.forceUpload || false,
+            pairLivePhotos: config.pairLivePhotos || false,
+            skipIncompleteLivePhotos: config.skipIncompleteLivePhotos ?? true,
+            updateExistingPhotosToLive: config.updateExistingPhotosToLive || false,
+            deleteFromHost: config.deleteFromHost || false,
+            disableUnsupportedFilesFilter: config.disableUnsupportedFilesFilter || false,
+            setDateFromFilename: config.setDateFromFilename || false,
+            uploadThreads: config.uploadThreads || 1
+        }
+    } finally {
+        await nextTick()
+        isHydrating.value = false
     }
 })
 
 // Watch for changes to proxy value and update backend
 watch(() => settings.value.proxy, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetProxy(newValue)
 })
 
 // Create individual watchers for each boolean setting
 watch(() => settings.value.useQuota, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetUseQuota(newValue)
 })
 
 watch(() => settings.value.saver, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetSaver(newValue)
 })
 
 watch(() => settings.value.recursive, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetRecursive(newValue)
 })
 
 watch(() => settings.value.forceUpload, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetForceUpload(newValue)
 })
 
 watch(() => settings.value.pairLivePhotos, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetPairLivePhotos(newValue)
     if (newValue && !settings.value.skipIncompleteLivePhotos) {
         settings.value.skipIncompleteLivePhotos = true
@@ -92,26 +104,32 @@ watch(() => settings.value.pairLivePhotos, async (newValue) => {
 })
 
 watch(() => settings.value.skipIncompleteLivePhotos, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetSkipIncompleteLivePhotos(newValue)
 })
 
 watch(() => settings.value.updateExistingPhotosToLive, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetUpdateExistingPhotosToLive(newValue)
 })
 
 watch(() => settings.value.deleteFromHost, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetDeleteFromHost(newValue)
 })
 
 watch(() => settings.value.disableUnsupportedFilesFilter, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetDisableUnsupportedFilesFilter(newValue)
 })
 
 watch(() => settings.value.setDateFromFilename, async (newValue) => {
+    if (isHydrating.value) return
     await ConfigManager.SetSetDateFromFilename(newValue)
 })
 
 watch(() => settings.value.uploadThreads, async (newValue) => {
+    if (isHydrating.value) return
     if (newValue < 1) {
         settings.value.uploadThreads = 1
     } else {
