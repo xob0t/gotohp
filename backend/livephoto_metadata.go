@@ -360,7 +360,11 @@ func readQuickTimeKeys(reader io.ReaderAt, box mp4Box) ([]string, error) {
 	if len(payload) < 8 {
 		return nil, fmt.Errorf("truncated QuickTime keys box")
 	}
-	entryCount := int(binary.BigEndian.Uint32(payload[4:8]))
+	entryCountValue := binary.BigEndian.Uint32(payload[4:8])
+	if uint64(entryCountValue) > uint64((len(payload)-8)/8) {
+		return nil, fmt.Errorf("invalid QuickTime metadata key count")
+	}
+	entryCount := int(entryCountValue)
 	offset := 8
 	keys := make([]string, 0, entryCount)
 	for index := 0; index < entryCount; index++ {
