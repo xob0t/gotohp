@@ -38,7 +38,6 @@ func parseUploadArgs(args []string) ([]string, cliConfig, error) {
 			config.noTUI = true
 		case "--pair-live-photos":
 			config.pairLivePhotos = true
-			config.pairLivePhotosSet = true
 			if !config.skipIncompleteLivePhotosSet {
 				config.skipIncompleteLivePhotos = true
 				config.skipIncompleteLivePhotosSet = true

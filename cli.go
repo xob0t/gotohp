@@ -24,7 +24,6 @@ type cliConfig struct {
 	disableUnsupportedFilesFilter bool
 	setDateFromFilename           bool
 	pairLivePhotos                bool
-	pairLivePhotosSet             bool
 	skipIncompleteLivePhotos      bool
 	skipIncompleteLivePhotosSet   bool
 	updateExistingPhotosToLive    bool
@@ -348,9 +347,7 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	backend.AppConfig.DisableUnsupportedFilesFilter = config.disableUnsupportedFilesFilter
 	backend.AppConfig.SetDateFromFilename = config.setDateFromFilename
 	backend.AppConfig.ExcludePattern = config.excludePattern
-	if config.pairLivePhotosSet {
-		backend.AppConfig.PairLivePhotos = config.pairLivePhotos
-	}
+	backend.AppConfig.PairLivePhotos = config.pairLivePhotos
 	if config.skipIncompleteLivePhotosSet {
 		backend.AppConfig.SkipIncompleteLivePhotos = config.skipIncompleteLivePhotos
 	}
