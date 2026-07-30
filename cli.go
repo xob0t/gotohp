@@ -267,7 +267,7 @@ func (m uploadModel) View() string {
 	if len(m.warnings) > 0 {
 		warningStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))
 		b.WriteString("\n")
-		b.WriteString(warningStyle.Render("Live Photo warnings:"))
+		b.WriteString(warningStyle.Render("Upload warnings:"))
 		b.WriteString("\n")
 		for _, warning := range m.warnings {
 			fmt.Fprintf(&b, "- [%s] %s", warning.Code, warning.Message)
