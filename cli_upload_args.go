@@ -98,6 +98,9 @@ func parseUploadArgs(args []string) ([]string, cliConfig, error) {
 	if config.ignoreAppleMetadata && !config.pairLivePhotos {
 		return nil, cliConfig{}, fmt.Errorf("--ignore-apple-metadata requires --pair-live-photos")
 	}
+	if config.skipIncompleteLivePhotosSet && !config.pairLivePhotos {
+		return nil, cliConfig{}, fmt.Errorf("--skip-incomplete-live-photos and --upload-incomplete-live-photos require --pair-live-photos")
+	}
 	if len(paths) == 0 {
 		return nil, cliConfig{}, fmt.Errorf("at least one file or directory path is required")
 	}
