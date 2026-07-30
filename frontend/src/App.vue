@@ -502,6 +502,7 @@ onUnmounted(() => {
             <Label class="text-muted-foreground">Successful: {{ uploadState.results.success.length }}</Label>
             <Label class="text-muted-foreground">Failed: {{ uploadState.results.fail.length }}</Label>
             <Label class="text-muted-foreground">Skipped: {{ uploadState.results.skipped.length }}</Label>
+            <Label class="text-muted-foreground">Warnings: {{ uploadState.results.warnings.length }}</Label>
             <Button
               variant="outline"
               class="cursor-pointer select-none min-w-[125px]"

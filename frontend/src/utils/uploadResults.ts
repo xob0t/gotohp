@@ -13,6 +13,7 @@ export interface UploadResults {
   success: UploadSuccess[]
   fail: string[]
   skipped: SkippedUploadResult[]
+  warnings: SkippedUploadResult[]
 }
 
 export interface UploadResultEvent {

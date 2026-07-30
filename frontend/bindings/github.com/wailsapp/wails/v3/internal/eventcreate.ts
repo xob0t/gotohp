@@ -18,7 +18,7 @@ function configure() {
         "albumError": $$createType3,
         "albumProgress": $$createType2,
         "files-dropped": $$createType4,
-        "livePhotoPreflightWarning": $$createType5,
+        "uploadWarning": $$createType5,
         "startUpload": $$createType6,
         "uploadStart": $$createType7,
     }));

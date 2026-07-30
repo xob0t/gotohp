@@ -409,7 +409,7 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 					err:        result.Error,
 				})
 			}
-		case "livePhotoPreflightWarning":
+		case "uploadWarning":
 			if warning, ok := data.(backend.PreflightWarning); ok {
 				p.Send(preflightWarningMsg{
 					paths:   warning.Paths,

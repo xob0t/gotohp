@@ -12,7 +12,7 @@ func init() {
 	application.RegisterEvent[application.Void]("uploadStop")
 	application.RegisterEvent[FileUploadResult]("FileStatus")
 	application.RegisterEvent[ThreadStatus]("ThreadStatus")
-	application.RegisterEvent[PreflightWarning]("livePhotoPreflightWarning")
+	application.RegisterEvent[PreflightWarning]("uploadWarning")
 	application.RegisterEvent[application.Void]("uploadCancel")
 	application.RegisterEvent[int64]("uploadTotalBytes")
 	application.RegisterEvent[FilesDroppedEvent]("files-dropped")

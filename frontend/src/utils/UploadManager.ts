@@ -58,7 +58,7 @@ export interface UploadState {
   uploadedFiles: number;
   threads: Map<number, ThreadStatus>;
   results: UploadResults;
-  preflightWarnings: PreflightWarning[];
+  warnings: PreflightWarning[];
   // Byte tracking
   totalBytes: number;
   uploadedBytes: number;
@@ -84,8 +84,9 @@ class UploadManager {
       success: [],
       fail: [],
       skipped: [],
+      warnings: [],
     },
-    preflightWarnings: [],
+    warnings: [],
     totalBytes: 0,
     uploadedBytes: 0,
     startTime: 0,
@@ -136,7 +137,7 @@ class UploadManager {
       this.completedBytes = 0;
       this.fileBytes.clear();
       this.resetUploadResults();
-      this.state.preflightWarnings = [];
+      this.state.warnings = [];
     });
 
     // Handle async total bytes update (calculated after uploadStart)
@@ -144,8 +145,13 @@ class UploadManager {
       this.state.totalBytes = event.data;
     });
 
-    Events.On("livePhotoPreflightWarning", (event: { data: PreflightWarning }) => {
-      this.state.preflightWarnings.push(event.data);
+    Events.On("uploadWarning", (event: { data: PreflightWarning }) => {
+      this.state.warnings.push(event.data);
+      this.state.results.warnings.push({
+        paths: event.data.Paths,
+        code: event.data.Code,
+        reason: event.data.Message,
+      });
     });
 
     // Handle thread status updates
@@ -261,6 +267,7 @@ class UploadManager {
     this.state.results.success = [];
     this.state.results.fail = [];
     this.state.results.skipped = [];
+    this.state.results.warnings = [];
   }
 
   public cancelUpload() {

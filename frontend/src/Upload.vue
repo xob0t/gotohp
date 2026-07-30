@@ -90,7 +90,7 @@ function warningFiles(paths: string[]): string {
         {{ state.uploadedFiles }}<span class="text-muted-foreground font-normal">/</span><span class="text-muted-foreground">{{ state.totalFiles }}</span>
       </p>
       <p class="text-xs text-muted-foreground">
-        files uploaded
+        items processed
       </p>
     </div>
 
@@ -147,11 +147,11 @@ function warningFiles(paths: string[]): string {
     </div>
 
     <div
-      v-if="state.preflightWarnings.length"
+      v-if="state.warnings.length"
       class="mb-3 space-y-1.5"
     >
       <div
-        v-for="(warning, index) in state.preflightWarnings"
+        v-for="(warning, index) in state.warnings"
         :key="`${warning.Code}-${index}`"
         class="flex gap-2 rounded-md bg-amber-500/10 px-2.5 py-2 text-amber-700 dark:text-amber-300"
       >

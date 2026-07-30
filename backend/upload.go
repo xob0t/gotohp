@@ -265,7 +265,7 @@ func emitUploadPreflight(app AppInterface, uploadItemCount int, warnings []Prefl
 		TotalBytes: 0,
 	})
 	for _, warning := range warnings {
-		app.EmitEvent("livePhotoPreflightWarning", warning)
+		app.EmitEvent("uploadWarning", warning)
 		if !isSkippedPreflightWarning(warning.Code) {
 			continue
 		}
@@ -690,7 +690,7 @@ func startUploadWorker(workerID int, workChan <-chan UploadWorkItem, results cha
 			mediaKey, skipped, err := uploadWorkItem(ctx, api, item, workerID, callback)
 			if err != nil && mediaKey != "" {
 				results <- FileUploadResult{IsLivePhoto: isLivePhoto, Path: path, Paths: paths, MediaKey: mediaKey}
-				app.EmitEvent("livePhotoPreflightWarning", PreflightWarning{
+				app.EmitEvent("uploadWarning", PreflightWarning{
 					Paths:   paths,
 					Code:    "local-cleanup-failed",
 					Message: err.Error(),
