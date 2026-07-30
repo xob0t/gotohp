@@ -464,16 +464,33 @@ func filterGooglePhotosFiles(paths []string) ([]string, error) {
 
 func filterGooglePhotosFilesWithCancel(paths []string, cancelled func() bool) ([]string, error) {
 	var supportedFiles []string
-	seenFiles := make(map[string]struct{})
-	appendFile := func(path string) {
+	type seenUploadFile struct {
+		canonicalPath string
+		info          os.FileInfo
+	}
+	seenFiles := make(map[string][]seenUploadFile)
+	appendFile := func(path string, info os.FileInfo) {
 		if !AppConfig.DisableUnsupportedFilesFilter && !isSupportedByGooglePhotos(path) {
 			return
 		}
-		identity := uploadPathIdentity(path)
-		if _, exists := seenFiles[identity]; exists {
-			return
+		canonicalPath := canonicalUploadPath(path)
+		bucketKey := canonicalPath
+		if runtime.GOOS == "windows" {
+			bucketKey = strings.ToLower(bucketKey)
 		}
-		seenFiles[identity] = struct{}{}
+		if info == nil {
+			info, _ = os.Stat(path)
+		}
+		for _, seen := range seenFiles[bucketKey] {
+			if canonicalPath == seen.canonicalPath ||
+				(info != nil && seen.info != nil && os.SameFile(info, seen.info)) {
+				return
+			}
+		}
+		seenFiles[bucketKey] = append(seenFiles[bucketKey], seenUploadFile{
+			canonicalPath: canonicalPath,
+			info:          info,
+		})
 		supportedFiles = append(supportedFiles, path)
 	}
 
@@ -496,29 +513,25 @@ func filterGooglePhotosFilesWithCancel(paths []string, cancelled func() bool) ([
 				if cancelled != nil && cancelled() {
 					return nil, context.Canceled
 				}
-				appendFile(file)
+				appendFile(file, nil)
 			}
 		} else {
-			appendFile(path)
+			appendFile(path, fileInfo)
 		}
 	}
 
 	return supportedFiles, nil
 }
 
-func uploadPathIdentity(path string) string {
-	identity, err := filepath.Abs(path)
+func canonicalUploadPath(path string) string {
+	canonicalPath, err := filepath.Abs(path)
 	if err != nil {
-		identity = filepath.Clean(path)
+		canonicalPath = filepath.Clean(path)
 	}
-	if resolved, err := filepath.EvalSymlinks(identity); err == nil {
-		identity = resolved
+	if resolved, err := filepath.EvalSymlinks(canonicalPath); err == nil {
+		canonicalPath = resolved
 	}
-	identity = filepath.Clean(identity)
-	if runtime.GOOS == "windows" {
-		identity = strings.ToLower(identity)
-	}
-	return identity
+	return filepath.Clean(canonicalPath)
 }
 
 // UploadFile is an exported version for CLI use with callback
