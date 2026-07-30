@@ -59,6 +59,12 @@ type fileCompleteMsg struct {
 	err        error
 }
 
+type preflightWarningMsg struct {
+	paths   []string
+	code    string
+	message string
+}
+
 type uploadCompleteMsg struct{}
 
 // Album messages
@@ -89,6 +95,7 @@ type uploadModel struct {
 	currentFiles map[int]string // workerID -> current file
 	workers      map[int]string // workerID -> status message
 	results      []uploadResult // Track all upload results
+	warnings     []uploadWarning
 	width        int
 	quitting     bool
 	// Album state
@@ -111,6 +118,12 @@ type uploadResult struct {
 	Error      string   `json:"error,omitempty"`
 }
 
+type uploadWarning struct {
+	Paths   []string `json:"paths,omitempty"`
+	Code    string   `json:"code"`
+	Message string   `json:"message"`
+}
+
 type albumSummary struct {
 	Name       string   `json:"name,omitempty"`
 	ItemsAdded int      `json:"itemsAdded,omitempty"`
@@ -119,12 +132,13 @@ type albumSummary struct {
 }
 
 type uploadSummary struct {
-	Total     int            `json:"total"`
-	Succeeded int            `json:"succeeded"`
-	Failed    int            `json:"failed"`
-	Skipped   int            `json:"skipped"`
-	Results   []uploadResult `json:"results"`
-	Album     *albumSummary  `json:"album,omitempty"`
+	Total     int             `json:"total"`
+	Succeeded int             `json:"succeeded"`
+	Failed    int             `json:"failed"`
+	Skipped   int             `json:"skipped"`
+	Results   []uploadResult  `json:"results"`
+	Warnings  []uploadWarning `json:"warnings,omitempty"`
+	Album     *albumSummary   `json:"album,omitempty"`
 }
 
 func initialModel() uploadModel {
@@ -133,6 +147,7 @@ func initialModel() uploadModel {
 		currentFiles: make(map[int]string),
 		workers:      make(map[int]string),
 		results:      []uploadResult{},
+		warnings:     []uploadWarning{},
 		width:        80,
 	}
 }
@@ -180,6 +195,14 @@ func (m uploadModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.results = append(m.results, result)
+		return m, nil
+
+	case preflightWarningMsg:
+		m.warnings = append(m.warnings, uploadWarning{
+			Paths:   msg.paths,
+			Code:    msg.code,
+			Message: msg.message,
+		})
 		return m, nil
 
 	case uploadCompleteMsg:
@@ -238,6 +261,20 @@ func (m uploadModel) View() string {
 	for i := 0; i < len(m.workers); i++ {
 		if status, ok := m.workers[i]; ok {
 			b.WriteString(status)
+			b.WriteString("\n")
+		}
+	}
+
+	if len(m.warnings) > 0 {
+		warningStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))
+		b.WriteString("\n")
+		b.WriteString(warningStyle.Render("Live Photo warnings:"))
+		b.WriteString("\n")
+		for _, warning := range m.warnings {
+			fmt.Fprintf(&b, "- [%s] %s", warning.Code, warning.Message)
+			if len(warning.Paths) > 0 {
+				fmt.Fprintf(&b, " (%s)", strings.Join(warning.Paths, ", "))
+			}
 			b.WriteString("\n")
 		}
 	}
@@ -375,6 +412,14 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 					err:        result.Error,
 				})
 			}
+		case "livePhotoPreflightWarning":
+			if warning, ok := data.(backend.PreflightWarning); ok {
+				p.Send(preflightWarningMsg{
+					paths:   warning.Paths,
+					code:    warning.Code,
+					message: warning.Message,
+				})
+			}
 		case "uploadStop":
 			p.Send(uploadCompleteMsg{})
 		case "albumProgress":
@@ -439,6 +484,7 @@ func buildUploadSummary(model uploadModel) uploadSummary {
 		Failed:    model.failed,
 		Skipped:   model.skipped,
 		Results:   model.results,
+		Warnings:  model.warnings,
 	}
 	if model.albumName != "" {
 		summary.Album = &albumSummary{
