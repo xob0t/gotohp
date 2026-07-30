@@ -108,7 +108,7 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 				warnings = append(warnings, metadataReadWarning(path, err))
 				continue
 			}
-			candidates := candidatesForIdentifier(candidatesByIdentifier, identifier)
+			candidates := candidatesForIdentifier(candidatesByIdentifier, strings.ToLower(identifier))
 			candidates.photos = append(candidates.photos, indexedLivePhotoMedia{path: path, index: index})
 		case "video":
 			metadata, err := reader.VideoLivePhotoMetadata(path)
@@ -130,6 +130,8 @@ func ClassifyUploadWork(paths []string, options LivePhotoClassificationOptions, 
 			identifier := metadata.ContentIdentifier
 			if options.IgnoreAppleMetadata {
 				identifier = livePhotoFilenameMatchKey(path)
+			} else {
+				identifier = strings.ToLower(identifier)
 			}
 			candidates := candidatesForIdentifier(candidatesByIdentifier, identifier)
 			candidates.videos = append(candidates.videos, indexedLivePhotoMedia{path: path, index: index})
