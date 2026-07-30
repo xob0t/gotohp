@@ -75,6 +75,7 @@ func uploadLivePhotoWithCallback(
 	}
 	if photoRemoteKey != "" {
 		if options.UpdateExistingPhotosToLive {
+			callback("uploadTotalBytesDelta", -photoInfo.Size())
 			mediaKey, err := reconcileExistingLivePhoto(
 				ctx,
 				api,
@@ -90,6 +91,7 @@ func uploadLivePhotoWithCallback(
 			)
 			return mediaKey, false, err
 		}
+		callback("uploadTotalBytesDelta", -totalBytes)
 		emitLivePhotoStatus(callback, ThreadStatus{
 			WorkerID: workerID,
 			Status:   "skipped",
@@ -102,6 +104,7 @@ func uploadLivePhotoWithCallback(
 	// The VideoOriginal direction has not been recovered. A standalone remote MOV
 	// must not be combined with a newly uploaded still using the Phodeo request.
 	if videoRemoteKey != "" {
+		callback("uploadTotalBytesDelta", -totalBytes)
 		emitLivePhotoStatus(callback, ThreadStatus{
 			WorkerID: workerID,
 			Status:   "skipped",

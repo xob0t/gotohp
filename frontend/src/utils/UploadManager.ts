@@ -103,6 +103,8 @@ class UploadManager {
   private completedBytes: number = 0;
   // Track the last known BytesTotal for each file
   private fileBytes: Map<string, number> = new Map();
+  // Dedupe decisions can change the bytes that will actually be uploaded.
+  private totalBytesAdjustment: number = 0;
 
   private constructor() {
     // Bind all methods to ensure 'this' context is preserved
@@ -136,13 +138,19 @@ class UploadManager {
       this.speedSamples = [];
       this.completedBytes = 0;
       this.fileBytes.clear();
+      this.totalBytesAdjustment = 0;
       this.resetUploadResults();
       this.state.warnings = [];
     });
 
     // Handle async total bytes update (calculated after uploadStart)
     Events.On("uploadTotalBytes", (event: { data: number }) => {
-      this.state.totalBytes = event.data;
+      this.state.totalBytes = Math.max(0, event.data + this.totalBytesAdjustment);
+    });
+
+    Events.On("uploadTotalBytesDelta", (event: { data: number }) => {
+      this.totalBytesAdjustment += event.data;
+      this.state.totalBytes = Math.max(0, this.state.totalBytes + event.data);
     });
 
     Events.On("uploadWarning", (event: { data: PreflightWarning }) => {

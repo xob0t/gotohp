@@ -24,6 +24,7 @@ declare module "@wailsio/runtime" {
             "uploadStart": backend$0.UploadBatchStart;
             "uploadStop": void;
             "uploadTotalBytes": number;
+            "uploadTotalBytesDelta": number;
         }
     }
 }
