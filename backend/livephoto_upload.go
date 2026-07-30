@@ -111,11 +111,11 @@ func uploadLivePhotoWithCallback(
 		return "", true, nil
 	}
 
-	photoToken, err := uploadLivePhotoComponent(ctx, api, pair.PhotoPath, photoInfo.Size(), photoSHA1, 0, totalBytes, workerID, displayName, callback)
+	photoToken, err := uploadLivePhotoComponent(ctx, api, pair.PhotoPath, pair.PhotoPath, photoInfo.Size(), photoSHA1, 0, totalBytes, workerID, displayName, callback)
 	if err != nil {
 		return "", false, fmt.Errorf("upload Live Photo still: %w", err)
 	}
-	videoToken, err := uploadLivePhotoComponent(ctx, api, pair.VideoPath, videoInfo.Size(), videoSHA1, photoInfo.Size(), totalBytes, workerID, displayName, callback)
+	videoToken, err := uploadLivePhotoComponent(ctx, api, pair.VideoPath, pair.PhotoPath, videoInfo.Size(), videoSHA1, photoInfo.Size(), totalBytes, workerID, displayName, callback)
 	if err != nil {
 		return "", false, fmt.Errorf("upload Live Photo video: %w", err)
 	}
@@ -175,7 +175,7 @@ func reconcileExistingLivePhoto(
 	emitLivePhotoStatus(callback, ThreadStatus{
 		WorkerID: workerID,
 		Status:   "uploading",
-		FilePath: pair.VideoPath,
+		FilePath: pair.PhotoPath,
 		FileName: displayName,
 		Message:  "Uploading Live Photo video for existing photo...",
 	})
@@ -183,6 +183,7 @@ func reconcileExistingLivePhoto(
 		ctx,
 		api,
 		pair.VideoPath,
+		pair.PhotoPath,
 		videoInfo.Size(),
 		videoSHA1,
 		0,
@@ -230,7 +231,8 @@ func reconcileExistingLivePhoto(
 func uploadLivePhotoComponent(
 	ctx context.Context,
 	api livePhotoUploadAPI,
-	path string,
+	componentPath string,
+	progressPath string,
 	size int64,
 	hash []byte,
 	completedBytes int64,
@@ -251,7 +253,7 @@ func uploadLivePhotoComponent(
 		emitLivePhotoStatus(callback, ThreadStatus{
 			WorkerID:      workerID,
 			Status:        "uploading",
-			FilePath:      path,
+			FilePath:      progressPath,
 			FileName:      displayName,
 			Message:       message,
 			BytesUploaded: completedBytes + bytesUploaded,
@@ -259,7 +261,7 @@ func uploadLivePhotoComponent(
 			Attempt:       attempt,
 		})
 	}
-	return api.UploadFileWithProgress(ctx, path, uploadSession, progress)
+	return api.UploadFileWithProgress(ctx, componentPath, uploadSession, progress)
 }
 
 func emitLivePhotoStatus(callback ProgressCallback, status ThreadStatus) {
