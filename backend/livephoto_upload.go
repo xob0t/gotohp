@@ -79,6 +79,7 @@ func uploadLivePhotoWithCallback(
 				ctx,
 				api,
 				pair,
+				photoInfo,
 				videoInfo,
 				photoSHA1,
 				videoSHA1,
@@ -164,6 +165,7 @@ func reconcileExistingLivePhoto(
 	ctx context.Context,
 	api livePhotoUploadAPI,
 	pair LivePhotoPair,
+	photoInfo os.FileInfo,
 	videoInfo os.FileInfo,
 	photoSHA1 []byte,
 	videoSHA1 []byte,
@@ -196,6 +198,12 @@ func reconcileExistingLivePhoto(
 		return "", fmt.Errorf("upload Live Photo video for existing photo: %w", err)
 	}
 
+	uploadTime := photoInfo.ModTime()
+	if options.SetDateFromFilename {
+		if parsed, ok := parseTimestampFromFilename(pair.PhotoPath); ok {
+			uploadTime = parsed
+		}
+	}
 	emitLivePhotoStatus(callback, ThreadStatus{
 		WorkerID: workerID,
 		Status:   "finalizing",
@@ -208,8 +216,8 @@ func reconcileExistingLivePhoto(
 		FileName:         videoInfo.Name(),
 		PhotoSHA1:        photoSHA1,
 		VideoSHA1:        videoSHA1,
-		CreatedAt:        videoInfo.ModTime(),
-		ModifiedAt:       videoInfo.ModTime(),
+		CreatedAt:        uploadTime,
+		ModifiedAt:       uploadTime,
 		StoragePolicy:    options.Policy.StoragePolicy,
 		UploadQuality:    options.Policy.UploadQuality,
 		UploadDeviceInfo: options.Policy.UploadDeviceInfo,
