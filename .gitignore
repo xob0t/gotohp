@@ -4,6 +4,11 @@ frontend/dist
 frontend/node_modules
 build/linux/appimage/build
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+# Mobile generated (per-machine; overlays hold absolute paths)
+build/ios/xcode/overlay.json
+build/ios/xcode/gen/
+build/android/overlay.json
+build/android/gen/
 config.yaml
 wails_windows_amd64.syso
 .claude/settings.local.json
