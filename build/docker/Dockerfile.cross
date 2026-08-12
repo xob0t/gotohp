@@ -158,11 +158,19 @@ case "${OS}-${ARCH}" in
         export GOOS=darwin
         ;;
     linux-arm64|linux-aarch64)
+        case "$(uname -m)" in
+            aarch64|arm64) ;;
+            *) echo "Linux arm64 builds require an arm64 wails-cross image" >&2; exit 1 ;;
+        esac
         export CC=gcc
         export GOARCH=arm64
         export GOOS=linux
         ;;
     linux-amd64|linux-x86_64)
+        case "$(uname -m)" in
+            x86_64|amd64) ;;
+            *) echo "Linux amd64 builds require an amd64 wails-cross image" >&2; exit 1 ;;
+        esac
         export CC=gcc
         export GOARCH=amd64
         export GOOS=linux
@@ -190,7 +198,11 @@ export CGO_CFLAGS="-w"
 
 # Build frontend if exists and not already built (host may have built it)
 if [ -d "frontend" ] && [ -f "frontend/package.json" ] && [ ! -d "frontend/dist" ]; then
-    (cd frontend && npm install --silent && npm run build --silent)
+    if [ "${DEV:-false}" = "true" ]; then
+        (cd frontend && npm install --silent && npm run build:dev --silent)
+    else
+        (cd frontend && npm install --silent && npm run build --silent)
+    fi
 fi
 
 # Build
@@ -198,24 +210,37 @@ APP=${APP_NAME:-$(basename $(pwd))}
 mkdir -p bin
 
 EXT=""
-LDFLAGS="-s -w"
 if [ "$GOOS" = "windows" ]; then
     EXT=".exe"
-    LDFLAGS="-s -w -H windowsgui"
 fi
 
-TAGS="production"
+TAGS=""
+if [ "${DEV:-false}" != "true" ]; then
+    TAGS="production"
+fi
 if [ -n "$EXTRA_TAGS" ]; then
-    TAGS="${TAGS},${EXTRA_TAGS}"
+    TAGS="${TAGS:+${TAGS},}${EXTRA_TAGS}"
 fi
 
 COMPILER="go build"
 if [ "$OBFUSCATED" = "true" ]; then
     COMPILER="garble ${GARBLE_ARGS} build"
-    TAGS="${TAGS},wails_obfuscated"
+    TAGS="${TAGS:+${TAGS},}wails_obfuscated"
 fi
 
-${COMPILER} -tags "$TAGS" -trimpath -buildvcs=false -ldflags="$LDFLAGS" -o bin/${APP}-${GOOS}-${GOARCH}${EXT} .
+if [ "${DEV:-false}" = "true" ]; then
+    if [ -n "$TAGS" ]; then
+        ${COMPILER} -tags "$TAGS" -buildvcs=false -gcflags=all="-l" -o bin/${APP}-${GOOS}-${GOARCH}${EXT} .
+    else
+        ${COMPILER} -buildvcs=false -gcflags=all="-l" -o bin/${APP}-${GOOS}-${GOARCH}${EXT} .
+    fi
+else
+    LDFLAGS="-s -w"
+    if [ "$GOOS" = "windows" ]; then
+        LDFLAGS="-s -w -H windowsgui"
+    fi
+    ${COMPILER} -tags "$TAGS" -trimpath -buildvcs=false -ldflags="$LDFLAGS" -o bin/${APP}-${GOOS}-${GOARCH}${EXT} .
+fi
 echo "Built: bin/${APP}-${GOOS}-${GOARCH}${EXT}"
 SCRIPT
 RUN chmod +x /usr/local/bin/build.sh

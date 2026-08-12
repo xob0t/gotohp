@@ -63,5 +63,8 @@ EXPOSE 8080
 # Can be overridden at runtime with -e WAILS_SERVER_HOST=...
 ENV WAILS_SERVER_HOST=0.0.0.0
 
+# Run as the distroless non-root user.
+USER 65532:65532
+
 # Run the server
 ENTRYPOINT ["/server"]
