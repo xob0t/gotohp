@@ -80,7 +80,7 @@ jobs:
           cache: true
 
       - name: Install Wails3
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
 
       - name: Build macOS App (Production)
         run: |
@@ -112,7 +112,7 @@ jobs:
           rm -f bin/gotohp
 
           # Build debug version (creates binary, not .app)
-          wails3 build
+          wails3 build DEV=true
 
           # Rename debug binary
           mv bin/gotohp release/gotohp-macos-universal_debug
@@ -196,7 +196,7 @@ jobs:
 
       - name: Install Wails3
         shell: cmd
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
 
       - name: Build Windows App (Production)
         shell: pwsh
@@ -208,7 +208,7 @@ jobs:
           task common:update:build-assets
 
           # Build the GUI application with production flags
-          task windows:build PRODUCTION=true
+          task windows:build
           Move-Item -Path "bin\gotohp.exe" -Destination "release\gotohp-x64.exe"
 
           # Build standalone CLI binary without Wails/WebView dependencies
@@ -226,7 +226,7 @@ jobs:
           Remove-Item -Path "bin\gotohp-cli.exe" -ErrorAction SilentlyContinue
 
           # Build GUI debug version
-          wails3 build
+          wails3 build DEV=true
           Move-Item -Path "bin\gotohp.exe" -Destination "release\gotohp-x64_debug.exe"
 
           # Build CLI debug version without Wails/WebView dependencies
@@ -317,7 +317,7 @@ jobs:
         run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
       - name: Install Wails3
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
 
       - name: Build Linux App (Production)
         run: |
@@ -355,7 +355,7 @@ jobs:
           rm -f bin/gotohp
 
           # Build debug version
-          wails3 build
+          wails3 build DEV=true
 
           # Copy debug binary
           cp bin/gotohp "release/gotohp_amd64_debug"

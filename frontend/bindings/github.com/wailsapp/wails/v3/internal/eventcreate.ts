@@ -18,9 +18,9 @@ function configure() {
         "albumError": $$createType3,
         "albumProgress": $$createType2,
         "files-dropped": $$createType4,
-        "uploadWarning": $$createType5,
-        "startUpload": $$createType6,
-        "uploadStart": $$createType7,
+        "startUpload": $$createType5,
+        "uploadStart": $$createType6,
+        "uploadWarning": $$createType7,
     }));
 }
 
@@ -30,8 +30,8 @@ const $$createType1 = backend$0.ThreadStatus.createFrom;
 const $$createType2 = backend$0.AlbumStatus.createFrom;
 const $$createType3 = backend$0.AlbumError.createFrom;
 const $$createType4 = backend$0.FilesDroppedEvent.createFrom;
-const $$createType5 = backend$0.PreflightWarning.createFrom;
-const $$createType6 = backend$0.StartUploadEvent.createFrom;
-const $$createType7 = backend$0.UploadBatchStart.createFrom;
+const $$createType5 = backend$0.StartUploadEvent.createFrom;
+const $$createType6 = backend$0.UploadBatchStart.createFrom;
+const $$createType7 = backend$0.PreflightWarning.createFrom;
 
 configure();

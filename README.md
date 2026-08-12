@@ -164,4 +164,4 @@ You only need to do this once.
 ## Build
 
 Follow official wails3 guide
-[https://v3alpha.wails.io/getting-started/installation/](https://v3alpha.wails.io/getting-started/installation/)
+[https://v3.wails.io/getting-started/installation/](https://v3.wails.io/getting-started/installation/)
