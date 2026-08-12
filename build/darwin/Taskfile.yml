@@ -149,8 +149,24 @@ tasks:
           OUTPUT: "{{.BIN_DIR}}/{{.APP_NAME}}-cli-arm64"
           DEV: '{{.DEV}}'
     cmds:
+      - task: '{{if eq OS "darwin"}}build:cli:universal:lipo:native{{else}}build:cli:universal:lipo:go{{end}}'
+
+  build:cli:universal:lipo:native:
+    summary: Creates universal CLI binary using native lipo (macOS)
+    internal: true
+    cmds:
       - lipo -create -output "{{.BIN_DIR}}/{{.APP_NAME}}-cli" "{{.BIN_DIR}}/{{.APP_NAME}}-cli-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}-cli-arm64"
       - rm "{{.BIN_DIR}}/{{.APP_NAME}}-cli-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}-cli-arm64"
+
+  build:cli:universal:lipo:go:
+    summary: Creates universal CLI binary using wails3 tool lipo (Linux/Windows)
+    internal: true
+    cmds:
+      - wails3 tool lipo -output "{{.BIN_DIR}}/{{.APP_NAME}}-cli" -input "{{.BIN_DIR}}/{{.APP_NAME}}-cli-amd64" -input "{{.BIN_DIR}}/{{.APP_NAME}}-cli-arm64"
+      - cmd: powershell Remove-Item -Force "{{.BIN_DIR}}/{{.APP_NAME}}-cli-amd64", "{{.BIN_DIR}}/{{.APP_NAME}}-cli-arm64"
+        platforms: [windows]
+      - cmd: rm -f "{{.BIN_DIR}}/{{.APP_NAME}}-cli-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}-cli-arm64"
+        platforms: [linux, darwin]
 
   package:
     summary: Packages the application into a `.app` bundle

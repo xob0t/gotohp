@@ -137,6 +137,7 @@ tasks:
       SCRIPT: "{{.SCRIPT}}"
 
   generate:bindings:
+    label: generate:bindings (BUILD_FLAGS={{.BUILD_FLAGS}} OBFUSCATED={{.OBFUSCATED}})
     summary: Generates bindings for the frontend
     run: once
     deps:
