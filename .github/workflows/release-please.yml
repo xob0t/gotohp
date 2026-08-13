@@ -40,9 +40,15 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install System Dependencies
+        if: ${{ steps.release-please.outputs.prs_created == 'true' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gcc pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+
       - name: Install Wails3
         if: ${{ steps.release-please.outputs.prs_created == 'true' }}
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
 
       - name: Regenerate Build Assets on Release PR
         if: ${{ steps.release-please.outputs.prs_created == 'true' }}
