@@ -401,7 +401,7 @@ var supportedFormats = map[string]bool{
 	"3gp": true, "3g2": true, "asf": true, "avi": true, "divx": true,
 	"m2t": true, "m2ts": true, "m4v": true, "mkv": true, "mmv": true,
 	"mod": true, "mov": true, "mp4": true, "mpg": true, "mpeg": true,
-	"mts": true, "tod": true, "wmv": true, "ts": true,
+	"mts": true, "tod": true, "wmv": true, "ts": true, "webm": true,
 }
 
 // isSupportedByGooglePhotos checks if a file extension is supported by Google Photos
