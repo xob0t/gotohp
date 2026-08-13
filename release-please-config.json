@@ -4,7 +4,12 @@
     ".": {
       "release-type": "go",
       "include-component-in-tag": false,
-      "extra-files": ["build/config.yml"]
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "build/config.yml"
+        }
+      ]
     }
   }
 }
