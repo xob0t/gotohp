@@ -29,10 +29,17 @@ on:
         type: boolean
   push:
     tags:
-      - "v*" # Triggers on version tags like v1.0.0, v2.1.3, etc.
+      - "v*" # Created by Release Please when the release PR is merged
 
 permissions:
   contents: write
+
+env:
+  WAILS_VERSION: v3.0.0-beta.8
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-macos:
@@ -46,41 +53,21 @@ jobs:
         with:
           ref: ${{ github.event_name == 'push' && github.sha || (inputs.commit_sha || inputs.branch) }}
 
-      - name: Set Tag and Release Info
-        id: set-tag
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            # Tag push event
-            TAG_NAME="${{ github.ref_name }}"
-            RELEASE_NAME="Release ${{ github.ref_name }}"
-            RELEASE_BODY="Release build for tag: ${{ github.ref_name }}"
-            IS_PRERELEASE="false"
-          else
-            # Manual workflow_dispatch event
-            TAG_NAME="manual-build-${{ inputs.commit_sha && inputs.commit_sha || inputs.branch }}"
-            RELEASE_NAME="Manual Build from ${{ inputs.branch }}${{ inputs.commit_sha && format(' ({0})', inputs.commit_sha) || '' }} (Latest)"
-            RELEASE_BODY="Latest manually triggered build artifacts from branch: ${{ inputs.branch }}${{ inputs.commit_sha && format('\nCommit: {0}', inputs.commit_sha) || '' }}"
-            IS_PRERELEASE="true"
-          fi
-
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
-          echo "release_body=$RELEASE_BODY" >> $GITHUB_OUTPUT
-          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: frontend/.node-version
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Install Wails3
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
 
       - name: Build macOS App (Production)
         run: |
@@ -132,18 +119,6 @@ jobs:
           name: macos-debug
           path: release/gotohp-macos-universal_debug
 
-      - name: Upload to Draft Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            release/gotohp-macos-universal.zip
-            release/gotohp-cli-macos-universal
-          tag_name: ${{ steps.set-tag.outputs.tag_name }}
-          name: ${{ steps.set-tag.outputs.release_name }}
-          body: ${{ steps.set-tag.outputs.release_body }}
-          draft: true
-          prerelease: ${{ steps.set-tag.outputs.is_prerelease }}
-
   build-windows:
     name: Build Windows
     runs-on: windows-latest
@@ -155,35 +130,15 @@ jobs:
         with:
           ref: ${{ github.event_name == 'push' && github.sha || (inputs.commit_sha || inputs.branch) }}
 
-      - name: Set Tag and Release Info
-        id: set-tag
-        run: |
-          if ("${{ github.event_name }}" -eq "push") {
-            # Tag push event
-            $TAG_NAME = "${{ github.ref_name }}"
-            $RELEASE_NAME = "Release ${{ github.ref_name }}"
-            $RELEASE_BODY = "Release build for tag: ${{ github.ref_name }}"
-            $IS_PRERELEASE = "false"
-          } else {
-            # Manual workflow_dispatch event
-            $TAG_NAME = "manual-build-${{ inputs.commit_sha && inputs.commit_sha || inputs.branch }}"
-            $RELEASE_NAME = "Manual Build from ${{ inputs.branch }}${{ inputs.commit_sha && format(' ({0})', inputs.commit_sha) || '' }} (Latest)"
-            $RELEASE_BODY = "Latest manually triggered build artifacts from branch: ${{ inputs.branch }}${{ inputs.commit_sha && format('\nCommit: {0}', inputs.commit_sha) || '' }}"
-            $IS_PRERELEASE = "true"
-          }
-
-          "tag_name=$TAG_NAME" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "release_name=$RELEASE_NAME" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "release_body=$RELEASE_BODY" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "is_prerelease=$IS_PRERELEASE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: frontend/.node-version
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
@@ -196,7 +151,7 @@ jobs:
 
       - name: Install Wails3
         shell: cmd
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
 
       - name: Build Windows App (Production)
         shell: pwsh
@@ -252,18 +207,6 @@ jobs:
             release/gotohp-x64_debug.exe
             release/gotohp-cli-x64_debug.exe
 
-      - name: Upload to Draft Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            release/gotohp-x64.exe
-            release/gotohp-cli-x64.exe
-          tag_name: ${{ steps.set-tag.outputs.tag_name }}
-          name: ${{ steps.set-tag.outputs.release_name }}
-          body: ${{ steps.set-tag.outputs.release_body }}
-          draft: true
-          prerelease: ${{ steps.set-tag.outputs.is_prerelease }}
-
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
@@ -275,35 +218,15 @@ jobs:
         with:
           ref: ${{ github.event_name == 'push' && github.sha || (inputs.commit_sha || inputs.branch) }}
 
-      - name: Set Tag and Release Info
-        id: set-tag
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            # Tag push event
-            TAG_NAME="${{ github.ref_name }}"
-            RELEASE_NAME="Release ${{ github.ref_name }}"
-            RELEASE_BODY="Release build for tag: ${{ github.ref_name }}"
-            IS_PRERELEASE="false"
-          else
-            # Manual workflow_dispatch event
-            TAG_NAME="manual-build-${{ inputs.commit_sha && inputs.commit_sha || inputs.branch }}"
-            RELEASE_NAME="Manual Build from ${{ inputs.branch }}${{ inputs.commit_sha && format(' ({0})', inputs.commit_sha) || '' }} (Latest)"
-            RELEASE_BODY="Latest manually triggered build artifacts from branch: ${{ inputs.branch }}${{ inputs.commit_sha && format('\nCommit: {0}', inputs.commit_sha) || '' }}"
-            IS_PRERELEASE="true"
-          fi
-
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
-          echo "release_body=$RELEASE_BODY" >> $GITHUB_OUTPUT
-          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: frontend/.node-version
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
@@ -317,7 +240,7 @@ jobs:
         run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
       - name: Install Wails3
-        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
 
       - name: Build Linux App (Production)
         run: |
@@ -377,16 +300,33 @@ jobs:
           name: linux-debug
           path: release/gotohp_amd64_debug
 
-      - name: Upload to Draft Release
-        uses: softprops/action-gh-release@v2
+  release:
+    name: Attach Release Assets
+    runs-on: ubuntu-latest
+    needs: [build-macos, build-windows, build-linux]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download Release Artifacts
+        uses: actions/download-artifact@v4
         with:
-          files: |
-            release/gotohp_amd64.deb
-            release/gotohp_amd64.AppImage
-            release/gotohp-cli_amd64
-            release/gotohp-cli_amd64.deb
-          tag_name: ${{ steps.set-tag.outputs.tag_name }}
-          name: ${{ steps.set-tag.outputs.release_name }}
-          body: ${{ steps.set-tag.outputs.release_body }}
-          draft: true
-          prerelease: ${{ steps.set-tag.outputs.is_prerelease }}
+          pattern: "*-release"
+          merge-multiple: true
+          path: release
+
+      - name: Generate Checksums
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload Assets to Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Release Please creates the release before pushing the tag; the
+          # create call is a fallback for manually pushed tags.
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
+          fi
+          gh release upload "$TAG" release/* --clobber --repo "$GITHUB_REPOSITORY"
