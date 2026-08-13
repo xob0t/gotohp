@@ -9,11 +9,15 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  WAILS_VERSION: v3.0.0-beta.8
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@v4
+        id: release-please
         with:
           # RELEASE_PLEASE_TOKEN must be a PAT (contents: write, pull-requests: write).
           # Tags created with the default GITHUB_TOKEN do not trigger other
@@ -21,3 +25,34 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # Regenerate the Wails build assets (Info.plist, Windows version info,
+      # nfpm configs) on the release PR branch so the version bump in
+      # build/config.yml is reflected in the committed metadata.
+      - uses: actions/checkout@v4
+        if: ${{ steps.release-please.outputs.prs_created == 'true' }}
+        with:
+          ref: ${{ fromJSON(steps.release-please.outputs.pr).headBranchName }}
+
+      - uses: actions/setup-go@v5
+        if: ${{ steps.release-please.outputs.prs_created == 'true' }}
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Wails3
+        if: ${{ steps.release-please.outputs.prs_created == 'true' }}
+        run: go install -v github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+
+      - name: Regenerate Build Assets on Release PR
+        if: ${{ steps.release-please.outputs.prs_created == 'true' }}
+        run: |
+          wails3 task common:update:build-assets
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "chore: regenerate build assets for release"
+            git push
+          else
+            echo "Build assets already up to date"
+          fi
