@@ -12,7 +12,7 @@ require (
 	github.com/knadh/koanf/providers/structs v1.0.1
 	github.com/knadh/koanf/v2 v2.3.6
 	github.com/tink-crypto/tink-go/v2 v2.8.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.8
+	github.com/wailsapp/wails/v3 v3.0.0-beta.12
 	google.golang.org/protobuf v1.36.12
 	modernc.org/sqlite v1.56.0
 )
