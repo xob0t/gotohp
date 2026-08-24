@@ -168,8 +168,9 @@ tasks:
 
   dev:frontend:
     summary: Runs the frontend in development mode
-    deps:
-      - task: install:frontend:deps
+    # `wails3 dev` runs a blocking development build before this task, and that
+    # build already installs the frontend dependencies. Repeating the install
+    # here can exhaust Wails' five-second frontend readiness timeout.
     cmds:
       - task: frontend:dev:{{.PACKAGE_MANAGER}}
 
