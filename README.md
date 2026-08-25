@@ -103,10 +103,8 @@ You only need to do this once.
 2. Click **Open Google sign-in** and sign in with the account you want to add.
 3. Sign in on the Google Embedded Setup page and click **I agree**. The page may keep loading forever; this is expected.
 4. Open the browser developer tools. Under Application or Storage, open Cookies for `accounts.google.com`.
-5. Copy only the value of the `oauth_token` cookie and paste it into gotohp. Google supplies the account email during the exchange.
+5. Copy only the value of the `oauth_token` cookie and paste it into gotohp.
 6. Click **Connect account**. gotohp exchanges the one-time cookie and does not save it.
-
-This flow uses an unofficial Google Play Services authentication endpoint and may stop working if Google changes it. Treat both the cookie and the saved gotohp credential like passwords.
 
 ### Option 2 - ReVanced. No root required
 
