@@ -42,6 +42,16 @@ type Config struct {
 	IgnoreAppleMetadata bool `json:"-" koanf:"-"`
 }
 
+type AccountSummary struct {
+	Email             string `json:"email"`
+	NeedsTokenBinding bool   `json:"needsTokenBinding"`
+}
+
+type AccountsState struct {
+	Accounts []AccountSummary `json:"accounts"`
+	Selected string           `json:"selected"`
+}
+
 type ConfigManager struct{}
 
 var (
@@ -542,12 +552,48 @@ func getUserConfigDir() string {
 	return dirname
 }
 
+//wails:ignore
 func (g *ConfigManager) GetConfig() Config {
-	// Don't reload if already loaded
-	if len(AppConfig.Credentials) == 0 && AppConfig.UploadThreads == 0 {
+	ensureConfigLoaded()
+	return AppConfig
+}
+
+func (g *ConfigManager) GetSettings() Config {
+	ensureConfigLoaded()
+	configMu.RLock()
+	defer configMu.RUnlock()
+
+	settings := AppConfig
+	settings.Credentials = nil
+	return settings
+}
+
+func (g *ConfigManager) GetAccounts() AccountsState {
+	ensureConfigLoaded()
+	configMu.RLock()
+	defer configMu.RUnlock()
+
+	state := AccountsState{
+		Accounts: make([]AccountSummary, 0, len(AppConfig.Credentials)),
+		Selected: AppConfig.Selected,
+	}
+	for _, credential := range AppConfig.Credentials {
+		values, err := url.ParseQuery(credential)
+		if err != nil || values.Get("Email") == "" {
+			continue
+		}
+		state.Accounts = append(state.Accounts, AccountSummary{
+			Email:             values.Get("Email"),
+			NeedsTokenBinding: credentialNeedsTokenBinding(values),
+		})
+	}
+	return state
+}
+
+func ensureConfigLoaded() {
+	if ConfigPath == "" {
 		_ = LoadConfig()
 	}
-	return AppConfig
 }
 
 // LoadConfig loads the configuration (exported for CLI use)
@@ -559,6 +605,7 @@ func LoadConfig() error {
 		AppConfig = DefaultConfig
 	} else {
 		AppConfig = loadAppConfig()
+		_ = os.Chmod(ConfigPath, 0o600)
 	}
 
 	return nil
@@ -572,7 +619,7 @@ func saveAppConfig() error {
 		fmt.Println(err)
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(ConfigPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(ConfigPath), 0o700); err != nil {
 		return err
 	}
 	b, err := k.Marshal(yaml.Parser())
@@ -581,13 +628,37 @@ func saveAppConfig() error {
 		return err
 	}
 
-	err = os.WriteFile(ConfigPath, b, 0o644)
+	return writeConfigAtomically(ConfigPath, b)
+}
+
+func writeConfigAtomically(path string, contents []byte) error {
+	directory := filepath.Dir(path)
+	temporary, err := os.CreateTemp(directory, ".gotohp-config-*")
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
+	temporaryPath := temporary.Name()
+	defer func() { _ = os.Remove(temporaryPath) }()
 
-	return nil
+	if err := temporary.Chmod(0o600); err != nil {
+		_ = temporary.Close()
+		return err
+	}
+	if _, err := temporary.Write(contents); err != nil {
+		_ = temporary.Close()
+		return err
+	}
+	if err := temporary.Sync(); err != nil {
+		_ = temporary.Close()
+		return err
+	}
+	if err := temporary.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(temporaryPath, path); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o600)
 }
 
 func loadAppConfig() Config {

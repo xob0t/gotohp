@@ -47,7 +47,6 @@ func NewApi() (*Api, error) {
 		return nil, fmt.Errorf("no account is selected")
 	}
 	credentials := ""
-	language := ""
 	for _, c := range AppConfig.Credentials {
 		params, err := url.ParseQuery(c)
 		if err != nil {
@@ -55,7 +54,6 @@ func NewApi() (*Api, error) {
 		}
 		if params.Get("Email") == selectedEmail {
 			credentials = c
-			language = params.Get("lang")
 		}
 	}
 
@@ -63,7 +61,16 @@ func NewApi() (*Api, error) {
 		return nil, fmt.Errorf("no credentials with matching selected email found")
 	}
 
-	client, err := NewHTTPClientWithProxy(AppConfig.Proxy)
+	return newAPIFromCredential(credentials, AppConfig.Proxy)
+}
+
+func newAPIFromCredential(credentials string, proxy string) (*Api, error) {
+	params, err := url.ParseQuery(credentials)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse credentials: %w", err)
+	}
+
+	client, err := NewHTTPClientWithProxy(proxy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
@@ -73,7 +80,7 @@ func NewApi() (*Api, error) {
 		model:             "Pixel XL",
 		make:              "Google",
 		clientVersionCode: 49029607,
-		language:          language,
+		language:          params.Get("lang"),
 		authData:          strings.TrimSpace(credentials),
 		client:            client,
 		authResponseCache: map[string]string{

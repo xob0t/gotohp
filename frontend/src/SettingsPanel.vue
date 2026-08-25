@@ -59,7 +59,7 @@ const toggleSetting = (setting: BooleanSetting, enabled = true) => {
 
 onMounted(async () => {
     try {
-        const config = await ConfigManager.GetConfig()
+        const config = await ConfigManager.GetSettings()
         settings.value = {
             proxy: config.proxy || '',
             useQuota: config.useQuota || false,

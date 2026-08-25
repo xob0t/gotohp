@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 interface Props {
     modelValue?: string
     options?: string[]
+    allowCredentialEntry?: boolean
 }
 
 interface Emits {
@@ -20,7 +21,8 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
     modelValue: '',
-    options: () => []
+    options: () => [],
+    allowCredentialEntry: true,
 })
 
 const emit = defineEmits<Emits>()
@@ -75,7 +77,7 @@ const removeOption = (index: number) => {
 <template>
   <!-- Show only the Add input when there are no options -->
   <div
-    v-if="internalOptions.length === 0"
+    v-if="internalOptions.length === 0 && allowCredentialEntry"
     class="flex gap-2"
   >
     <Input
@@ -124,7 +126,10 @@ const removeOption = (index: number) => {
           </div>
         </template>
       </SelectGroup>
-      <div class="p-2 flex gap-2">
+      <div
+        v-if="allowCredentialEntry"
+        class="p-2 flex gap-2"
+      >
         <Input
           v-model="newOption"
           class="h-8 px-1"

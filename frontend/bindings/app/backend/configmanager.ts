@@ -13,12 +13,22 @@ export function AddCredentials(newAuthString: string): $CancellablePromise<void>
     return $Call.ByID(4083250689, newAuthString);
 }
 
+export function AddGoogleAccount(oauthToken: string): $CancellablePromise<string> {
+    return $Call.ByID(733209449, oauthToken);
+}
+
 export function AddTokenBindingAliasFromADB(email: string): $CancellablePromise<void> {
     return $Call.ByID(3252041498, email);
 }
 
 export function CredentialNeedsTokenBinding(authString: string): $CancellablePromise<boolean> {
     return $Call.ByID(920629710, authString);
+}
+
+export function GetAccounts(): $CancellablePromise<$models.AccountsState> {
+    return $Call.ByID(562122970).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 export function GetAlbumAutoMode(): $CancellablePromise<boolean> {
@@ -29,14 +39,14 @@ export function GetAlbumName(): $CancellablePromise<string> {
     return $Call.ByID(3590690922);
 }
 
-export function GetConfig(): $CancellablePromise<$models.Config> {
-    return $Call.ByID(815152812).then(($result: any) => {
-        return $$createType0($result);
-    });
-}
-
 export function GetExcludePattern(): $CancellablePromise<string> {
     return $Call.ByID(2942848526);
+}
+
+export function GetSettings(): $CancellablePromise<$models.Config> {
+    return $Call.ByID(4262641511).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 export function RemoveCredentials(email: string): $CancellablePromise<void> {
@@ -108,4 +118,5 @@ export function SetUseQuota(useQuota: boolean): $CancellablePromise<void> {
 }
 
 // Private type creation functions
-const $$createType0 = $models.Config.createFrom;
+const $$createType0 = $models.AccountsState.createFrom;
+const $$createType1 = $models.Config.createFrom;

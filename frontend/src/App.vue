@@ -13,6 +13,7 @@ import { ConfigManager } from '../bindings/app/backend'
 import { Events } from '@wailsio/runtime'
 import Button from "./components/ui/button/Button.vue"
 import EditableSelect from "./components/ui/EditableSelect.vue"
+import GoogleAuthSetup from "./components/GoogleAuthSetup.vue"
 import './index.css'
 import SettingsPanel from "./SettingsPanel.vue"
 import Upload from './Upload.vue'
@@ -36,20 +37,10 @@ const pendingFileCount = ref(0)
 
 const selectedOption = ref('')
 const options = ref<string[]>([])
-const credentialMap = ref<Record<string, string>>({})
+const accountNeedsTokenBinding = ref<Record<string, boolean>>({})
 const albumNameOrKey = ref('')
 const tokenBindingEmail = ref('')
 const isExtractingTokenBinding = ref(false)
-
-function extractEmailFromCredential(credential: string): string | null {
-  try {
-    const params = new URLSearchParams(credential)
-    return params.get('Email') || null
-  } catch (error) {
-    console.error('Failed to parse credential:', error)
-    return null
-  }
-}
 
 watch(selectedOption, async (newValue) => {
   if (newValue) {
@@ -67,59 +58,22 @@ watch(selectedOption, async (newValue) => {
 })
 
 async function updateTokenBindingPrompt(email: string) {
-  const credential = credentialMap.value[email]
-  if (!credential) {
-    tokenBindingEmail.value = ''
-    return
-  }
-
-  tokenBindingEmail.value = await ConfigManager.CredentialNeedsTokenBinding(credential)
-    ? email
-    : ''
-}
-
-async function addCredentials(authString: string) {
-  try {
-    await ConfigManager.AddCredentials(authString)
-
-    const email = extractEmailFromCredential(authString)
-    if (email) {
-      credentialMap.value[email] = authString
-      if (!options.value.includes(email)) {
-        options.value = [...options.value, email]
-      }
-      selectedOption.value = email
-      await updateTokenBindingPrompt(email)
-    }
-    toast.success('Credentials added successfully!')
-    return true
-  } catch (error: unknown) {
-    console.error('Failed to add credentials:', error)
-    toast.error('Failed to add credentials', {
-      description: error instanceof Error ? error.message : String(error),
-    })
-    return false
-  }
+  tokenBindingEmail.value = accountNeedsTokenBinding.value[email] ? email : ''
 }
 
 async function refreshCredentials() {
-  const config = await ConfigManager.GetConfig()
-  credentialMap.value = {}
-  options.value = []
+  const state = await ConfigManager.GetAccounts()
+  accountNeedsTokenBinding.value = {}
+  options.value = state.accounts.map(account => {
+    accountNeedsTokenBinding.value[account.email] = account.needsTokenBinding
+    return account.email
+  })
 
-  if (config.credentials?.length) {
-    config.credentials.forEach(credential => {
-      const email = extractEmailFromCredential(credential)
-      if (email) {
-        credentialMap.value[email] = credential
-        options.value.push(email)
-      }
-    })
-  }
-
-  if (config.selected) {
-    selectedOption.value = config.selected
-    await updateTokenBindingPrompt(config.selected)
+  selectedOption.value = state.selected || ''
+  if (state.selected) {
+    await updateTokenBindingPrompt(state.selected)
+  } else {
+    tokenBindingEmail.value = ''
   }
 }
 
@@ -146,8 +100,8 @@ async function removeCredentials(email: string) {
   try {
     await ConfigManager.RemoveCredentials(email)
 
-    if (credentialMap.value[email]) {
-      delete credentialMap.value[email]
+    if (options.value.includes(email)) {
+      delete accountNeedsTokenBinding.value[email]
       options.value = options.value.filter(opt => opt !== email)
       if (selectedOption.value === email) {
         selectedOption.value = ''
@@ -379,13 +333,7 @@ onUnmounted(() => {
       data-file-drop-target
     >
       <template v-if="options.length === 0">
-        <EditableSelect
-          v-model="selectedOption"
-          :options="options"
-          @update:options="(newOptions) => options = newOptions"
-          @item-added="addCredentials"
-          @item-removed="removeCredentials"
-        />
+        <GoogleAuthSetup @account-added="refreshCredentials" />
         <div
           v-if="tokenBindingEmail"
           class="w-full max-w-xs border rounded-lg p-3 flex flex-col gap-3"
@@ -458,10 +406,11 @@ onUnmounted(() => {
           <EditableSelect
             v-model="selectedOption"
             :options="options"
+            :allow-credential-entry="false"
             @update:options="(newOptions) => options = newOptions"
-            @item-added="addCredentials"
             @item-removed="removeCredentials"
           />
+          <GoogleAuthSetup @account-added="refreshCredentials" />
           <div
             v-if="tokenBindingEmail"
             class="w-full max-w-xs border rounded-lg p-3 flex flex-col gap-3"
