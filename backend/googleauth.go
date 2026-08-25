@@ -37,11 +37,7 @@ type googleAuthExchange struct {
 }
 
 func (g *ConfigManager) AddGoogleAccount(oauthToken string) (string, error) {
-	if ConfigPath == "" {
-		if err := LoadConfig(); err != nil {
-			return "", fmt.Errorf("load configuration: %w", err)
-		}
-	}
+	ensureConfigLoaded()
 
 	configMu.RLock()
 	proxy := AppConfig.Proxy

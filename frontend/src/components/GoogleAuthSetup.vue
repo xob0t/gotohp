@@ -88,7 +88,7 @@ async function addRawCredential() {
         type="button"
         class="cursor-pointer select-none"
       >
-        Add Google account
+        Add account
       </Button>
     </SheetTrigger>
     <SheetContent

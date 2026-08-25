@@ -555,6 +555,9 @@ func getUserConfigDir() string {
 //wails:ignore
 func (g *ConfigManager) GetConfig() Config {
 	ensureConfigLoaded()
+	configMu.RLock()
+	defer configMu.RUnlock()
+
 	return AppConfig
 }
 
@@ -591,13 +594,28 @@ func (g *ConfigManager) GetAccounts() AccountsState {
 }
 
 func ensureConfigLoaded() {
+	configMu.RLock()
+	loaded := ConfigPath != ""
+	configMu.RUnlock()
+	if loaded {
+		return
+	}
+
+	configMu.Lock()
+	defer configMu.Unlock()
 	if ConfigPath == "" {
-		_ = LoadConfig()
+		_ = loadConfigLocked()
 	}
 }
 
 // LoadConfig loads the configuration (exported for CLI use)
 func LoadConfig() error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	return loadConfigLocked()
+}
+
+func loadConfigLocked() error {
 	determineConfigPath()
 
 	file, _ := os.ReadFile(ConfigPath)

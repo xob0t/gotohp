@@ -62,18 +62,27 @@ async function updateTokenBindingPrompt(email: string) {
 }
 
 async function refreshCredentials() {
-  const state = await ConfigManager.GetAccounts()
-  accountNeedsTokenBinding.value = {}
-  options.value = state.accounts.map(account => {
-    accountNeedsTokenBinding.value[account.email] = account.needsTokenBinding
-    return account.email
-  })
+  try {
+    const state = await ConfigManager.GetAccounts()
+    const nextNeedsTokenBinding: Record<string, boolean> = {}
+    const nextOptions = state.accounts.map(account => {
+      nextNeedsTokenBinding[account.email] = account.needsTokenBinding
+      return account.email
+    })
 
-  selectedOption.value = state.selected || ''
-  if (state.selected) {
-    await updateTokenBindingPrompt(state.selected)
-  } else {
-    tokenBindingEmail.value = ''
+    accountNeedsTokenBinding.value = nextNeedsTokenBinding
+    options.value = nextOptions
+    selectedOption.value = state.selected || ''
+    if (state.selected) {
+      await updateTokenBindingPrompt(state.selected)
+    } else {
+      tokenBindingEmail.value = ''
+    }
+  } catch (error) {
+    console.error('Failed to refresh Google accounts:', error)
+    toast.error('Could not refresh Google accounts', {
+      description: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 
