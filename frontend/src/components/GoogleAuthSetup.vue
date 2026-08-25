@@ -88,7 +88,7 @@ async function addRawCredential() {
         type="button"
         class="cursor-pointer select-none"
       >
-        Add account
+        Add Google account
       </Button>
     </SheetTrigger>
     <SheetContent
@@ -153,7 +153,9 @@ async function addRawCredential() {
             Advanced: paste captured credentials
           </summary>
           <div class="mt-3 flex flex-col gap-2">
+            <Label for="google-raw-credential">Captured credential string</Label>
             <Input
+              id="google-raw-credential"
               v-model="rawCredential"
               type="password"
               autocomplete="off"

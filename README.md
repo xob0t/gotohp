@@ -99,7 +99,7 @@ You only need to do this once.
 
 ### Option 1 - Embedded setup
 
-1. Open gotohp and click **Add account**.
+1. Open gotohp and click **Add Google account**.
 2. Click **Open Google sign-in** and sign in with the account you want to add.
 3. Sign in on the Google Embedded Setup page and click **I agree**. The page may keep loading forever; this is expected.
 4. Open the browser developer tools. Under Application or Storage, open Cookies for `accounts.google.com`.
