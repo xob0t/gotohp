@@ -4,6 +4,12 @@ import { ConfigManager } from '../bindings/app/backend'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Info } from '@lucide/vue'
 
 import {
     NumberField,
@@ -188,27 +194,51 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       />
     </div>
     <div class="flex items-center justify-between">
-      <Label
-        for="force-upload"
-        class="size-full cursor-pointer"
-      >Force Upload</Label>
+      <div class="flex min-w-0 flex-1 items-center gap-1.5">
+        <Label
+          for="force-upload"
+          class="cursor-pointer"
+        >Force Upload</Label>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button
+              type="button"
+              class="inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              aria-label="About Force Upload"
+            >
+              <Info class="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent class="max-w-72">
+            Applies to single files. Live Photo pairs always check both components for duplicates.
+          </TooltipContent>
+        </Tooltip>
+      </div>
       <Switch
         id="force-upload"
         v-model="settings.forceUpload"
       />
     </div>
-    <p class="-mt-1 text-[11px] leading-snug text-muted-foreground">
-      Applies to single files. Live Photo pairs always check both components for duplicates.
-    </p>
     <div class="flex items-center justify-between">
-      <div class="pr-4">
+      <div class="flex min-w-0 flex-1 items-center gap-1.5 pr-4">
         <Label
           for="pair-live-photos"
           class="cursor-pointer"
         >Pair Apple Live Photos</Label>
-        <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-          Identify Apple Live Photo image and MOV pairs via embedded metadata and upload them as one item.
-        </p>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button
+              type="button"
+              class="inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              aria-label="About Pair Apple Live Photos"
+            >
+              <Info class="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent class="max-w-72">
+            Identify Apple Live Photo image and MOV pairs via embedded metadata and upload them as one item.
+          </TooltipContent>
+        </Tooltip>
       </div>
       <Switch
         id="pair-live-photos"
@@ -219,15 +249,26 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       class="flex items-center justify-between pl-4 transition-opacity"
       :class="settings.pairLivePhotos ? 'opacity-100' : 'opacity-45'"
     >
-      <div class="pr-4">
+      <div class="flex min-w-0 flex-1 items-center gap-1.5 pr-4">
         <Label
           for="skip-incomplete-live-photos"
           class="cursor-pointer"
         >Skip Incomplete Live Photos</Label>
-        <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-          Only upload Live Photos when both photo and video are available. If either is missing,
-          don’t upload the remaining file separately.
-        </p>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button
+              type="button"
+              class="inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              aria-label="About Skip Incomplete Live Photos"
+            >
+              <Info class="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent class="max-w-72">
+            Only upload Live Photos when both photo and video are available. If either is missing,
+            don't upload the remaining file separately.
+          </TooltipContent>
+        </Tooltip>
       </div>
       <Switch
         id="skip-incomplete-live-photos"
@@ -239,14 +280,25 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       class="flex items-center justify-between pl-4 transition-opacity"
       :class="settings.pairLivePhotos ? 'opacity-100' : 'opacity-45'"
     >
-      <div class="pr-4">
+      <div class="flex min-w-0 flex-1 items-center gap-1.5 pr-4">
         <Label
           for="update-existing-photos-to-live"
           class="cursor-pointer"
         >Update Existing Photos to Live Photos</Label>
-        <p class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-          If a static photo was already uploaded, re-upload it alongside its MOV companion to upgrade it to a Live Photo. Both local photo and video files are required.
-        </p>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button
+              type="button"
+              class="inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              aria-label="About Update Existing Photos to Live Photos"
+            >
+              <Info class="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent class="max-w-72">
+            If a static photo was already uploaded, re-upload it alongside its MOV companion to upgrade it to a Live Photo. Both local photo and video files are required.
+          </TooltipContent>
+        </Tooltip>
       </div>
       <Switch
         id="update-existing-photos-to-live"

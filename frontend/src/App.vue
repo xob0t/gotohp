@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import {
   Sheet,
   SheetContent,
@@ -488,7 +489,9 @@ onUnmounted(() => {
               </Button>
             </SheetTrigger>
             <SheetContent side="bottom">
-              <SettingsPanel />
+              <TooltipProvider disable-hoverable-content>
+                <SettingsPanel />
+              </TooltipProvider>
             </SheetContent>
           </Sheet>
 
