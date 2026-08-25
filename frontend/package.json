@@ -34,7 +34,7 @@
     "@iconify/vue": "^5.0.1",
     "@types/node": "^26.2.0",
     "@vitejs/plugin-vue": "^6.0.8",
-    "@wailsio/runtime": "3.0.0-beta.8",
+    "@wailsio/runtime": "3.0.0-beta.12",
     "autoprefixer": "^10.5.4",
     "eslint": "^10.8.1",
     "eslint-plugin-vue": "^10.10.0",
