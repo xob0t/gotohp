@@ -11,7 +11,7 @@ info:
   description: "Google Photos Unofficial Client" # The application description
   copyright: "" # Copyright text
   comments: "" # Comments
-  version: "0.9.0" # The application version, managed by Release Please (x-release-please-version)
+  version: "0.10.0" # The application version, managed by Release Please (x-release-please-version)
 
 # Dev mode configuration
 dev_mode:
