@@ -9,10 +9,12 @@ import {
 } from '@/components/ui/sheet'
 import { useColorMode } from '@vueuse/core'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { UserPlus } from '@lucide/vue'
 import { ConfigManager } from '../bindings/app/backend'
 import { Events } from '@wailsio/runtime'
 import Button from "./components/ui/button/Button.vue"
-import EditableSelect from "./components/ui/EditableSelect.vue"
+import GoogleAccountSelect from './components/GoogleAccountSelect.vue'
+import GoogleAuthSetup from "./components/GoogleAuthSetup.vue"
 import './index.css'
 import SettingsPanel from "./SettingsPanel.vue"
 import Upload from './Upload.vue'
@@ -36,20 +38,12 @@ const pendingFileCount = ref(0)
 
 const selectedOption = ref('')
 const options = ref<string[]>([])
-const credentialMap = ref<Record<string, string>>({})
+const accountNeedsTokenBinding = ref<Record<string, boolean>>({})
 const albumNameOrKey = ref('')
 const tokenBindingEmail = ref('')
 const isExtractingTokenBinding = ref(false)
-
-function extractEmailFromCredential(credential: string): string | null {
-  try {
-    const params = new URLSearchParams(credential)
-    return params.get('Email') || null
-  } catch (error) {
-    console.error('Failed to parse credential:', error)
-    return null
-  }
-}
+const isAccountSetupOpen = ref(false)
+const removingAccount = ref('')
 
 watch(selectedOption, async (newValue) => {
   if (newValue) {
@@ -67,59 +61,31 @@ watch(selectedOption, async (newValue) => {
 })
 
 async function updateTokenBindingPrompt(email: string) {
-  const credential = credentialMap.value[email]
-  if (!credential) {
-    tokenBindingEmail.value = ''
-    return
-  }
-
-  tokenBindingEmail.value = await ConfigManager.CredentialNeedsTokenBinding(credential)
-    ? email
-    : ''
-}
-
-async function addCredentials(authString: string) {
-  try {
-    await ConfigManager.AddCredentials(authString)
-
-    const email = extractEmailFromCredential(authString)
-    if (email) {
-      credentialMap.value[email] = authString
-      if (!options.value.includes(email)) {
-        options.value = [...options.value, email]
-      }
-      selectedOption.value = email
-      await updateTokenBindingPrompt(email)
-    }
-    toast.success('Credentials added successfully!')
-    return true
-  } catch (error: unknown) {
-    console.error('Failed to add credentials:', error)
-    toast.error('Failed to add credentials', {
-      description: error instanceof Error ? error.message : String(error),
-    })
-    return false
-  }
+  tokenBindingEmail.value = accountNeedsTokenBinding.value[email] ? email : ''
 }
 
 async function refreshCredentials() {
-  const config = await ConfigManager.GetConfig()
-  credentialMap.value = {}
-  options.value = []
-
-  if (config.credentials?.length) {
-    config.credentials.forEach(credential => {
-      const email = extractEmailFromCredential(credential)
-      if (email) {
-        credentialMap.value[email] = credential
-        options.value.push(email)
-      }
+  try {
+    const state = await ConfigManager.GetAccounts()
+    const nextNeedsTokenBinding: Record<string, boolean> = {}
+    const nextOptions = state.accounts.map(account => {
+      nextNeedsTokenBinding[account.email] = account.needsTokenBinding
+      return account.email
     })
-  }
 
-  if (config.selected) {
-    selectedOption.value = config.selected
-    await updateTokenBindingPrompt(config.selected)
+    accountNeedsTokenBinding.value = nextNeedsTokenBinding
+    options.value = nextOptions
+    selectedOption.value = state.selected || ''
+    if (state.selected) {
+      await updateTokenBindingPrompt(state.selected)
+    } else {
+      tokenBindingEmail.value = ''
+    }
+  } catch (error) {
+    console.error('Failed to refresh Google accounts:', error)
+    toast.error('Could not refresh Google accounts', {
+      description: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 
@@ -143,18 +109,14 @@ async function addTokenBindingAliasFromADB() {
 }
 
 async function removeCredentials(email: string) {
+  removingAccount.value = email
   try {
     await ConfigManager.RemoveCredentials(email)
 
-    if (credentialMap.value[email]) {
-      delete credentialMap.value[email]
-      options.value = options.value.filter(opt => opt !== email)
-      if (selectedOption.value === email) {
-        selectedOption.value = ''
-      }
-      if (tokenBindingEmail.value === email) {
-        tokenBindingEmail.value = ''
-      }
+    const removedSelectedAccount = selectedOption.value === email
+    await refreshCredentials()
+    if (removedSelectedAccount && options.value.length > 0 && !selectedOption.value) {
+      selectedOption.value = options.value[0]
     }
     toast.success('Credentials removed.')
     return true
@@ -162,7 +124,13 @@ async function removeCredentials(email: string) {
     console.error('Failed to remove credentials:', error)
     toast.error('Failed to remove credentials.')
     return false
+  } finally {
+    removingAccount.value = ''
   }
+}
+
+function openAccountSetup() {
+  isAccountSetupOpen.value = true
 }
 
 onMounted(async () => {
@@ -375,31 +343,27 @@ onUnmounted(() => {
     <!-- Normal UI (not dragging) -->
     <div
       v-else-if="!uploadState.isUploading"
-      class="w-screen h-screen flex flex-col items-center gap-4 max-w-md pt-30"
+      class="w-screen h-screen flex flex-col items-center gap-4 max-w-md px-6 pt-30"
       data-file-drop-target
     >
       <template v-if="options.length === 0">
-        <EditableSelect
-          v-model="selectedOption"
-          :options="options"
-          @update:options="(newOptions) => options = newOptions"
-          @item-added="addCredentials"
-          @item-removed="removeCredentials"
-        />
-        <div
-          v-if="tokenBindingEmail"
-          class="w-full max-w-xs border rounded-lg p-3 flex flex-col gap-3"
-          style="--wails-draggable: none"
-        >
-          <p class="text-sm text-muted-foreground">
-            This credential needs a token binding key from the rooted Android device it was captured from.
-          </p>
+        <div class="flex max-w-xs flex-col items-center gap-4 text-center">
+          <div class="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <UserPlus class="size-5" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <h1 class="text-xl font-semibold select-none">
+              Connect Google Photos
+            </h1>
+            <p class="text-sm text-muted-foreground select-none">
+              Add an account before uploading photos and videos.
+            </p>
+          </div>
           <Button
             class="cursor-pointer select-none"
-            :disabled="isExtractingTokenBinding"
-            @click="addTokenBindingAliasFromADB"
+            @click="openAccountSetup"
           >
-            {{ isExtractingTokenBinding ? 'Reading ADB...' : 'Read from ADB' }}
+            Add Google account
           </Button>
         </div>
       </template>
@@ -455,12 +419,12 @@ onUnmounted(() => {
           <h1 class="text-xl font-semibold select-none">
             Drop files to upload
           </h1>
-          <EditableSelect
+          <GoogleAccountSelect
             v-model="selectedOption"
             :options="options"
-            @update:options="(newOptions) => options = newOptions"
-            @item-added="addCredentials"
+            :removing-account="removingAccount"
             @item-removed="removeCredentials"
+            @add="openAccountSetup"
           />
           <div
             v-if="tokenBindingEmail"
@@ -523,6 +487,10 @@ onUnmounted(() => {
     >
       <Upload />
     </div>
+    <GoogleAuthSetup
+      v-model:open="isAccountSetupOpen"
+      @account-added="refreshCredentials"
+    />
     <Toaster
       position="bottom-center"
       rich-colors

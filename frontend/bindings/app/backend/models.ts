@@ -5,6 +5,60 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+export class AccountSummary {
+    "email": string;
+    "needsTokenBinding": boolean;
+
+    /** Creates a new AccountSummary instance. */
+    constructor($$source: Partial<AccountSummary> = {}) {
+        if (!("email" in $$source)) {
+            this["email"] = "";
+        }
+        if (!("needsTokenBinding" in $$source)) {
+            this["needsTokenBinding"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AccountSummary instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AccountSummary {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AccountSummary($$parsedSource as Partial<AccountSummary>);
+    }
+}
+
+export class AccountsState {
+    "accounts": AccountSummary[];
+    "selected": string;
+
+    /** Creates a new AccountsState instance. */
+    constructor($$source: Partial<AccountsState> = {}) {
+        if (!("accounts" in $$source)) {
+            this["accounts"] = [];
+        }
+        if (!("selected" in $$source)) {
+            this["selected"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AccountsState instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AccountsState {
+        const $$createField0_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("accounts" in $$parsedSource) {
+            $$parsedSource["accounts"] = $$createField0_0($$parsedSource["accounts"]);
+        }
+        return new AccountsState($$parsedSource as Partial<AccountsState>);
+    }
+}
+
 /**
  * AlbumError represents an album creation error
  */
@@ -68,7 +122,7 @@ export class AlbumStatus {
      * Creates a new AlbumStatus instance from a string or object.
      */
     static createFrom($$source: any = {}): AlbumStatus {
-        const $$createField3_0 = $$createType0;
+        const $$createField3_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("AlbumKeys" in $$parsedSource) {
             $$parsedSource["AlbumKeys"] = $$createField3_0($$parsedSource["AlbumKeys"]);
@@ -78,7 +132,7 @@ export class AlbumStatus {
 }
 
 export class Config {
-    "credentials": string[];
+    "credentials"?: string[];
     "selected": string;
     "proxy": string;
     "useQuota": boolean;
@@ -98,9 +152,6 @@ export class Config {
 
     /** Creates a new Config instance. */
     constructor($$source: Partial<Config> = {}) {
-        if (!("credentials" in $$source)) {
-            this["credentials"] = [];
-        }
         if (!("selected" in $$source)) {
             this["selected"] = "";
         }
@@ -157,7 +208,7 @@ export class Config {
      * Creates a new Config instance from a string or object.
      */
     static createFrom($$source: any = {}): Config {
-        const $$createField0_0 = $$createType0;
+        const $$createField0_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("credentials" in $$parsedSource) {
             $$parsedSource["credentials"] = $$createField0_0($$parsedSource["credentials"]);
@@ -214,7 +265,7 @@ export class FileUploadResult {
      * Creates a new FileUploadResult instance from a string or object.
      */
     static createFrom($$source: any = {}): FileUploadResult {
-        const $$createField8_0 = $$createType0;
+        const $$createField8_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("Paths" in $$parsedSource) {
             $$parsedSource["Paths"] = $$createField8_0($$parsedSource["Paths"]);
@@ -246,7 +297,7 @@ export class FilesDroppedEvent {
      * Creates a new FilesDroppedEvent instance from a string or object.
      */
     static createFrom($$source: any = {}): FilesDroppedEvent {
-        const $$createField0_0 = $$createType0;
+        const $$createField0_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("files" in $$parsedSource) {
             $$parsedSource["files"] = $$createField0_0($$parsedSource["files"]);
@@ -279,7 +330,7 @@ export class PreflightWarning {
      * Creates a new PreflightWarning instance from a string or object.
      */
     static createFrom($$source: any = {}): PreflightWarning {
-        const $$createField0_0 = $$createType0;
+        const $$createField0_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("Paths" in $$parsedSource) {
             $$parsedSource["Paths"] = $$createField0_0($$parsedSource["Paths"]);
@@ -307,7 +358,7 @@ export class StartUploadEvent {
      * Creates a new StartUploadEvent instance from a string or object.
      */
     static createFrom($$source: any = {}): StartUploadEvent {
-        const $$createField0_0 = $$createType0;
+        const $$createField0_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("files" in $$parsedSource) {
             $$parsedSource["files"] = $$createField0_0($$parsedSource["files"]);
@@ -399,4 +450,6 @@ export class UploadBatchStart {
 }
 
 // Private type creation functions
-const $$createType0 = $Create.Array($Create.Any);
+const $$createType0 = AccountSummary.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $Create.Array($Create.Any);

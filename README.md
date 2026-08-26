@@ -93,11 +93,20 @@ Current limitations:
 - **Force Upload** remains a single-file option and does not bypass Live Photo
   pair decisions.
 
-## Requires mobile app credentials to work
+## Sign in
 
 You only need to do this once.
 
-### Option 1 - ReVanced. No root required
+### Option 1 - Embedded setup
+
+1. Open gotohp and click **Add Google account**.
+2. Click **Open Google sign-in** and sign in with the account you want to add.
+3. Sign in on the Google Embedded Setup page and click **I agree**. The page may keep loading forever; this is expected.
+4. Open the browser developer tools. Under Application or Storage, open Cookies for `accounts.google.com`.
+5. Copy only the value of the `oauth_token` cookie and paste it into gotohp.
+6. Click **Connect account**. gotohp exchanges the one-time cookie and does not save it.
+
+### Option 2 - ReVanced. No root required
 
 1. Install Google Photos ReVanced on your android device/emulator.
    - Install GmsCore [https://github.com/ReVanced/GmsCore/releases](https://github.com/ReVanced/GmsCore/releases)
@@ -123,7 +132,7 @@ You only need to do this once.
 7. Copy text from `androidId=` to the end of the line from any log.
 8. That's it! 🎉
 
-### Option 2 - Official apk. Root required
+### Option 3 - Official apk. Root required
 
 <details>
   <summary><strong>Click to expand</strong></summary>

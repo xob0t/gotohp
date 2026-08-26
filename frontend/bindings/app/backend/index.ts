@@ -7,6 +7,8 @@ export {
 };
 
 export {
+    AccountSummary,
+    AccountsState,
     AlbumError,
     AlbumStatus,
     Config,
