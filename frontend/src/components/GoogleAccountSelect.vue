@@ -52,7 +52,7 @@ watch(selectedValue, (newValue) => {
     v-model="selectedValue"
     v-model:open="isOpen"
   >
-    <SelectTrigger class="w-60 select-none">
+    <SelectTrigger class="max-w-60 select-none">
       <SelectValue placeholder="Select account" />
     </SelectTrigger>
     <SelectContent
