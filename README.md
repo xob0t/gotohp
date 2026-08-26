@@ -95,8 +95,6 @@ Current limitations:
 
 ## Sign in
 
-You only need to do this once.
-
 ### Option 1 - Embedded setup
 
 1. Open gotohp and click **Add Google account**.
@@ -104,9 +102,12 @@ You only need to do this once.
 3. Sign in on the Google Embedded Setup page and click **I agree**. The page may keep loading forever; this is expected.
 4. Open the browser developer tools. Under Application or Storage, open Cookies for `accounts.google.com`.
 5. Copy only the value of the `oauth_token` cookie and paste it into gotohp.
-6. Click **Connect account**. gotohp exchanges the one-time cookie and does not save it.
+6. Click **Connect account**.
 
 ### Option 2 - ReVanced. No root required
+
+<details>
+  <summary><strong>Click to expand</strong></summary>
 
 1. Install Google Photos ReVanced on your android device/emulator.
    - Install GmsCore [https://github.com/ReVanced/GmsCore/releases](https://github.com/ReVanced/GmsCore/releases)
@@ -131,6 +132,8 @@ You only need to do this once.
 6. One or more identical GmsCore logs should appear in the terminal.
 7. Copy text from `androidId=` to the end of the line from any log.
 8. That's it! 🎉
+
+</details>
 
 ### Option 3 - Official apk. Root required
 
