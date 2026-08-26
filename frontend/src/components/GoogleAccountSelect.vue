@@ -57,7 +57,7 @@ watch(selectedValue, (newValue) => {
     </SelectTrigger>
     <SelectContent
       align="center"
-      class="w-[var(--reka-select-trigger-width)] max-w-[calc(100vw-3rem)]"
+      class="w-max min-w-[var(--reka-select-trigger-width)] max-w-[min(15rem,calc(100vw-3rem))]"
     >
       <SelectGroup>
         <div
@@ -67,14 +67,14 @@ watch(selectedValue, (newValue) => {
         >
           <SelectItemPrimitive
             :value="option"
-            class="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-9 pl-8 text-sm outline-hidden select-none"
+            class="focus:bg-accent focus:text-accent-foreground relative flex min-w-0 w-full cursor-default items-center rounded-sm py-1.5 pr-9 pl-8 text-sm outline-hidden select-none"
           >
             <span class="absolute left-2 flex size-3.5 items-center justify-center">
               <SelectItemIndicator>
                 <Check class="size-4" />
               </SelectItemIndicator>
             </span>
-            <SelectItemText>
+            <SelectItemText class="min-w-0 flex-1">
               <span class="block max-w-44 truncate">{{ option }}</span>
             </SelectItemText>
           </SelectItemPrimitive>
