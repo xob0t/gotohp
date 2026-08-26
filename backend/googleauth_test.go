@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -340,6 +341,49 @@ func TestWriteConfigAtomicallyReplacesExistingFile(t *testing.T) {
 		if permissions := info.Mode().Perm(); permissions != 0o600 {
 			t.Fatalf("config permissions = %o, want 600", permissions)
 		}
+	}
+}
+
+func TestConcurrentSettingsWritesPersistLatestState(t *testing.T) {
+	restoreConfigGlobals(t)
+
+	configMu.Lock()
+	AppConfig = DefaultConfig
+	ConfigPath = filepath.Join(t.TempDir(), "gotohp.config")
+	configMu.Unlock()
+
+	manager := &ConfigManager{}
+	var writes sync.WaitGroup
+	for index := 1; index <= 16; index++ {
+		index := index
+		writes.Add(2)
+		go func() {
+			defer writes.Done()
+			manager.SetProxy(fmt.Sprintf("proxy-%d", index))
+		}()
+		go func() {
+			defer writes.Done()
+			manager.SetUploadThreads(index)
+		}()
+	}
+	writes.Wait()
+
+	configMu.RLock()
+	wantProxy := AppConfig.Proxy
+	wantUploadThreads := AppConfig.UploadThreads
+	path := ConfigPath
+	configMu.RUnlock()
+
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	saved := string(contents)
+	if !strings.Contains(saved, fmt.Sprintf("proxy: %s", wantProxy)) {
+		t.Fatalf("saved proxy does not match memory: want %q in %s", wantProxy, saved)
+	}
+	if !strings.Contains(saved, fmt.Sprintf("upload_threads: %d", wantUploadThreads)) {
+		t.Fatalf("saved upload threads do not match memory: want %d in %s", wantUploadThreads, saved)
 	}
 }
 

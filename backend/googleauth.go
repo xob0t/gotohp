@@ -317,7 +317,7 @@ func upsertCredential(credential string) error {
 	}
 	AppConfig.Selected = email
 
-	if err := saveAppConfig(); err != nil {
+	if err := saveAppConfigLocked(); err != nil {
 		AppConfig.Credentials = previousCredentials
 		AppConfig.Selected = previousSelected
 		return err
