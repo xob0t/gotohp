@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -282,6 +284,36 @@ func TestGenerateAndroidID(t *testing.T) {
 	}
 }
 
+func TestGetSettingsRedactsCredentials(t *testing.T) {
+	restoreConfigGlobals(t)
+
+	configMu.Lock()
+	ConfigPath = filepath.Join(t.TempDir(), "gotohp.config")
+	AppConfig = Config{
+		Credentials: []string{"Email=person%40example.com&Token=secret"},
+		Selected:    "person@example.com",
+		Proxy:       "http://proxy.example",
+	}
+	configMu.Unlock()
+
+	settings := (&ConfigManager{}).GetSettings()
+	if settings.Proxy != "http://proxy.example" {
+		t.Fatalf("proxy = %q, want configured proxy", settings.Proxy)
+	}
+	if settings.Credentials != nil {
+		t.Fatalf("credentials = %v, want nil", settings.Credentials)
+	}
+
+	encoded, err := json.Marshal(settings)
+	if err != nil {
+		t.Fatalf("marshal settings: %v", err)
+	}
+	serialized := string(encoded)
+	if strings.Contains(serialized, "secret") {
+		t.Fatalf("settings exposed credential data: %s", serialized)
+	}
+}
+
 func TestWriteConfigAtomicallyReplacesExistingFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "gotohp.config")
 	if err := os.WriteFile(path, []byte("old"), 0o600); err != nil {
@@ -296,6 +328,15 @@ func TestWriteConfigAtomicallyReplacesExistingFile(t *testing.T) {
 	}
 	if string(contents) != "new" {
 		t.Fatalf("config contents = %q, want new", contents)
+	}
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat replaced config: %v", err)
+		}
+		if permissions := info.Mode().Perm(); permissions != 0o600 {
+			t.Fatalf("config permissions = %o, want 600", permissions)
+		}
 	}
 }
 

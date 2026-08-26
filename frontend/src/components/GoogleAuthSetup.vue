@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Browser } from '@wailsio/runtime'
 import { toast } from 'vue-sonner'
 import { ConfigManager } from '../../bindings/app/backend'
@@ -24,6 +24,13 @@ const oauthToken = ref('')
 const rawCredential = ref('')
 const isConnecting = ref(false)
 const isAddingRawCredential = ref(false)
+
+watch(isOpen, (open) => {
+  if (!open) {
+    oauthToken.value = ''
+    rawCredential.value = ''
+  }
+})
 
 async function openEmbeddedSetup() {
   try {

@@ -676,7 +676,7 @@ func writeConfigAtomically(path string, contents []byte) error {
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return err
 	}
-	return os.Chmod(path, 0o600)
+	return nil
 }
 
 func loadAppConfig() Config {
