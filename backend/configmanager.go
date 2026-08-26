@@ -71,67 +71,78 @@ func ParseAuthString(authString string) (url.Values, error) {
 }
 
 func (g *ConfigManager) SetProxy(proxy string) {
-	AppConfig.Proxy = proxy
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.Proxy = proxy
+	})
 }
 
 func (g *ConfigManager) SetSelected(email string) {
-	// Parse the auth string
-	AppConfig.Selected = email
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.Selected = email
+	})
 }
 
 func (g *ConfigManager) SetUseQuota(useQuota bool) {
-	AppConfig.UseQuota = useQuota
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.UseQuota = useQuota
+	})
 }
 
 func (g *ConfigManager) SetSaver(saver bool) {
-	AppConfig.Saver = saver
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.Saver = saver
+	})
 }
 
 func (g *ConfigManager) SetRecursive(recursive bool) {
-	AppConfig.Recursive = recursive
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.Recursive = recursive
+	})
 }
 
 func (g *ConfigManager) SetForceUpload(forceUpload bool) {
-	AppConfig.ForceUpload = forceUpload
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.ForceUpload = forceUpload
+	})
 }
 
 func (g *ConfigManager) SetPairLivePhotos(pairLivePhotos bool) {
-	AppConfig.PairLivePhotos = pairLivePhotos
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.PairLivePhotos = pairLivePhotos
+	})
 }
 
 func (g *ConfigManager) SetSkipIncompleteLivePhotos(skipIncompleteLivePhotos bool) {
-	AppConfig.SkipIncompleteLivePhotos = skipIncompleteLivePhotos
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.SkipIncompleteLivePhotos = skipIncompleteLivePhotos
+	})
 }
 
 func (g *ConfigManager) SetUpdateExistingPhotosToLive(updateExistingPhotosToLive bool) {
-	AppConfig.UpdateExistingPhotosToLive = updateExistingPhotosToLive
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.UpdateExistingPhotosToLive = updateExistingPhotosToLive
+	})
 }
 
 func (g *ConfigManager) SetDeleteFromHost(deleteFromHost bool) {
-	AppConfig.DeleteFromHost = deleteFromHost
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.DeleteFromHost = deleteFromHost
+	})
 }
 
 func (g *ConfigManager) SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter bool) {
-	AppConfig.DisableUnsupportedFilesFilter = disableUnsupportedFilesFilter
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.DisableUnsupportedFilesFilter = disableUnsupportedFilesFilter
+	})
 }
 
 func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
 	if uploadThreads < 1 {
 		return
 	}
-	AppConfig.UploadThreads = uploadThreads
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.UploadThreads = uploadThreads
+	})
 }
 
 func (g *ConfigManager) SetAlbumName(albumName string) {
@@ -167,13 +178,15 @@ func GetAlbumConfig() (albumName string, autoMode bool) {
 }
 
 func (g *ConfigManager) SetSetDateFromFilename(v bool) {
-	AppConfig.SetDateFromFilename = v
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.SetDateFromFilename = v
+	})
 }
 
 func (g *ConfigManager) SetExcludePattern(pattern string) {
-	AppConfig.ExcludePattern = pattern
-	_ = saveAppConfig()
+	updateAppConfig(func(config *Config) {
+		config.ExcludePattern = pattern
+	})
 }
 
 func (g *ConfigManager) GetExcludePattern() string {
@@ -217,6 +230,9 @@ func (g *ConfigManager) AddCredentials(newAuthString string) error {
 		return fmt.Errorf("email cannot be empty")
 	}
 
+	configMu.Lock()
+	defer configMu.Unlock()
+
 	// Check for duplicate email in existing credentials
 	for _, cred := range AppConfig.Credentials {
 		existingParams, err := url.ParseQuery(cred)
@@ -231,7 +247,7 @@ func (g *ConfigManager) AddCredentials(newAuthString string) error {
 	// If validation passed, add the new credentials
 	AppConfig.Credentials = append(AppConfig.Credentials, newAuthString)
 	AppConfig.Selected = email
-	_ = saveAppConfig()
+	_ = saveAppConfigLocked()
 	return nil
 }
 
@@ -254,6 +270,9 @@ func (g *ConfigManager) AddTokenBindingAliasFromADB(email string) error {
 		return err
 	}
 
+	configMu.Lock()
+	defer configMu.Unlock()
+
 	for i, cred := range AppConfig.Credentials {
 		params, err := url.ParseQuery(cred)
 		if err != nil {
@@ -264,7 +283,7 @@ func (g *ConfigManager) AddTokenBindingAliasFromADB(email string) error {
 		}
 		params.Set("token_binding_alias", alias)
 		AppConfig.Credentials[i] = params.Encode()
-		return saveAppConfig()
+		return saveAppConfigLocked()
 	}
 
 	return fmt.Errorf("no credentials found for email %s", email)
@@ -274,6 +293,9 @@ func (g *ConfigManager) RemoveCredentials(email string) error {
 	if email == "" {
 		return fmt.Errorf("email cannot be empty")
 	}
+
+	configMu.Lock()
+	defer configMu.Unlock()
 
 	// Find and remove the credential with matching email
 	found := false
@@ -305,7 +327,7 @@ func (g *ConfigManager) RemoveCredentials(email string) error {
 		AppConfig.Selected = ""
 	}
 
-	_ = saveAppConfig()
+	_ = saveAppConfigLocked()
 	return nil
 }
 
@@ -629,7 +651,16 @@ func loadConfigLocked() error {
 	return nil
 }
 
-func saveAppConfig() error {
+func updateAppConfig(update func(*Config)) {
+	configMu.Lock()
+	defer configMu.Unlock()
+
+	update(&AppConfig)
+	_ = saveAppConfigLocked()
+}
+
+// saveAppConfigLocked persists AppConfig while the caller holds configMu for writing.
+func saveAppConfigLocked() error {
 	k := koanf.New(".")
 
 	err := k.Load(structs.Provider(AppConfig, "koanf"), nil)
