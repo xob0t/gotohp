@@ -36,6 +36,8 @@ type googleAuthExchange struct {
 	MasterToken string
 }
 
+// AddGoogleAccount exchanges an Embedded Setup oauth_token for a Google Photos
+// credential using the GUI's proxy preference, saves it, and returns the email.
 func (g *ConfigManager) AddGoogleAccount(oauthToken string) (string, error) {
 	ensureConfigLoaded()
 
@@ -43,6 +45,14 @@ func (g *ConfigManager) AddGoogleAccount(oauthToken string) (string, error) {
 	proxy := AppConfig.Preferences.Proxy
 	configMu.RUnlock()
 
+	return g.AddGoogleAccountWithProxy(oauthToken, proxy)
+}
+
+// AddGoogleAccountWithProxy is AddGoogleAccount with an explicit proxy, for
+// callers such as the CLI that do not use GUI preferences.
+//
+//wails:ignore
+func (g *ConfigManager) AddGoogleAccountWithProxy(oauthToken string, proxy string) (string, error) {
 	client, err := newGoogleAuthHTTPClient(proxy)
 	if err != nil {
 		return "", fmt.Errorf("prepare Google authentication: %w", err)

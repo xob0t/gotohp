@@ -1,6 +1,10 @@
 package cli
 
-import "testing"
+import (
+	"io"
+	"strings"
+	"testing"
+)
 
 func TestIsCLIInvocation(t *testing.T) {
 	cases := []struct {
@@ -24,5 +28,30 @@ func TestIsCLIInvocation(t *testing.T) {
 		if got := IsCLIInvocation(c.args); got != c.want {
 			t.Errorf("IsCLIInvocation(%q) = %v, want %v", c.args, got, c.want)
 		}
+	}
+}
+
+func TestReadSecretArg(t *testing.T) {
+	if got, err := readSecretArg("literal", strings.NewReader("ignored")); err != nil || got != "literal" {
+		t.Fatalf("literal: got %q, %v", got, err)
+	}
+	if got, err := readSecretArg("-", strings.NewReader("  token-value \r\nsecond line\n")); err != nil || got != "token-value" {
+		t.Fatalf("stdin: got %q, %v", got, err)
+	}
+	if _, err := readSecretArg("-", strings.NewReader("\n")); err == nil {
+		t.Fatal("empty stdin: expected error")
+	}
+	if got, err := readSecretArg("-", strings.NewReader("no-trailing-newline")); err != nil || got != "no-trailing-newline" {
+		t.Fatalf("eof without newline: got %q, %v", got, err)
+	}
+	// Must return after the first line without waiting for EOF on the reader.
+	pr, pw := io.Pipe()
+	go func() { _, _ = io.WriteString(pw, "first\n") }()
+	if got, err := readSecretArg("-", pr); err != nil || got != "first" {
+		t.Fatalf("open pipe: got %q, %v", got, err)
+	}
+	_ = pw.Close()
+	if _, err := readSecretArg("-", strings.NewReader(strings.Repeat("x", maxSecretLen+1)+"\n")); err == nil {
+		t.Fatal("overlong: expected error")
 	}
 }
