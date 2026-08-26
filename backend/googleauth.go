@@ -40,7 +40,7 @@ func (g *ConfigManager) AddGoogleAccount(oauthToken string) (string, error) {
 	ensureConfigLoaded()
 
 	configMu.RLock()
-	proxy := AppConfig.Proxy
+	proxy := AppConfig.Preferences.Proxy
 	configMu.RUnlock()
 
 	client, err := newGoogleAuthHTTPClient(proxy)
@@ -301,25 +301,25 @@ func upsertCredential(credential string) error {
 	configMu.Lock()
 	defer configMu.Unlock()
 
-	previousCredentials := append([]string(nil), AppConfig.Credentials...)
-	previousSelected := AppConfig.Selected
+	previousCredentials := append([]string(nil), AppConfig.Account.Credentials...)
+	previousSelected := AppConfig.Account.Selected
 	replaced := false
-	for index, existing := range AppConfig.Credentials {
+	for index, existing := range AppConfig.Account.Credentials {
 		existingValues, parseErr := url.ParseQuery(existing)
 		if parseErr == nil && strings.EqualFold(existingValues.Get("Email"), email) {
-			AppConfig.Credentials[index] = credential
+			AppConfig.Account.Credentials[index] = credential
 			replaced = true
 			break
 		}
 	}
 	if !replaced {
-		AppConfig.Credentials = append(AppConfig.Credentials, credential)
+		AppConfig.Account.Credentials = append(AppConfig.Account.Credentials, credential)
 	}
-	AppConfig.Selected = email
+	AppConfig.Account.Selected = email
 
 	if err := saveAppConfigLocked(); err != nil {
-		AppConfig.Credentials = previousCredentials
-		AppConfig.Selected = previousSelected
+		AppConfig.Account.Credentials = previousCredentials
+		AppConfig.Account.Selected = previousSelected
 		return err
 	}
 	return nil

@@ -172,8 +172,8 @@ func TestAddGoogleAccountUsesGoogleEmailAndReplacesCredential(t *testing.T) {
 		"androidId": {"fedcba9876543210"},
 	}.Encode()
 	AppConfig = DefaultConfig
-	AppConfig.Credentials = []string{oldCredential}
-	AppConfig.Selected = email
+	AppConfig.Account.Credentials = []string{oldCredential}
+	AppConfig.Account.Selected = email
 	ConfigPath = filepath.Join(t.TempDir(), "gotohp.config")
 
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
@@ -222,10 +222,10 @@ func TestAddGoogleAccountUsesGoogleEmailAndReplacesCredential(t *testing.T) {
 	if !validated {
 		t.Fatal("credential was not validated before persistence")
 	}
-	if len(AppConfig.Credentials) != 1 {
-		t.Fatalf("credentials count = %d, want 1", len(AppConfig.Credentials))
+	if len(AppConfig.Account.Credentials) != 1 {
+		t.Fatalf("credentials count = %d, want 1", len(AppConfig.Account.Credentials))
 	}
-	values, err := url.ParseQuery(AppConfig.Credentials[0])
+	values, err := url.ParseQuery(AppConfig.Account.Credentials[0])
 	if err != nil {
 		t.Fatalf("parse saved credential: %v", err)
 	}
@@ -267,7 +267,7 @@ func TestAddGoogleAccountDoesNotPersistFailedValidation(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected validation error")
 	}
-	if len(AppConfig.Credentials) != 0 {
+	if len(AppConfig.Account.Credentials) != 0 {
 		t.Fatal("failed credential was added to memory")
 	}
 	if _, statErr := os.Stat(ConfigPath); !os.IsNotExist(statErr) {
@@ -291,9 +291,11 @@ func TestGetSettingsRedactsCredentials(t *testing.T) {
 	configMu.Lock()
 	ConfigPath = filepath.Join(t.TempDir(), "gotohp.config")
 	AppConfig = Config{
-		Credentials: []string{"Email=person%40example.com&Token=secret"},
-		Selected:    "person@example.com",
-		Proxy:       "http://proxy.example",
+		Account: AccountConfig{
+			Credentials: []string{"Email=person%40example.com&Token=secret"},
+			Selected:    "person@example.com",
+		},
+		Preferences: Preferences{Proxy: "http://proxy.example"},
 	}
 	configMu.Unlock()
 
@@ -301,10 +303,6 @@ func TestGetSettingsRedactsCredentials(t *testing.T) {
 	if settings.Proxy != "http://proxy.example" {
 		t.Fatalf("proxy = %q, want configured proxy", settings.Proxy)
 	}
-	if settings.Credentials != nil {
-		t.Fatalf("credentials = %v, want nil", settings.Credentials)
-	}
-
 	encoded, err := json.Marshal(settings)
 	if err != nil {
 		t.Fatalf("marshal settings: %v", err)
@@ -369,8 +367,8 @@ func TestConcurrentSettingsWritesPersistLatestState(t *testing.T) {
 	writes.Wait()
 
 	configMu.RLock()
-	wantProxy := AppConfig.Proxy
-	wantUploadThreads := AppConfig.UploadThreads
+	wantProxy := AppConfig.Preferences.Proxy
+	wantUploadThreads := AppConfig.Preferences.UploadThreads
 	path := ConfigPath
 	configMu.RUnlock()
 

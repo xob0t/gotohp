@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"encoding/json"
@@ -14,26 +14,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/term"
 )
-
-// CLI flags and config
-type cliConfig struct {
-	recursive                     bool
-	threads                       int
-	forceUpload                   bool
-	deleteFromHost                bool
-	disableUnsupportedFilesFilter bool
-	setDateFromFilename           bool
-	pairLivePhotos                bool
-	skipIncompleteLivePhotos      bool
-	skipIncompleteLivePhotosSet   bool
-	updateExistingPhotosToLive    bool
-	ignoreAppleMetadata           bool
-	excludePattern                string
-	logLevel                      string
-	configPath                    string
-	albumName                     string
-	noTUI                         bool
-}
 
 // Messages for bubbletea
 type uploadStartMsg struct {
@@ -320,56 +300,96 @@ func parseLogLevel(level string) slog.Level {
 	}
 }
 
-func shouldUseTUI(config cliConfig) bool {
-	return !config.noTUI &&
+func shouldUseTUI(settings uploadRunSettings) bool {
+	return !settings.noTUI &&
 		term.IsTerminal(os.Stdin.Fd()) &&
 		term.IsTerminal(os.Stdout.Fd())
 }
 
-// CLI upload implementation
-func runCLIUpload(filePaths []string, config cliConfig) error {
-	// Set custom config path if provided
-	if config.configPath != "" {
-		backend.ConfigPath = config.configPath
+// teaReporter renders backend progress by forwarding it to the bubbletea program.
+type teaReporter struct {
+	p *tea.Program
+}
+
+func (r teaReporter) UploadStart(start backend.UploadBatchStart) {
+	r.p.Send(uploadStartMsg{total: start.Total})
+}
+
+func (r teaReporter) UploadStop() {
+	r.p.Send(uploadCompleteMsg{})
+}
+
+func (r teaReporter) TotalBytes(int64)      {}
+func (r teaReporter) TotalBytesDelta(int64) {}
+
+func (r teaReporter) Warning(warning backend.PreflightWarning) {
+	r.p.Send(preflightWarningMsg{
+		paths:   warning.Paths,
+		code:    warning.Code,
+		message: warning.Message,
+	})
+}
+
+func (r teaReporter) ThreadStatus(status backend.ThreadStatus) {
+	r.p.Send(fileProgressMsg{
+		workerID: status.WorkerID,
+		status:   status.Status,
+		fileName: status.FileName,
+		message:  status.Message,
+	})
+}
+
+func (r teaReporter) FileResult(result backend.FileUploadResult) {
+	r.p.Send(fileCompleteMsg{
+		success:    !result.IsError && !result.Skipped,
+		skipped:    result.Skipped,
+		fileName:   result.Path,
+		paths:      result.Paths,
+		mediaKey:   result.MediaKey,
+		skipCode:   result.SkipCode,
+		skipReason: result.SkipReason,
+		err:        result.Error,
+	})
+}
+
+func (r teaReporter) AlbumProgress(status backend.AlbumStatus) {
+	r.p.Send(albumProgressMsg{
+		albumName:  status.AlbumName,
+		itemsAdded: status.ItemsAdded,
+		totalItems: status.TotalItems,
+	})
+}
+
+func (r teaReporter) AlbumComplete(status backend.AlbumStatus) {
+	r.p.Send(albumCompleteMsg{
+		albumName:  status.AlbumName,
+		itemsAdded: status.ItemsAdded,
+		albumKeys:  status.AlbumKeys,
+	})
+}
+
+func (r teaReporter) AlbumError(albumErr backend.AlbumError) {
+	r.p.Send(albumErrorMsg{
+		albumName: albumErr.AlbumName,
+		error:     albumErr.Error,
+	})
+}
+
+func newLogger(level slog.Level) *slog.Logger {
+	if level > slog.LevelDebug {
+		// Anything above debug would only clutter the TUI; the JSON summary
+		// carries the outcome.
+		return slog.New(slog.DiscardHandler)
 	}
+	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+}
 
-	// Load backend config
-	err := backend.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	// Override config with CLI flags
-	backend.AppConfig.Recursive = config.recursive
-	backend.AppConfig.UploadThreads = config.threads
-	backend.AppConfig.ForceUpload = config.forceUpload
-	backend.AppConfig.DeleteFromHost = config.deleteFromHost
-	backend.AppConfig.DisableUnsupportedFilesFilter = config.disableUnsupportedFilesFilter
-	backend.AppConfig.SetDateFromFilename = config.setDateFromFilename
-	backend.AppConfig.ExcludePattern = config.excludePattern
-	backend.AppConfig.PairLivePhotos = config.pairLivePhotos
-	if config.skipIncompleteLivePhotosSet {
-		backend.AppConfig.SkipIncompleteLivePhotos = config.skipIncompleteLivePhotos
-	}
-	backend.AppConfig.UpdateExistingPhotosToLive = config.updateExistingPhotosToLive
-	backend.AppConfig.IgnoreAppleMetadata = config.ignoreAppleMetadata
-
-	// Handle album option - check for AUTO mode
-	if strings.ToUpper(config.albumName) == "AUTO" {
-		backend.AppConfig.AlbumAutoMode = true
-		backend.AppConfig.AlbumName = ""
-	} else {
-		backend.AppConfig.AlbumAutoMode = false
-		backend.AppConfig.AlbumName = config.albumName
-	}
-
-	// Parse log level
-	logLevel := parseLogLevel(config.logLevel)
-
-	// Start the upload event loop, with rendering and input only when interactive.
+// runUpload runs the upload with already-resolved options and prints a JSON
+// summary when it completes.
+func runUpload(paths []string, opts backend.UploadOptions, settings uploadRunSettings) error {
 	model := initialModel()
 	programOptions := []tea.ProgramOption{}
-	if !shouldUseTUI(config) {
+	if !shouldUseTUI(settings) {
 		programOptions = append(
 			programOptions,
 			tea.WithInput(nil),
@@ -378,96 +398,21 @@ func runCLIUpload(filePaths []string, config cliConfig) error {
 	}
 	p := tea.NewProgram(model, programOptions...)
 
-	// Create CLI app with event callback to bubbletea
-	eventCallback := func(event string, data any) {
-		switch event {
-		case "uploadStart":
-			if start, ok := data.(backend.UploadBatchStart); ok {
-				p.Send(uploadStartMsg{total: start.Total})
-			}
-		case "ThreadStatus":
-			if status, ok := data.(backend.ThreadStatus); ok {
-				fileName := status.FileName
-				// No truncation - show full filename
-				p.Send(fileProgressMsg{
-					workerID: status.WorkerID,
-					status:   status.Status,
-					fileName: fileName,
-					message:  status.Message,
-				})
-			}
-		case "FileStatus":
-			if result, ok := data.(backend.FileUploadResult); ok {
-				p.Send(fileCompleteMsg{
-					success:    !result.IsError && !result.Skipped,
-					skipped:    result.Skipped,
-					fileName:   result.Path,
-					paths:      result.Paths,
-					mediaKey:   result.MediaKey,
-					skipCode:   result.SkipCode,
-					skipReason: result.SkipReason,
-					err:        result.Error,
-				})
-			}
-		case "uploadWarning":
-			if warning, ok := data.(backend.PreflightWarning); ok {
-				p.Send(preflightWarningMsg{
-					paths:   warning.Paths,
-					code:    warning.Code,
-					message: warning.Message,
-				})
-			}
-		case "uploadStop":
-			p.Send(uploadCompleteMsg{})
-		case "albumProgress":
-			if status, ok := data.(backend.AlbumStatus); ok {
-				p.Send(albumProgressMsg{
-					albumName:  status.AlbumName,
-					itemsAdded: status.ItemsAdded,
-					totalItems: status.TotalItems,
-				})
-			}
-		case "albumComplete":
-			if status, ok := data.(backend.AlbumStatus); ok {
-				p.Send(albumCompleteMsg{
-					albumName:  status.AlbumName,
-					itemsAdded: status.ItemsAdded,
-					albumKeys:  status.AlbumKeys,
-				})
-			}
-		case "albumError":
-			if albumErr, ok := data.(backend.AlbumError); ok {
-				p.Send(albumErrorMsg{
-					albumName: albumErr.AlbumName,
-					error:     albumErr.Error,
-				})
-			}
-		}
-	}
+	uploadManager := backend.NewUploadManager(teaReporter{p: p}, newLogger(parseLogLevel(settings.logLevel)))
+	go uploadManager.Upload(paths, opts)
 
-	cliApp := backend.NewCLIApp(eventCallback, logLevel)
-	uploadManager := backend.NewUploadManager(cliApp)
-
-	// Run upload in background
-	go func() {
-		uploadManager.Upload(cliApp, filePaths)
-	}()
-
-	// Run until the upload manager emits uploadStop.
+	// Run until the upload manager reports UploadStop.
 	finalModel, err := p.Run()
 	if err != nil {
 		return fmt.Errorf("error running upload program: %w", err)
 	}
 
-	// Print JSON summary after the upload program completes.
 	if m, ok := finalModel.(uploadModel); ok {
 		summary := buildUploadSummary(m)
-
 		jsonOutput, err := json.MarshalIndent(summary, "", "  ")
 		if err != nil {
 			return fmt.Errorf("error generating JSON: %w", err)
 		}
-
 		fmt.Println(string(jsonOutput))
 	}
 

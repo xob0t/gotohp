@@ -29,7 +29,7 @@ func uploadLivePhotoWithCallback(
 	pair LivePhotoPair,
 	options LivePhotoUploadOptions,
 	workerID int,
-	callback ProgressCallback,
+	reporter UploadReporter,
 ) (mediaKey string, skipped bool, err error) {
 	photoInfo, err := os.Stat(pair.PhotoPath)
 	if err != nil {
@@ -41,7 +41,7 @@ func uploadLivePhotoWithCallback(
 	}
 	totalBytes := photoInfo.Size() + videoInfo.Size()
 	displayName := filepath.Base(pair.PhotoPath) + " + " + filepath.Base(pair.VideoPath)
-	emitLivePhotoStatus(callback, ThreadStatus{
+	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
 		Status:   "hashing",
 		FilePath: pair.PhotoPath,
@@ -58,7 +58,7 @@ func uploadLivePhotoWithCallback(
 		return "", false, fmt.Errorf("hash Live Photo video: %w", err)
 	}
 
-	emitLivePhotoStatus(callback, ThreadStatus{
+	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
 		Status:   "checking",
 		FilePath: pair.PhotoPath,
@@ -75,7 +75,7 @@ func uploadLivePhotoWithCallback(
 	}
 	if photoRemoteKey != "" {
 		if options.UpdateExistingPhotosToLive {
-			callback("uploadTotalBytesDelta", -photoInfo.Size())
+			reporter.TotalBytesDelta(-photoInfo.Size())
 			mediaKey, err := reconcileExistingLivePhoto(
 				ctx,
 				api,
@@ -87,12 +87,12 @@ func uploadLivePhotoWithCallback(
 				options,
 				workerID,
 				displayName,
-				callback,
+				reporter,
 			)
 			return mediaKey, false, err
 		}
-		callback("uploadTotalBytesDelta", -totalBytes)
-		emitLivePhotoStatus(callback, ThreadStatus{
+		reporter.TotalBytesDelta(-totalBytes)
+		reporter.ThreadStatus(ThreadStatus{
 			WorkerID: workerID,
 			Status:   "skipped",
 			FilePath: pair.PhotoPath,
@@ -104,8 +104,8 @@ func uploadLivePhotoWithCallback(
 	// The VideoOriginal direction has not been recovered. A standalone remote MOV
 	// must not be combined with a newly uploaded still using the Phodeo request.
 	if videoRemoteKey != "" {
-		callback("uploadTotalBytesDelta", -totalBytes)
-		emitLivePhotoStatus(callback, ThreadStatus{
+		reporter.TotalBytesDelta(-totalBytes)
+		reporter.ThreadStatus(ThreadStatus{
 			WorkerID: workerID,
 			Status:   "skipped",
 			FilePath: pair.PhotoPath,
@@ -115,11 +115,11 @@ func uploadLivePhotoWithCallback(
 		return "", true, nil
 	}
 
-	photoToken, err := uploadLivePhotoComponent(ctx, api, pair.PhotoPath, pair.PhotoPath, photoInfo.Size(), photoSHA1, 0, totalBytes, workerID, displayName, callback)
+	photoToken, err := uploadLivePhotoComponent(ctx, api, pair.PhotoPath, pair.PhotoPath, photoInfo.Size(), photoSHA1, 0, totalBytes, workerID, displayName, reporter)
 	if err != nil {
 		return "", false, fmt.Errorf("upload Live Photo still: %w", err)
 	}
-	videoToken, err := uploadLivePhotoComponent(ctx, api, pair.VideoPath, pair.PhotoPath, videoInfo.Size(), videoSHA1, photoInfo.Size(), totalBytes, workerID, displayName, callback)
+	videoToken, err := uploadLivePhotoComponent(ctx, api, pair.VideoPath, pair.PhotoPath, videoInfo.Size(), videoSHA1, photoInfo.Size(), totalBytes, workerID, displayName, reporter)
 	if err != nil {
 		return "", false, fmt.Errorf("upload Live Photo video: %w", err)
 	}
@@ -130,7 +130,7 @@ func uploadLivePhotoWithCallback(
 			uploadTime = parsed
 		}
 	}
-	emitLivePhotoStatus(callback, ThreadStatus{
+	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
 		Status:   "finalizing",
 		FilePath: pair.PhotoPath,
@@ -175,9 +175,9 @@ func reconcileExistingLivePhoto(
 	options LivePhotoUploadOptions,
 	workerID int,
 	displayName string,
-	callback ProgressCallback,
+	reporter UploadReporter,
 ) (string, error) {
-	emitLivePhotoStatus(callback, ThreadStatus{
+	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
 		Status:   "uploading",
 		FilePath: pair.PhotoPath,
@@ -195,7 +195,7 @@ func reconcileExistingLivePhoto(
 		videoInfo.Size(),
 		workerID,
 		displayName,
-		callback,
+		reporter,
 	)
 	if err != nil {
 		return "", fmt.Errorf("upload Live Photo video for existing photo: %w", err)
@@ -207,7 +207,7 @@ func reconcileExistingLivePhoto(
 			uploadTime = parsed
 		}
 	}
-	emitLivePhotoStatus(callback, ThreadStatus{
+	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
 		Status:   "finalizing",
 		FilePath: pair.PhotoPath,
@@ -250,7 +250,7 @@ func uploadLivePhotoComponent(
 	totalBytes int64,
 	workerID int,
 	displayName string,
-	callback ProgressCallback,
+	reporter UploadReporter,
 ) (ScottyFinalizeToken, error) {
 	uploadSession, err := api.GetUploadToken(base64.StdEncoding.EncodeToString(hash), size)
 	if err != nil {
@@ -261,7 +261,7 @@ func uploadLivePhotoComponent(
 		if attempt > 1 {
 			message = fmt.Sprintf("Retrying Live Photo component (attempt %d)...", attempt)
 		}
-		emitLivePhotoStatus(callback, ThreadStatus{
+		reporter.ThreadStatus(ThreadStatus{
 			WorkerID:      workerID,
 			Status:        "uploading",
 			FilePath:      progressPath,
@@ -274,13 +274,6 @@ func uploadLivePhotoComponent(
 	}
 	return api.UploadFileWithProgress(ctx, componentPath, uploadSession, progress)
 }
-
-func emitLivePhotoStatus(callback ProgressCallback, status ThreadStatus) {
-	if callback != nil {
-		callback("ThreadStatus", status)
-	}
-}
-
 func removeLivePhotoFiles(pair LivePhotoPair) error {
 	for _, path := range []string{pair.VideoPath, pair.PhotoPath} {
 		if err := os.Remove(path); err != nil {

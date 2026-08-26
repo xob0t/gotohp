@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -30,17 +31,19 @@ type AlbumStatus struct {
 
 // AlbumManager handles album creation with batching
 type AlbumManager struct {
-	api    *Api
-	app    AppInterface
-	cancel <-chan struct{}
+	api      *Api
+	reporter UploadReporter
+	logger   *slog.Logger
+	cancel   <-chan struct{}
 }
 
 // NewAlbumManager creates a new AlbumManager
-func NewAlbumManager(api *Api, app AppInterface, cancel <-chan struct{}) *AlbumManager {
+func NewAlbumManager(api *Api, reporter UploadReporter, logger *slog.Logger, cancel <-chan struct{}) *AlbumManager {
 	return &AlbumManager{
-		api:    api,
-		app:    app,
-		cancel: cancel,
+		api:      api,
+		reporter: reporter,
+		logger:   logger,
+		cancel:   cancel,
 	}
 }
 
@@ -109,7 +112,7 @@ func (m *AlbumManager) addToExistingAlbum(mediaKeys []string, albumKey string) (
 		itemsAdded += len(batch)
 
 		// Emit progress event
-		m.app.EmitEvent("albumProgress", AlbumStatus{
+		m.reporter.AlbumProgress(AlbumStatus{
 			AlbumName:  displayName,
 			ItemsAdded: itemsAdded,
 			TotalItems: totalItems,
@@ -119,7 +122,7 @@ func (m *AlbumManager) addToExistingAlbum(mediaKeys []string, albumKey string) (
 	}
 
 	// Emit completion event
-	m.app.EmitEvent("albumComplete", AlbumStatus{
+	m.reporter.AlbumComplete(AlbumStatus{
 		AlbumName:  displayName,
 		ItemsAdded: itemsAdded,
 		TotalItems: totalItems,
@@ -183,7 +186,7 @@ func (m *AlbumManager) createNewAlbum(mediaKeys []string, albumName string) ([]s
 
 	// Log if we need multiple albums
 	if len(mediaKeys) > AlbumLimit {
-		m.app.GetLogger().Warn(fmt.Sprintf("%d items exceed the album limit of %d. They will be split into multiple albums.", len(mediaKeys), AlbumLimit))
+		m.logger.Warn(fmt.Sprintf("%d items exceed the album limit of %d. They will be split into multiple albums.", len(mediaKeys), AlbumLimit))
 	}
 
 	// Process in album-sized chunks (up to 20,000 items per album)
@@ -233,7 +236,7 @@ func (m *AlbumManager) createNewAlbum(mediaKeys []string, albumName string) ([]s
 			itemsAdded += len(batch)
 
 			// Emit progress event
-			m.app.EmitEvent("albumProgress", AlbumStatus{
+			m.reporter.AlbumProgress(AlbumStatus{
 				AlbumName:  currentAlbumName,
 				ItemsAdded: itemsAdded,
 				TotalItems: totalItems,
@@ -246,7 +249,7 @@ func (m *AlbumManager) createNewAlbum(mediaKeys []string, albumName string) ([]s
 	}
 
 	// Emit completion event
-	m.app.EmitEvent("albumComplete", AlbumStatus{
+	m.reporter.AlbumComplete(AlbumStatus{
 		AlbumName:  albumName,
 		ItemsAdded: itemsAdded,
 		TotalItems: totalItems,

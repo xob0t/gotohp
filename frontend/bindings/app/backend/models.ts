@@ -131,92 +131,6 @@ export class AlbumStatus {
     }
 }
 
-export class Config {
-    "credentials"?: string[];
-    "selected": string;
-    "proxy": string;
-    "useQuota": boolean;
-    "saver": boolean;
-    "recursive": boolean;
-    "forceUpload": boolean;
-    "pairLivePhotos": boolean;
-    "skipIncompleteLivePhotos": boolean;
-    "updateExistingPhotosToLive": boolean;
-    "uploadThreads": number;
-    "deleteFromHost": boolean;
-    "disableUnsupportedFilesFilter": boolean;
-    "albumName": string;
-    "albumAutoMode": boolean;
-    "setDateFromFilename": boolean;
-    "excludePattern": string;
-
-    /** Creates a new Config instance. */
-    constructor($$source: Partial<Config> = {}) {
-        if (!("selected" in $$source)) {
-            this["selected"] = "";
-        }
-        if (!("proxy" in $$source)) {
-            this["proxy"] = "";
-        }
-        if (!("useQuota" in $$source)) {
-            this["useQuota"] = false;
-        }
-        if (!("saver" in $$source)) {
-            this["saver"] = false;
-        }
-        if (!("recursive" in $$source)) {
-            this["recursive"] = false;
-        }
-        if (!("forceUpload" in $$source)) {
-            this["forceUpload"] = false;
-        }
-        if (!("pairLivePhotos" in $$source)) {
-            this["pairLivePhotos"] = false;
-        }
-        if (!("skipIncompleteLivePhotos" in $$source)) {
-            this["skipIncompleteLivePhotos"] = false;
-        }
-        if (!("updateExistingPhotosToLive" in $$source)) {
-            this["updateExistingPhotosToLive"] = false;
-        }
-        if (!("uploadThreads" in $$source)) {
-            this["uploadThreads"] = 0;
-        }
-        if (!("deleteFromHost" in $$source)) {
-            this["deleteFromHost"] = false;
-        }
-        if (!("disableUnsupportedFilesFilter" in $$source)) {
-            this["disableUnsupportedFilesFilter"] = false;
-        }
-        if (!("albumName" in $$source)) {
-            this["albumName"] = "";
-        }
-        if (!("albumAutoMode" in $$source)) {
-            this["albumAutoMode"] = false;
-        }
-        if (!("setDateFromFilename" in $$source)) {
-            this["setDateFromFilename"] = false;
-        }
-        if (!("excludePattern" in $$source)) {
-            this["excludePattern"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Config instance from a string or object.
-     */
-    static createFrom($$source: any = {}): Config {
-        const $$createField0_0 = $$createType2;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("credentials" in $$parsedSource) {
-            $$parsedSource["credentials"] = $$createField0_0($$parsedSource["credentials"]);
-        }
-        return new Config($$parsedSource as Partial<Config>);
-    }
-}
-
 export class FileUploadResult {
     "MediaKey": string;
     "IsError": boolean;
@@ -303,6 +217,91 @@ export class FilesDroppedEvent {
             $$parsedSource["files"] = $$createField0_0($$parsedSource["files"]);
         }
         return new FilesDroppedEvent($$parsedSource as Partial<FilesDroppedEvent>);
+    }
+}
+
+/**
+ * Preferences are GUI settings. The CLI never reads them; every CLI run is
+ * configured by flags alone.
+ */
+export class Preferences {
+    "proxy": string;
+    "useQuota": boolean;
+    "saver": boolean;
+    "recursive": boolean;
+    "forceUpload": boolean;
+    "pairLivePhotos": boolean;
+    "skipIncompleteLivePhotos": boolean;
+    "updateExistingPhotosToLive": boolean;
+    "uploadThreads": number;
+    "deleteFromHost": boolean;
+    "disableUnsupportedFilesFilter": boolean;
+    "setDateFromFilename": boolean;
+    "excludePattern": string;
+
+    /**
+     * AlbumName and AlbumAutoMode are per-session choices and are never persisted.
+     */
+    "albumName": string;
+    "albumAutoMode": boolean;
+
+    /** Creates a new Preferences instance. */
+    constructor($$source: Partial<Preferences> = {}) {
+        if (!("proxy" in $$source)) {
+            this["proxy"] = "";
+        }
+        if (!("useQuota" in $$source)) {
+            this["useQuota"] = false;
+        }
+        if (!("saver" in $$source)) {
+            this["saver"] = false;
+        }
+        if (!("recursive" in $$source)) {
+            this["recursive"] = false;
+        }
+        if (!("forceUpload" in $$source)) {
+            this["forceUpload"] = false;
+        }
+        if (!("pairLivePhotos" in $$source)) {
+            this["pairLivePhotos"] = false;
+        }
+        if (!("skipIncompleteLivePhotos" in $$source)) {
+            this["skipIncompleteLivePhotos"] = false;
+        }
+        if (!("updateExistingPhotosToLive" in $$source)) {
+            this["updateExistingPhotosToLive"] = false;
+        }
+        if (!("uploadThreads" in $$source)) {
+            this["uploadThreads"] = 0;
+        }
+        if (!("deleteFromHost" in $$source)) {
+            this["deleteFromHost"] = false;
+        }
+        if (!("disableUnsupportedFilesFilter" in $$source)) {
+            this["disableUnsupportedFilesFilter"] = false;
+        }
+        if (!("setDateFromFilename" in $$source)) {
+            this["setDateFromFilename"] = false;
+        }
+        if (!("excludePattern" in $$source)) {
+            this["excludePattern"] = "";
+        }
+        if (!("albumName" in $$source)) {
+            this["albumName"] = "";
+        }
+        if (!("albumAutoMode" in $$source)) {
+            this["albumAutoMode"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Preferences instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Preferences {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Preferences($$parsedSource as Partial<Preferences>);
     }
 }
 

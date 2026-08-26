@@ -43,7 +43,7 @@ export function GetExcludePattern(): $CancellablePromise<string> {
     return $Call.ByID(2942848526);
 }
 
-export function GetSettings(): $CancellablePromise<$models.Config> {
+export function GetSettings(): $CancellablePromise<$models.Preferences> {
     return $Call.ByID(4262641511).then(($result: any) => {
         return $$createType1($result);
     });
@@ -119,4 +119,4 @@ export function SetUseQuota(useQuota: boolean): $CancellablePromise<void> {
 
 // Private type creation functions
 const $$createType0 = $models.AccountsState.createFrom;
-const $$createType1 = $models.Config.createFrom;
+const $$createType1 = $models.Preferences.createFrom;
