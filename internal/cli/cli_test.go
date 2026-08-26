@@ -51,7 +51,11 @@ func TestReadSecretArg(t *testing.T) {
 		t.Fatalf("open pipe: got %q, %v", got, err)
 	}
 	_ = pw.Close()
-	if _, err := readSecretArg("-", strings.NewReader(strings.Repeat("x", maxSecretLen+1)+"\n")); err == nil {
+	exact := strings.Repeat("x", maxSecretLen)
+	if got, err := readSecretArg("-", strings.NewReader(exact+"\r\n")); err != nil || got != exact {
+		t.Fatalf("exact limit: len=%d, %v", len(got), err)
+	}
+	if _, err := readSecretArg("-", strings.NewReader(exact+"x\n")); err == nil {
 		t.Fatal("overlong: expected error")
 	}
 }

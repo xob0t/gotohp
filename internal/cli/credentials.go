@@ -111,14 +111,16 @@ func readSecretArg(arg string, in io.Reader) (string, error) {
 	if arg != "-" {
 		return arg, nil
 	}
-	line, err := bufio.NewReader(io.LimitReader(in, maxSecretLen+1)).ReadString('\n')
+	// Allow the limit plus a line terminator, then measure the content alone.
+	line, err := bufio.NewReader(io.LimitReader(in, maxSecretLen+3)).ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		return "", fmt.Errorf("reading value from stdin: %w", err)
 	}
-	if len(line) > maxSecretLen {
+	content := strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+	if len(content) > maxSecretLen {
 		return "", fmt.Errorf("value on stdin exceeds %d bytes", maxSecretLen)
 	}
-	value := strings.TrimSpace(line)
+	value := strings.TrimSpace(content)
 	if value == "" {
 		return "", fmt.Errorf("no value received on stdin")
 	}
