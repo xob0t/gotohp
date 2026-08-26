@@ -8,11 +8,8 @@ import (
 	"app/internal/cli"
 )
 
+// gotohp-cli is built without Wails, so it is CLI only.
 func main() {
-	// CLI-only build without Wails/WebView: there is no GUI to fall back to.
-	if len(os.Args) < 2 {
-		os.Exit(1)
-	}
 	os.Exit(cli.Run(os.Args[1:], cli.Info{
 		ExecutableName: "gotohp-cli",
 		HasGUI:         false,
