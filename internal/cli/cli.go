@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -20,14 +21,25 @@ type Info struct {
 	Version string
 }
 
-// IsCommand reports whether arg is a recognised top-level CLI command.
-func IsCommand(arg string) bool {
-	return slices.Contains([]string{
-		"upload",
-		"credentials", "creds",
-		"help", "--help", "-h",
-		"version", "--version", "-v",
-	}, arg)
+// IsCLIInvocation reports whether args (excluding the program name) address
+// the CLI: a recognised command, optionally preceded by root flags such as
+// --config. Anything else is left for the GUI.
+func IsCLIInvocation(args []string) bool {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--config" || arg == "-c":
+			i++ // skip the flag value
+		case strings.HasPrefix(arg, "--config=") || strings.HasPrefix(arg, "-c="):
+		case arg == "--help" || arg == "-h" || arg == "--version" || arg == "-v":
+			return true
+		case strings.HasPrefix(arg, "-"):
+			return false
+		default:
+			return slices.Contains([]string{"upload", "credentials", "creds", "help", "version"}, arg)
+		}
+	}
+	return false
 }
 
 // Run executes the CLI with args (excluding the program name) and returns the

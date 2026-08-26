@@ -22,9 +22,9 @@ var assets embed.FS
 var title = "gotohp v" + getAppVersion()
 
 func main() {
-	// A recognised command runs the CLI; anything else (including no
-	// arguments) opens the GUI.
-	if len(os.Args) > 1 && cli.IsCommand(os.Args[1]) {
+	// A recognised command (optionally preceded by root flags such as
+	// --config) runs the CLI; anything else, including no arguments, opens the GUI.
+	if cli.IsCLIInvocation(os.Args[1:]) {
 		os.Exit(cli.Run(os.Args[1:], cli.Info{
 			ExecutableName: "gotohp",
 			HasGUI:         true,
