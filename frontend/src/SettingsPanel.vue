@@ -34,6 +34,8 @@ interface Settings {
     uploadThreads: number
 }
 
+type BooleanSetting = Exclude<keyof Settings, 'proxy' | 'uploadThreads'>
+
 const settings = ref<Settings>({
     proxy: '',
     useQuota: false,
@@ -49,6 +51,11 @@ const settings = ref<Settings>({
     uploadThreads: 0
 })
 const isHydrating = ref(true)
+
+const toggleSetting = (setting: BooleanSetting, enabled = true) => {
+    if (!enabled) return
+    settings.value[setting] = !settings.value[setting]
+}
 
 onMounted(async () => {
     try {
@@ -194,7 +201,10 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       />
     </div>
     <div class="flex items-center justify-between">
-      <div class="flex min-w-0 flex-1 items-center gap-1.5">
+      <div
+        class="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5"
+        @click.self="toggleSetting('forceUpload')"
+      >
         <Label
           for="force-upload"
           class="cursor-pointer"
@@ -220,7 +230,10 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       />
     </div>
     <div class="flex items-center justify-between">
-      <div class="flex min-w-0 flex-1 items-center gap-1.5 pr-4">
+      <div
+        class="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 pr-4"
+        @click.self="toggleSetting('pairLivePhotos')"
+      >
         <Label
           for="pair-live-photos"
           class="cursor-pointer"
@@ -249,7 +262,11 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       class="flex items-center justify-between pl-4 transition-opacity"
       :class="settings.pairLivePhotos ? 'opacity-100' : 'opacity-45'"
     >
-      <div class="flex min-w-0 flex-1 items-center gap-1.5 pr-4">
+      <div
+        class="flex min-w-0 flex-1 items-center gap-1.5 pr-4"
+        :class="settings.pairLivePhotos ? 'cursor-pointer' : 'cursor-not-allowed'"
+        @click.self="toggleSetting('skipIncompleteLivePhotos', settings.pairLivePhotos)"
+      >
         <Label
           for="skip-incomplete-live-photos"
           class="cursor-pointer"
@@ -280,7 +297,11 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       class="flex items-center justify-between pl-4 transition-opacity"
       :class="settings.pairLivePhotos ? 'opacity-100' : 'opacity-45'"
     >
-      <div class="flex min-w-0 flex-1 items-center gap-1.5 pr-4">
+      <div
+        class="flex min-w-0 flex-1 items-center gap-1.5 pr-4"
+        :class="settings.pairLivePhotos ? 'cursor-pointer' : 'cursor-not-allowed'"
+        @click.self="toggleSetting('updateExistingPhotosToLive', settings.pairLivePhotos)"
+      >
         <Label
           for="update-existing-photos-to-live"
           class="cursor-pointer"
