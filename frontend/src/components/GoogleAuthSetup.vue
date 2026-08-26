@@ -9,10 +9,8 @@ import { Label } from '@/components/ui/label'
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet'
 
 const embeddedSetupURL = 'https://accounts.google.com/EmbeddedSetup'
@@ -21,7 +19,7 @@ const emit = defineEmits<{
   (event: 'account-added'): void
 }>()
 
-const isOpen = ref(false)
+const isOpen = defineModel<boolean>('open', { default: false })
 const oauthToken = ref('')
 const rawCredential = ref('')
 const isConnecting = ref(false)
@@ -83,14 +81,6 @@ async function addRawCredential() {
 
 <template>
   <Sheet v-model:open="isOpen">
-    <SheetTrigger as-child>
-      <Button
-        type="button"
-        class="cursor-pointer select-none"
-      >
-        Add Google account
-      </Button>
-    </SheetTrigger>
     <SheetContent
       side="bottom"
       class="max-h-[96vh] overflow-y-auto"
@@ -98,9 +88,6 @@ async function addRawCredential() {
     >
       <SheetHeader class="gap-1 pb-2">
         <SheetTitle>Connect Google Photos</SheetTitle>
-        <SheetDescription>
-          Sign in with the account you want, then paste its one-time cookie value.
-        </SheetDescription>
       </SheetHeader>
 
       <div class="flex flex-col gap-3 px-4 pb-3">
@@ -116,7 +103,9 @@ async function addRawCredential() {
 
         <div class="rounded-lg border p-2.5 text-[11px] leading-snug text-muted-foreground">
           <ol class="list-decimal space-y-1 pl-4">
-            <li>Sign in with the account you want, then click <span class="text-foreground">I agree</span>.</li>
+            <li>
+              Sign in with the account you want, then click <span class="text-foreground">I agree</span>. The page may keep loading; this is expected.
+            </li>
             <li>In DevTools, open Application or Storage → Cookies → accounts.google.com.</li>
             <li>Copy only the <code class="text-foreground">oauth_token</code> cookie value.</li>
           </ol>
@@ -134,9 +123,6 @@ async function addRawCredential() {
             :disabled="isConnecting"
             @keydown.enter="connectAccount"
           />
-          <p class="text-[11px] leading-snug text-muted-foreground">
-            Exchanged once, never saved, and usually cannot be reused.
-          </p>
         </div>
 
         <Button
