@@ -21,7 +21,7 @@ import (
 )
 
 type Config struct {
-	Credentials                   []string `json:"credentials" koanf:"credentials"`
+	Credentials                   []string `json:"credentials,omitempty" koanf:"credentials"`
 	Selected                      string   `json:"selected" koanf:"selected"`
 	Proxy                         string   `json:"proxy" koanf:"proxy"`
 	UseQuota                      bool     `json:"useQuota" koanf:"use_quota"`

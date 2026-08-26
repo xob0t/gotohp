@@ -312,6 +312,9 @@ func TestGetSettingsRedactsCredentials(t *testing.T) {
 	if strings.Contains(serialized, "secret") {
 		t.Fatalf("settings exposed credential data: %s", serialized)
 	}
+	if strings.Contains(serialized, "credentials") {
+		t.Fatalf("settings included the credentials field: %s", serialized)
+	}
 }
 
 func TestWriteConfigAtomicallyReplacesExistingFile(t *testing.T) {

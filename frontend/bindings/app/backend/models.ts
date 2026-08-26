@@ -132,7 +132,7 @@ export class AlbumStatus {
 }
 
 export class Config {
-    "credentials": string[];
+    "credentials"?: string[];
     "selected": string;
     "proxy": string;
     "useQuota": boolean;
@@ -152,9 +152,6 @@ export class Config {
 
     /** Creates a new Config instance. */
     constructor($$source: Partial<Config> = {}) {
-        if (!("credentials" in $$source)) {
-            this["credentials"] = [];
-        }
         if (!("selected" in $$source)) {
             this["selected"] = "";
         }
