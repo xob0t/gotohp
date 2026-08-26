@@ -59,40 +59,6 @@ gotohp-cli version
 - `version` - Show version information
 - `help` - Show help message
 
-## Apple Live Photos
-
-**Pair Apple Live Photos** is disabled by default. When enabled, gotohp matches
-HEIC/JPEG and MOV components using their embedded Apple content identifier and
-uploads each complete pair as one Google Photos item. Both local files must be in
-the same upload queue. Filenames do not need to match in the normal mode.
-
-**Update Existing Photos to Live** is a nested, default-off GUI option. Its CLI
-equivalent is `--update-existing-photos-to-live`. If the byte-identical still
-already exists in Google Photos, gotohp uploads only the matching local MOV and
-attaches it to that existing photo. This operation still requires both local
-components so gotohp can verify their Apple identifiers before using the still's
-SHA-1 to find the correct remote item.
-
-`--ignore-apple-metadata` is an advanced CLI-only override for exports whose
-Apple identifiers are incorrect. It matches one still and one MOV with the same
-case-insensitive filename stem in the same directory. The MOV must still contain
-a valid Live Photo still-image-time marker. Ambiguous groups are skipped rather
-than guessed. Google Photos does not enforce identifier equality for this private
-upload path, so using the override with incorrectly named files can attach the
-wrong video permanently.
-
-Current limitations:
-
-- A MOV by itself cannot locate its matching remote still; both local files are
-  required.
-- If only the MOV exists remotely, the pair is skipped because that reconciliation
-  direction has not been recovered.
-- gotohp cannot currently determine whether a remote photo is already Live.
-  Repeating an update can upload and attach the MOV again.
-- Existing standalone MOV items are not removed when a photo is updated.
-- **Force Upload** remains a single-file option and does not bypass Live Photo
-  pair decisions.
-
 ## Sign in
 
 ### Option 1 - Embedded setup
