@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/sheet'
 import { useColorMode } from '@vueuse/core'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { Plus, UserPlus } from '@lucide/vue'
+import { UserPlus } from '@lucide/vue'
 import { ConfigManager } from '../bindings/app/backend'
 import { Events } from '@wailsio/runtime'
 import Button from "./components/ui/button/Button.vue"
@@ -419,24 +419,13 @@ onUnmounted(() => {
           <h1 class="text-xl font-semibold select-none">
             Drop files to upload
           </h1>
-          <div class="flex items-center gap-2">
-            <GoogleAccountSelect
-              v-model="selectedOption"
-              :options="options"
-              :removing-account="removingAccount"
-              @item-removed="removeCredentials"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Add Google account"
-              title="Add Google account"
-              @click="openAccountSetup"
-            >
-              <Plus />
-            </Button>
-          </div>
+          <GoogleAccountSelect
+            v-model="selectedOption"
+            :options="options"
+            :removing-account="removingAccount"
+            @item-removed="removeCredentials"
+            @add="openAccountSetup"
+          />
           <div
             v-if="tokenBindingEmail"
             class="w-full max-w-xs border rounded-lg p-3 flex flex-col gap-3"

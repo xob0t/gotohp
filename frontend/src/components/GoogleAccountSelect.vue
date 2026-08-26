@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Check, X } from '@lucide/vue'
+import { Check, Plus, X } from '@lucide/vue'
 import {
   SelectItem as SelectItemPrimitive,
   SelectItemIndicator,
@@ -10,6 +10,7 @@ import {
   Select,
   SelectContent,
   SelectGroup,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -23,6 +24,7 @@ interface Props {
 interface Emits {
   (event: 'update:modelValue', value: string): void
   (event: 'item-removed', value: string): void
+  (event: 'add'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -91,6 +93,16 @@ watch(selectedValue, (newValue) => {
           </button>
         </div>
       </SelectGroup>
+      <SelectSeparator v-if="options.length" />
+      <button
+        type="button"
+        class="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm text-muted-foreground outline-hidden select-none hover:bg-accent"
+        @pointerdown.stop.prevent
+        @click.stop.prevent="isOpen = false; emit('add')"
+      >
+        <Plus class="size-4" />
+        Add account
+      </button>
     </SelectContent>
   </Select>
 </template>

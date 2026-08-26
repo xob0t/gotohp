@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { Browser } from '@wailsio/runtime'
 import { toast } from 'vue-sonner'
+import { ChevronDown, ExternalLink } from '@lucide/vue'
 import { ConfigManager } from '../../bindings/app/backend'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,11 +25,13 @@ const oauthToken = ref('')
 const rawCredential = ref('')
 const isConnecting = ref(false)
 const isAddingRawCredential = ref(false)
+const showAdvanced = ref(false)
 
 watch(isOpen, (open) => {
   if (!open) {
     oauthToken.value = ''
     rawCredential.value = ''
+    showAdvanced.value = false
   }
 })
 
@@ -90,63 +93,86 @@ async function addRawCredential() {
   <Sheet v-model:open="isOpen">
     <SheetContent
       side="bottom"
-      class="max-h-[96vh] overflow-y-auto"
+      class="max-h-[92vh] overflow-y-auto"
       style="--wails-draggable: none"
     >
-      <SheetHeader class="gap-1 pb-2">
-        <SheetTitle>Connect Google Photos</SheetTitle>
-      </SheetHeader>
+      <div class="mx-auto flex w-full max-w-sm flex-col px-5 pt-1 pb-6">
+        <SheetHeader class="gap-0 px-0 pb-4 text-center">
+          <SheetTitle>Connect Google Photos</SheetTitle>
+        </SheetHeader>
 
-      <div class="flex flex-col gap-3 px-4 pb-3">
-        <Button
-          type="button"
-          variant="outline"
-          class="cursor-pointer select-none"
-          :disabled="isConnecting"
-          @click="openEmbeddedSetup"
-        >
-          Open Google sign-in
-        </Button>
+        <div class="flex flex-col gap-4">
+          <!-- Step 1: open sign-in -->
+          <div class="flex flex-col gap-2">
+            <p class="flex items-center gap-2 text-sm font-medium select-none">
+              <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs">1</span>
+              Open the Google sign-in page
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              class="cursor-pointer select-none"
+              :disabled="isConnecting"
+              @click="openEmbeddedSetup"
+            >
+              <ExternalLink class="size-4" />
+              Open sign-in
+            </Button>
+            <ol class="list-decimal space-y-1 rounded-lg border bg-muted/30 py-2.5 pr-3 pl-7 text-xs leading-snug text-muted-foreground">
+              <li>
+                Sign in, then click <span class="text-foreground">I agree</span>. The page may hang on a spinner. That's fine.
+              </li>
+              <li>Open DevTools, then Application or Storage → Cookies → accounts.google.com.</li>
+              <li>Copy the <code class="text-foreground">oauth_token</code> cookie's value.</li>
+            </ol>
+          </div>
 
-        <div class="rounded-lg border p-2.5 text-[11px] leading-snug text-muted-foreground">
-          <ol class="list-decimal space-y-1 pl-4">
-            <li>
-              Sign in with the account you want, then click <span class="text-foreground">I agree</span>. The page may keep loading; this is expected.
-            </li>
-            <li>In DevTools, open Application or Storage → Cookies → accounts.google.com.</li>
-            <li>Copy only the <code class="text-foreground">oauth_token</code> cookie value.</li>
-          </ol>
+          <!-- Step 2: paste token -->
+          <div class="flex flex-col gap-2">
+            <Label
+              for="google-oauth-token"
+              class="flex items-center gap-2 text-sm font-medium"
+            >
+              <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs">2</span>
+              Paste the oauth_token value
+            </Label>
+            <Input
+              id="google-oauth-token"
+              v-model="oauthToken"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Paste the cookie value"
+              :disabled="isConnecting"
+              @keydown.enter="connectAccount"
+            />
+            <Button
+              type="button"
+              class="cursor-pointer select-none"
+              :disabled="!oauthToken.trim() || isConnecting"
+              @click="connectAccount"
+            >
+              {{ isConnecting ? 'Connecting...' : 'Connect account' }}
+            </Button>
+          </div>
         </div>
 
-        <div class="flex flex-col gap-1.5">
-          <Label for="google-oauth-token">oauth_token value</Label>
-          <Input
-            id="google-oauth-token"
-            v-model="oauthToken"
-            type="password"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Paste the cookie value"
-            :disabled="isConnecting"
-            @keydown.enter="connectAccount"
-          />
-        </div>
-
-        <Button
-          type="button"
-          class="cursor-pointer select-none"
-          :disabled="!oauthToken.trim() || isConnecting"
-          @click="connectAccount"
-        >
-          {{ isConnecting ? 'Connecting...' : 'Connect account' }}
-        </Button>
-
-        <details class="rounded-lg border p-2.5 text-sm">
-          <summary class="cursor-pointer select-none text-muted-foreground">
-            Advanced: paste captured credentials
-          </summary>
-          <div class="mt-3 flex flex-col gap-2">
-            <Label for="google-raw-credential">Captured credential string</Label>
+        <div class="mt-4 border-t pt-3">
+          <button
+            type="button"
+            class="flex w-full items-center gap-1 text-xs text-muted-foreground select-none hover:text-foreground"
+            @click="showAdvanced = !showAdvanced"
+          >
+            <ChevronDown
+              class="size-3.5 transition-transform"
+              :class="showAdvanced && 'rotate-180'"
+            />
+            Paste a captured credential instead
+          </button>
+          <div
+            v-if="showAdvanced"
+            class="mt-3 flex flex-col gap-2"
+          >
             <Input
               id="google-raw-credential"
               v-model="rawCredential"
@@ -164,10 +190,10 @@ async function addRawCredential() {
               :disabled="!rawCredential.trim() || isAddingRawCredential"
               @click="addRawCredential"
             >
-              {{ isAddingRawCredential ? 'Adding...' : 'Add captured credentials' }}
+              {{ isAddingRawCredential ? 'Adding...' : 'Add credential' }}
             </Button>
           </div>
-        </details>
+        </div>
       </div>
     </SheetContent>
   </Sheet>
