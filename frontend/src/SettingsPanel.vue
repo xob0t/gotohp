@@ -269,7 +269,7 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       >
         <Label
           for="skip-incomplete-live-photos"
-          class="cursor-pointer"
+          :class="settings.pairLivePhotos ? 'cursor-pointer' : 'cursor-not-allowed'"
         >Skip Incomplete Live Photos</Label>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -304,7 +304,7 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
       >
         <Label
           for="update-existing-photos-to-live"
-          class="cursor-pointer"
+          :class="settings.pairLivePhotos ? 'cursor-pointer' : 'cursor-not-allowed'"
         >Update Existing Photos to Live Photos</Label>
         <Tooltip>
           <TooltipTrigger as-child>
