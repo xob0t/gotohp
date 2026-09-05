@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // Info describes the binary hosting the CLI.
@@ -46,7 +47,7 @@ func IsCLIInvocation(args []string) bool {
 // process exit code.
 func Run(args []string, info Info) int {
 	root := newRootCommand(info)
-	root.SetArgs(normalizeLegacyArgs(args))
+	root.SetArgs(normalizeLegacyArgs(root, args))
 	if err := root.Execute(); err != nil {
 		var exit exitError
 		if errorsAs(err, &exit) {
@@ -92,13 +93,51 @@ func newRootCommand(info Info) *cobra.Command {
 // normalizeLegacyArgs rewrites flags from the previous hand-rolled parser that
 // POSIX-style parsing would misread. "-df" used to mean --disable-filter; under
 // pflag it would expand to -d -f (delete + force), which must not happen silently.
-func normalizeLegacyArgs(args []string) []string {
-	out := make([]string, 0, len(args))
-	for _, arg := range args {
-		if arg == "-df" {
-			arg = "--disable-filter"
+func normalizeLegacyArgs(root *cobra.Command, args []string) []string {
+	out := slices.Clone(args)
+	cmd, _, err := root.Find(args)
+	if err != nil {
+		return out // Let Cobra report invalid commands.
+	}
+	flags := cmd.Flags()
+	flags.AddFlagSet(cmd.PersistentFlags())
+	flags.AddFlagSet(cmd.InheritedFlags())
+	for i := 0; i < len(out); i++ {
+		arg := out[i]
+		if arg == "--" {
+			break
 		}
-		out = append(out, arg)
+		if arg == "-df" && flags.Lookup("disable-filter") != nil {
+			// The explicit value also lets Cobra find a later subcommand.
+			out[i] = "--disable-filter=true"
+			continue
+		}
+		if flagConsumesNextArg(flags, arg) {
+			i++
+		}
 	}
 	return out
+}
+
+// Follow pflag's value rules using the command's flag definitions, including
+// short bundles such as -ra value and attached values such as -ra=value.
+func flagConsumesNextArg(flags *pflag.FlagSet, arg string) bool {
+	if strings.HasPrefix(arg, "--") {
+		name, _, attached := strings.Cut(arg[2:], "=")
+		flag := flags.Lookup(name)
+		return !attached && flag != nil && flag.NoOptDefVal == ""
+	}
+	if !strings.HasPrefix(arg, "-") {
+		return false
+	}
+	for shorts := arg[1:]; len(shorts) > 0; shorts = shorts[1:] {
+		flag := flags.ShorthandLookup(shorts[:1])
+		if flag == nil || (len(shorts) > 1 && shorts[1] == '=') {
+			return false
+		}
+		if flag.NoOptDefVal == "" {
+			return len(shorts) == 1
+		}
+	}
+	return false
 }
