@@ -19,7 +19,7 @@ FROM node:24-bookworm-slim AS node-runtime
 FROM golang:1.26-trixie
 
 ARG TARGETARCH
-ARG GARBLE_VERSION=v0.16.0
+ARG GARBLE_VERSION=v0.17.0
 
 # Install base tools, GCC, and GTK/WebKit dev packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
