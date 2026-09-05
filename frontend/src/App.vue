@@ -256,7 +256,7 @@ onMounted(() => {
   window.addEventListener('uploadError', uploadErrorHandler)
 
   // Listen for files-dropped event from backend
-  Events.On('files-dropped', (event: { data: { files: string[]; dropZone: string } }) => {
+  Events.On('files-dropped', async (event: { data: { files: string[]; dropZone: string } }) => {
     const { files, dropZone } = event.data
 
     if (dropZone === 'album') {
@@ -264,16 +264,17 @@ onMounted(() => {
       pendingFiles.value = files
       pendingFileCount.value = files.length
       showAlbumInput.value = true
-    } else if (dropZone === 'auto-album') {
-      // Auto album mode - create albums based on folder names
-      ConfigManager.SetAlbumName('')
-      ConfigManager.SetAlbumAutoMode(true)
-      Events.Emit('startUpload', { files })
     } else {
-      // Regular upload (no album)
-      ConfigManager.SetAlbumName('')
-      ConfigManager.SetAlbumAutoMode(false)
-      Events.Emit('startUpload', { files })
+      try {
+        await ConfigManager.SetAlbumName('')
+        await ConfigManager.SetAlbumAutoMode(dropZone === 'auto-album')
+        await Events.Emit('startUpload', { files })
+      } catch (error) {
+        console.error('Failed to start upload:', error)
+        toast.error('Failed to start upload', {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      }
     }
   })
 })
