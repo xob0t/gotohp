@@ -129,9 +129,17 @@ func newGoogleAuthHTTPClient(proxyURL string) (*http.Client, error) {
 	}
 
 	return &http.Client{
-		Transport: transport,
-		Timeout:   30 * time.Second,
+		Transport:     transport,
+		Timeout:       30 * time.Second,
+		CheckRedirect: rejectGoogleAuthRedirect,
 	}, nil
+}
+
+// These fixed endpoints must not forward token-bearing requests to a redirect
+// target. Return the original response instead of a url.Error containing the
+// untrusted redirect URL.
+func rejectGoogleAuthRedirect(_ *http.Request, _ []*http.Request) error {
+	return http.ErrUseLastResponse
 }
 
 func exchangeEmbeddedSetupToken(
@@ -287,6 +295,7 @@ func validateGooglePhotosCredential(credential string, proxy string) error {
 	if err != nil {
 		return err
 	}
+	api.client.CheckRedirect = rejectGoogleAuthRedirect
 	if _, err := api.BearerToken(); err != nil {
 		return err
 	}

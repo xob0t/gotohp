@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,8 +16,97 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
+
+func TestGoogleAuthenticationRejectsRedirects(t *testing.T) {
+	for _, status := range []int{http.StatusTemporaryRedirect, http.StatusPermanentRedirect} {
+		for _, destination := range []string{"same-origin", "cross-origin", "http-downgrade"} {
+			for _, validation := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%d/%s/validation=%t", status, destination, validation), func(t *testing.T) {
+					const token = "synthetic-redirect-test-token"
+					var redirected atomic.Int32
+					var initial atomic.Int32
+					redirectTarget := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						redirected.Add(1)
+						w.WriteHeader(http.StatusBadRequest)
+					}))
+					if destination == "http-downgrade" {
+						redirectTarget.Start()
+					} else {
+						redirectTarget.StartTLS()
+					}
+					defer redirectTarget.Close()
+					location := redirectTarget.URL + "/redirected?token=" + token
+					source := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						if r.URL.Path == "/redirected" {
+							redirected.Add(1)
+							w.WriteHeader(http.StatusBadRequest)
+							return
+						}
+						initial.Add(1)
+						if r.Method != http.MethodPost {
+							t.Errorf("method = %s, want POST", r.Method)
+						}
+						if err := r.ParseForm(); err != nil || r.Form.Get("Token") != token {
+							t.Error("initial request did not contain the expected token form")
+						}
+						http.Redirect(w, r, location, status)
+					}))
+					defer source.Close()
+					if destination == "same-origin" {
+						location = source.URL + "/redirected?token=" + token
+					}
+
+					// Route only the fixed validation endpoint to the local TLS server.
+					// Keep real redirect targets reachable so an accidental follow is observed.
+					transport := http.DefaultTransport.(*http.Transport).Clone()
+					transport.Proxy = nil
+					transport.TLSClientConfig = source.Client().Transport.(*http.Transport).TLSClientConfig.Clone()
+					transport.TLSClientConfig.InsecureSkipVerify = false
+					transport.TLSClientConfig.ServerName = "127.0.0.1"
+					transport.TLSClientConfig.RootCAs = x509.NewCertPool()
+					transport.TLSClientConfig.RootCAs.AddCert(source.Certificate())
+					if destination != "http-downgrade" {
+						transport.TLSClientConfig.RootCAs.AddCert(redirectTarget.Certificate())
+					}
+					transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+						if address == "android.googleapis.com:443" {
+							address = source.Listener.Addr().String()
+						}
+						return (&net.Dialer{}).DialContext(ctx, network, address)
+					}
+					previousTransport := http.DefaultTransport
+					http.DefaultTransport = transport
+					defer func() { http.DefaultTransport = previousTransport }()
+
+					var err error
+					if validation {
+						credential := buildGooglePhotosCredential("person@example.com", token, "0123456789abcdef")
+						err = validateGooglePhotosCredential(credential, "")
+					} else {
+						client, clientErr := newGoogleAuthHTTPClient("")
+						if clientErr != nil {
+							t.Fatal(clientErr)
+						}
+						defer client.CloseIdleConnections()
+						_, err = exchangeEmbeddedSetupToken(context.Background(), client, source.URL, token, "0123456789abcdef")
+					}
+					if err == nil || !strings.Contains(err.Error(), fmt.Sprint(status)) {
+						t.Errorf("expected rejection with HTTP status %d", status)
+					}
+					if err != nil && strings.Contains(err.Error(), token) {
+						t.Error("error exposed token from redirect Location")
+					}
+					if initial.Load() != 1 || redirected.Load() != 0 {
+						t.Errorf("initial requests = %d, redirected requests = %d; want 1, 0", initial.Load(), redirected.Load())
+					}
+				})
+			}
+		}
+	}
+}
 
 func TestGoogleAuthHTTPClientHandlesNegotiatedHTTP2(t *testing.T) {
 	const masterToken = "test-master-token"
