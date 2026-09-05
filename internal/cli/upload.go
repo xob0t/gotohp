@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"strings"
@@ -408,14 +409,24 @@ func runUpload(paths []string, opts backend.UploadOptions, settings uploadRunSet
 	}
 
 	if m, ok := finalModel.(uploadModel); ok {
-		summary := buildUploadSummary(m)
-		jsonOutput, err := json.MarshalIndent(summary, "", "  ")
-		if err != nil {
-			return fmt.Errorf("error generating JSON: %w", err)
-		}
-		fmt.Println(string(jsonOutput))
+		return finishUpload(m, os.Stdout)
 	}
 
+	return nil
+}
+
+// finishUpload writes the complete result before reporting a failed run.
+func finishUpload(model uploadModel, output io.Writer) error {
+	jsonOutput, err := json.MarshalIndent(buildUploadSummary(model), "", "  ")
+	if err != nil {
+		return fmt.Errorf("error generating JSON: %w", err)
+	}
+	if _, err := fmt.Fprintln(output, string(jsonOutput)); err != nil {
+		return fmt.Errorf("error writing JSON: %w", err)
+	}
+	if model.failed > 0 || model.albumError != "" {
+		return exitError{code: 1}
+	}
 	return nil
 }
 
