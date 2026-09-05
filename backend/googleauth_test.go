@@ -39,6 +39,9 @@ func TestGoogleAuthenticationRejectsRedirects(t *testing.T) {
 					}
 					defer redirectTarget.Close()
 					location := redirectTarget.URL + "/redirected?token=" + token
+					if destination == "cross-origin" {
+						location = strings.Replace(location, "127.0.0.1", "localhost", 1)
+					}
 					source := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						if r.URL.Path == "/redirected" {
 							redirected.Add(1)
@@ -74,6 +77,10 @@ func TestGoogleAuthenticationRejectsRedirects(t *testing.T) {
 					transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
 						if address == "android.googleapis.com:443" {
 							address = source.Listener.Addr().String()
+						}
+						host, _, err := net.SplitHostPort(address)
+						if err != nil || (host != "127.0.0.1" && host != "localhost") {
+							return nil, errors.New("test refused a non-local request")
 						}
 						return (&net.Dialer{}).DialContext(ctx, network, address)
 					}
