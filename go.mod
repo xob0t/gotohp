@@ -11,6 +11,8 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/structs v1.0.1
 	github.com/knadh/koanf/v2 v2.3.6
+	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.10
 	github.com/tink-crypto/tink-go/v2 v2.8.0
 	github.com/wailsapp/wails/v3 v3.0.0-beta.12
 	google.golang.org/protobuf v1.36.12
@@ -35,6 +37,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/knadh/koanf/maps v0.1.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.1 // indirect

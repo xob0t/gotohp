@@ -34,6 +34,8 @@ type Api struct {
 	authResponseCache map[string]string
 	commitEndpoint    string
 	commitRetryConfig *RetryConfig
+	saver             bool
+	useQuota          bool
 }
 
 type AuthResponse struct {
@@ -41,27 +43,46 @@ type AuthResponse struct {
 	Auth   string
 }
 
-func NewApi() (*Api, error) {
-	selectedEmail := AppConfig.Selected
-	if len(selectedEmail) == 0 {
+// ApiOptions selects the account and per-run upload policy for an API client.
+type ApiOptions struct {
+	// Account is the credential email to use; empty means the selected account.
+	Account  string
+	Proxy    string
+	Saver    bool
+	UseQuota bool
+}
+
+// NewApi creates a client for the account in opts using the loaded credential store.
+func NewApi(opts ApiOptions) (*Api, error) {
+	account := currentConfig().Account
+	email := opts.Account
+	if email == "" {
+		email = account.Selected
+	}
+	if email == "" {
 		return nil, fmt.Errorf("no account is selected")
 	}
 	credentials := ""
-	for _, c := range AppConfig.Credentials {
+	for _, c := range account.Credentials {
 		params, err := url.ParseQuery(c)
 		if err != nil {
 			continue
 		}
-		if params.Get("Email") == selectedEmail {
+		if strings.EqualFold(params.Get("Email"), email) {
 			credentials = c
 		}
 	}
-
 	if len(credentials) == 0 {
-		return nil, fmt.Errorf("no credentials with matching selected email found")
+		return nil, fmt.Errorf("no credentials found for account %s", email)
 	}
 
-	return newAPIFromCredential(credentials, AppConfig.Proxy)
+	api, err := newAPIFromCredential(credentials, opts.Proxy)
+	if err != nil {
+		return nil, err
+	}
+	api.saver = opts.Saver
+	api.useQuota = opts.UseQuota
+	return api, nil
 }
 
 func newAPIFromCredential(credentials string, proxy string) (*Api, error) {
@@ -497,12 +518,12 @@ func (a *Api) CommitUpload(
 	}
 
 	var qualityVal int64 = 3
-	if AppConfig.Saver {
+	if a.saver {
 		qualityVal = 1
 		a.model = "Pixel 2"
 	}
 
-	if AppConfig.UseQuota {
+	if a.useQuota {
 		a.model = "Pixel 8"
 	}
 

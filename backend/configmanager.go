@@ -20,26 +20,77 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// AccountConfig is the credential store shared by the GUI and the CLI.
+type AccountConfig struct {
+	Credentials []string `json:"credentials,omitempty" koanf:"credentials"`
+	Selected    string   `json:"selected" koanf:"selected"`
+}
+
+// Preferences are GUI settings. The CLI never reads them; every CLI run is
+// configured by flags alone.
+type Preferences struct {
+	Proxy                         string `json:"proxy" koanf:"proxy"`
+	UseQuota                      bool   `json:"useQuota" koanf:"use_quota"`
+	Saver                         bool   `json:"saver" koanf:"saver"`
+	Recursive                     bool   `json:"recursive" koanf:"recursive"`
+	ForceUpload                   bool   `json:"forceUpload" koanf:"force_upload"`
+	PairLivePhotos                bool   `json:"pairLivePhotos" koanf:"pair_live_photos"`
+	SkipIncompleteLivePhotos      bool   `json:"skipIncompleteLivePhotos" koanf:"skip_incomplete_live_photos"`
+	UpdateExistingPhotosToLive    bool   `json:"updateExistingPhotosToLive" koanf:"update_existing_photos_to_live"`
+	UploadThreads                 int    `json:"uploadThreads" koanf:"upload_threads"`
+	DeleteFromHost                bool   `json:"deleteFromHost" koanf:"delete_from_host"`
+	DisableUnsupportedFilesFilter bool   `json:"disableUnsupportedFilesFilter" koanf:"disable_unsupported_files_filter"`
+	SetDateFromFilename           bool   `json:"setDateFromFilename" koanf:"set_date_from_filename"`
+	ExcludePattern                string `json:"excludePattern" koanf:"exclude_pattern"`
+	// AlbumName and AlbumAutoMode are per-session choices and are never persisted.
+	AlbumName     string `json:"albumName" koanf:"-"`
+	AlbumAutoMode bool   `json:"albumAutoMode" koanf:"-"`
+}
+
+// Config is the on-disk layout of gotohp.config.
 type Config struct {
-	Credentials                   []string `json:"credentials,omitempty" koanf:"credentials"`
-	Selected                      string   `json:"selected" koanf:"selected"`
-	Proxy                         string   `json:"proxy" koanf:"proxy"`
-	UseQuota                      bool     `json:"useQuota" koanf:"use_quota"`
-	Saver                         bool     `json:"saver" koanf:"saver"`
-	Recursive                     bool     `json:"recursive" koanf:"recursive"`
-	ForceUpload                   bool     `json:"forceUpload" koanf:"force_upload"`
-	PairLivePhotos                bool     `json:"pairLivePhotos" koanf:"pair_live_photos"`
-	SkipIncompleteLivePhotos      bool     `json:"skipIncompleteLivePhotos" koanf:"skip_incomplete_live_photos"`
-	UpdateExistingPhotosToLive    bool     `json:"updateExistingPhotosToLive" koanf:"update_existing_photos_to_live"`
-	UploadThreads                 int      `json:"uploadThreads" koanf:"upload_threads"`
-	DeleteFromHost                bool     `json:"deleteFromHost" koanf:"delete_from_host"`
-	DisableUnsupportedFilesFilter bool     `json:"disableUnsupportedFilesFilter" koanf:"disable_unsupported_files_filter"`
-	AlbumName                     string   `json:"albumName" koanf:"album_name"`
-	AlbumAutoMode                 bool     `json:"albumAutoMode" koanf:"album_auto_mode"`
-	SetDateFromFilename           bool     `json:"setDateFromFilename" koanf:"set_date_from_filename"`
-	ExcludePattern                string   `json:"excludePattern" koanf:"exclude_pattern"`
-	// IgnoreAppleMetadata is a CLI-only per-command override and is never persisted.
-	IgnoreAppleMetadata bool `json:"-" koanf:"-"`
+	Account     AccountConfig `json:"account" koanf:"account"`
+	Preferences Preferences   `json:"preferences" koanf:"preferences"`
+}
+
+// legacyConfig is the pre-sectioned flat layout, kept only for migration.
+type legacyConfig struct {
+	Credentials                   []string `koanf:"credentials"`
+	Selected                      string   `koanf:"selected"`
+	Proxy                         string   `koanf:"proxy"`
+	UseQuota                      bool     `koanf:"use_quota"`
+	Saver                         bool     `koanf:"saver"`
+	Recursive                     bool     `koanf:"recursive"`
+	ForceUpload                   bool     `koanf:"force_upload"`
+	PairLivePhotos                bool     `koanf:"pair_live_photos"`
+	SkipIncompleteLivePhotos      bool     `koanf:"skip_incomplete_live_photos"`
+	UpdateExistingPhotosToLive    bool     `koanf:"update_existing_photos_to_live"`
+	UploadThreads                 int      `koanf:"upload_threads"`
+	DeleteFromHost                bool     `koanf:"delete_from_host"`
+	DisableUnsupportedFilesFilter bool     `koanf:"disable_unsupported_files_filter"`
+	SetDateFromFilename           bool     `koanf:"set_date_from_filename"`
+	ExcludePattern                string   `koanf:"exclude_pattern"`
+}
+
+func (l legacyConfig) toConfig() Config {
+	return Config{
+		Account: AccountConfig{Credentials: l.Credentials, Selected: l.Selected},
+		Preferences: Preferences{
+			Proxy:                         l.Proxy,
+			UseQuota:                      l.UseQuota,
+			Saver:                         l.Saver,
+			Recursive:                     l.Recursive,
+			ForceUpload:                   l.ForceUpload,
+			PairLivePhotos:                l.PairLivePhotos,
+			SkipIncompleteLivePhotos:      l.SkipIncompleteLivePhotos,
+			UpdateExistingPhotosToLive:    l.UpdateExistingPhotosToLive,
+			UploadThreads:                 l.UploadThreads,
+			DeleteFromHost:                l.DeleteFromHost,
+			DisableUnsupportedFilesFilter: l.DisableUnsupportedFilesFilter,
+			SetDateFromFilename:           l.SetDateFromFilename,
+			ExcludePattern:                l.ExcludePattern,
+		},
+	}
 }
 
 type AccountSummary struct {
@@ -55,14 +106,14 @@ type AccountsState struct {
 type ConfigManager struct{}
 
 var (
-	configMu      sync.RWMutex
-	AppConfig     Config
-	UploadRunning bool = false
-	ConfigPath    string
-	DefaultConfig = Config{
+	configMu           sync.RWMutex
+	AppConfig          Config
+	ConfigPath         string
+	DefaultPreferences = Preferences{
 		SkipIncompleteLivePhotos: true,
 		UploadThreads:            3,
 	}
+	DefaultConfig = Config{Preferences: DefaultPreferences}
 )
 
 // ParseAuthString parses an auth string and returns url.Values (exported for CLI use)
@@ -70,69 +121,83 @@ func ParseAuthString(authString string) (url.Values, error) {
 	return url.ParseQuery(authString)
 }
 
+// LooksLikeAuthString reports whether value is a raw credential (a query string
+// with Email and Token keys) rather than an Embedded Setup oauth_token.
+func LooksLikeAuthString(value string) bool {
+	value = strings.TrimSpace(value)
+	if !strings.Contains(value, "=") {
+		return false
+	}
+	params, err := url.ParseQuery(value)
+	if err != nil {
+		return false
+	}
+	return params.Get("Email") != "" && params.Get("Token") != ""
+}
+
 func (g *ConfigManager) SetProxy(proxy string) {
 	updateAppConfig(func(config *Config) {
-		config.Proxy = proxy
+		config.Preferences.Proxy = proxy
 	})
 }
 
 func (g *ConfigManager) SetSelected(email string) {
 	updateAppConfig(func(config *Config) {
-		config.Selected = email
+		config.Account.Selected = email
 	})
 }
 
 func (g *ConfigManager) SetUseQuota(useQuota bool) {
 	updateAppConfig(func(config *Config) {
-		config.UseQuota = useQuota
+		config.Preferences.UseQuota = useQuota
 	})
 }
 
 func (g *ConfigManager) SetSaver(saver bool) {
 	updateAppConfig(func(config *Config) {
-		config.Saver = saver
+		config.Preferences.Saver = saver
 	})
 }
 
 func (g *ConfigManager) SetRecursive(recursive bool) {
 	updateAppConfig(func(config *Config) {
-		config.Recursive = recursive
+		config.Preferences.Recursive = recursive
 	})
 }
 
 func (g *ConfigManager) SetForceUpload(forceUpload bool) {
 	updateAppConfig(func(config *Config) {
-		config.ForceUpload = forceUpload
+		config.Preferences.ForceUpload = forceUpload
 	})
 }
 
 func (g *ConfigManager) SetPairLivePhotos(pairLivePhotos bool) {
 	updateAppConfig(func(config *Config) {
-		config.PairLivePhotos = pairLivePhotos
+		config.Preferences.PairLivePhotos = pairLivePhotos
 	})
 }
 
 func (g *ConfigManager) SetSkipIncompleteLivePhotos(skipIncompleteLivePhotos bool) {
 	updateAppConfig(func(config *Config) {
-		config.SkipIncompleteLivePhotos = skipIncompleteLivePhotos
+		config.Preferences.SkipIncompleteLivePhotos = skipIncompleteLivePhotos
 	})
 }
 
 func (g *ConfigManager) SetUpdateExistingPhotosToLive(updateExistingPhotosToLive bool) {
 	updateAppConfig(func(config *Config) {
-		config.UpdateExistingPhotosToLive = updateExistingPhotosToLive
+		config.Preferences.UpdateExistingPhotosToLive = updateExistingPhotosToLive
 	})
 }
 
 func (g *ConfigManager) SetDeleteFromHost(deleteFromHost bool) {
 	updateAppConfig(func(config *Config) {
-		config.DeleteFromHost = deleteFromHost
+		config.Preferences.DeleteFromHost = deleteFromHost
 	})
 }
 
 func (g *ConfigManager) SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter bool) {
 	updateAppConfig(func(config *Config) {
-		config.DisableUnsupportedFilesFilter = disableUnsupportedFilesFilter
+		config.Preferences.DisableUnsupportedFilesFilter = disableUnsupportedFilesFilter
 	})
 }
 
@@ -141,58 +206,51 @@ func (g *ConfigManager) SetUploadThreads(uploadThreads int) {
 		return
 	}
 	updateAppConfig(func(config *Config) {
-		config.UploadThreads = uploadThreads
+		config.Preferences.UploadThreads = uploadThreads
 	})
 }
 
 func (g *ConfigManager) SetAlbumName(albumName string) {
 	configMu.Lock()
 	defer configMu.Unlock()
-	AppConfig.AlbumName = strings.TrimSpace(albumName)
+	AppConfig.Preferences.AlbumName = strings.TrimSpace(albumName)
 }
 
 func (g *ConfigManager) GetAlbumName() string {
 	configMu.RLock()
 	defer configMu.RUnlock()
-	return AppConfig.AlbumName
+	return AppConfig.Preferences.AlbumName
 }
 
 func (g *ConfigManager) SetAlbumAutoMode(autoMode bool) {
 	configMu.Lock()
 	defer configMu.Unlock()
-	AppConfig.AlbumAutoMode = autoMode
+	AppConfig.Preferences.AlbumAutoMode = autoMode
 	// Don't persist to disk - this is per-session like AlbumName
 }
 
 func (g *ConfigManager) GetAlbumAutoMode() bool {
 	configMu.RLock()
 	defer configMu.RUnlock()
-	return AppConfig.AlbumAutoMode
-}
-
-// GetAlbumConfig returns album name and auto mode atomically
-func GetAlbumConfig() (albumName string, autoMode bool) {
-	configMu.RLock()
-	defer configMu.RUnlock()
-	return AppConfig.AlbumName, AppConfig.AlbumAutoMode
+	return AppConfig.Preferences.AlbumAutoMode
 }
 
 func (g *ConfigManager) SetSetDateFromFilename(v bool) {
 	updateAppConfig(func(config *Config) {
-		config.SetDateFromFilename = v
+		config.Preferences.SetDateFromFilename = v
 	})
 }
 
 func (g *ConfigManager) SetExcludePattern(pattern string) {
 	updateAppConfig(func(config *Config) {
-		config.ExcludePattern = pattern
+		config.Preferences.ExcludePattern = pattern
 	})
 }
 
 func (g *ConfigManager) GetExcludePattern() string {
 	configMu.RLock()
 	defer configMu.RUnlock()
-	return AppConfig.ExcludePattern
+	return AppConfig.Preferences.ExcludePattern
 }
 
 func (g *ConfigManager) AddCredentials(newAuthString string) error {
@@ -234,7 +292,7 @@ func (g *ConfigManager) AddCredentials(newAuthString string) error {
 	defer configMu.Unlock()
 
 	// Check for duplicate email in existing credentials
-	for _, cred := range AppConfig.Credentials {
+	for _, cred := range AppConfig.Account.Credentials {
 		existingParams, err := url.ParseQuery(cred)
 		if err != nil {
 			continue // skip malformed entries
@@ -245,8 +303,8 @@ func (g *ConfigManager) AddCredentials(newAuthString string) error {
 	}
 
 	// If validation passed, add the new credentials
-	AppConfig.Credentials = append(AppConfig.Credentials, newAuthString)
-	AppConfig.Selected = email
+	AppConfig.Account.Credentials = append(AppConfig.Account.Credentials, newAuthString)
+	AppConfig.Account.Selected = email
 	_ = saveAppConfigLocked()
 	return nil
 }
@@ -273,7 +331,7 @@ func (g *ConfigManager) AddTokenBindingAliasFromADB(email string) error {
 	configMu.Lock()
 	defer configMu.Unlock()
 
-	for i, cred := range AppConfig.Credentials {
+	for i, cred := range AppConfig.Account.Credentials {
 		params, err := url.ParseQuery(cred)
 		if err != nil {
 			continue
@@ -282,7 +340,7 @@ func (g *ConfigManager) AddTokenBindingAliasFromADB(email string) error {
 			continue
 		}
 		params.Set("token_binding_alias", alias)
-		AppConfig.Credentials[i] = params.Encode()
+		AppConfig.Account.Credentials[i] = params.Encode()
 		return saveAppConfigLocked()
 	}
 
@@ -301,7 +359,7 @@ func (g *ConfigManager) RemoveCredentials(email string) error {
 	found := false
 	var updatedCredentials []string
 
-	for _, cred := range AppConfig.Credentials {
+	for _, cred := range AppConfig.Account.Credentials {
 		params, err := url.ParseQuery(cred)
 		if err != nil {
 			continue // skip malformed entries
@@ -320,11 +378,11 @@ func (g *ConfigManager) RemoveCredentials(email string) error {
 	}
 
 	// Update the configuration
-	AppConfig.Credentials = updatedCredentials
+	AppConfig.Account.Credentials = updatedCredentials
 
 	// If we're removing the currently selected credential, clear the selection
-	if AppConfig.Selected == email {
-		AppConfig.Selected = ""
+	if AppConfig.Account.Selected == email {
+		AppConfig.Account.Selected = ""
 	}
 
 	_ = saveAppConfigLocked()
@@ -547,6 +605,8 @@ func cleanADBError(out string) string {
 	return strings.Join(strings.Fields(out), " ")
 }
 
+// determineConfigPath picks the config location when none was given explicitly:
+// a portable gotohp.config next to the executable wins over the user config dir.
 func determineConfigPath() {
 	// First try portable config in executable directory
 	exePath, err := os.Executable()
@@ -577,20 +637,31 @@ func getUserConfigDir() string {
 //wails:ignore
 func (g *ConfigManager) GetConfig() Config {
 	ensureConfigLoaded()
+	return currentConfig()
+}
+
+// currentConfig returns a snapshot of the loaded config.
+func currentConfig() Config {
 	configMu.RLock()
 	defer configMu.RUnlock()
-
 	return AppConfig
 }
 
-func (g *ConfigManager) GetSettings() Config {
+func (g *ConfigManager) GetSettings() Preferences {
 	ensureConfigLoaded()
 	configMu.RLock()
 	defer configMu.RUnlock()
+	return AppConfig.Preferences
+}
 
-	settings := AppConfig
-	settings.Credentials = nil
-	return settings
+// SessionUploadOptions builds upload options from the GUI's current preferences.
+//
+//wails:ignore
+func (g *ConfigManager) SessionUploadOptions() UploadOptions {
+	ensureConfigLoaded()
+	configMu.RLock()
+	defer configMu.RUnlock()
+	return AppConfig.Preferences.UploadOptions()
 }
 
 func (g *ConfigManager) GetAccounts() AccountsState {
@@ -599,10 +670,10 @@ func (g *ConfigManager) GetAccounts() AccountsState {
 	defer configMu.RUnlock()
 
 	state := AccountsState{
-		Accounts: make([]AccountSummary, 0, len(AppConfig.Credentials)),
-		Selected: AppConfig.Selected,
+		Accounts: make([]AccountSummary, 0, len(AppConfig.Account.Credentials)),
+		Selected: AppConfig.Account.Selected,
 	}
-	for _, credential := range AppConfig.Credentials {
+	for _, credential := range AppConfig.Account.Credentials {
 		values, err := url.ParseQuery(credential)
 		if err != nil || values.Get("Email") == "" {
 			continue
@@ -630,15 +701,19 @@ func ensureConfigLoaded() {
 	}
 }
 
-// LoadConfig loads the configuration (exported for CLI use)
-func LoadConfig() error {
+// LoadConfig loads settings from path, or from the default location when path
+// is empty. It replaces any previously loaded config.
+func LoadConfig(path string) error {
 	configMu.Lock()
 	defer configMu.Unlock()
+	ConfigPath = path
 	return loadConfigLocked()
 }
 
 func loadConfigLocked() error {
-	determineConfigPath()
+	if ConfigPath == "" {
+		determineConfigPath()
+	}
 
 	file, _ := os.ReadFile(ConfigPath)
 	if len(file) == 0 {
@@ -717,19 +792,59 @@ func loadAppConfig() Config {
 		log.Printf("error parsing app config: %v", err)
 		return DefaultConfig
 	}
+	if isLegacyConfig(k) {
+		return migrateLegacyConfig(k)
+	}
 	err := k.Unmarshal("", &c)
 	if err != nil {
 		log.Printf("error unmarshaling app config: %v", err)
 		return DefaultConfig
 	}
 
-	if !k.Exists("skip_incomplete_live_photos") {
-		c.SkipIncompleteLivePhotos = DefaultConfig.SkipIncompleteLivePhotos
+	if !k.Exists("preferences.skip_incomplete_live_photos") {
+		c.Preferences.SkipIncompleteLivePhotos = DefaultPreferences.SkipIncompleteLivePhotos
 	}
 
-	if c.UploadThreads < 1 {
-		c.UploadThreads = DefaultConfig.UploadThreads
+	if c.Preferences.UploadThreads < 1 {
+		c.Preferences.UploadThreads = DefaultPreferences.UploadThreads
 	}
 
+	return c
+}
+
+// isLegacyConfig reports whether the loaded file uses the flat pre-sectioned layout.
+func isLegacyConfig(k *koanf.Koanf) bool {
+	if k.Exists("account") || k.Exists("preferences") {
+		return false
+	}
+	for _, key := range []string{"credentials", "selected", "upload_threads", "proxy", "recursive"} {
+		if k.Exists(key) {
+			return true
+		}
+	}
+	return false
+}
+
+// migrateLegacyConfig converts a flat config into the sectioned layout and
+// rewrites the file so the migration happens once.
+func migrateLegacyConfig(k *koanf.Koanf) Config {
+	legacy := legacyConfig{
+		SkipIncompleteLivePhotos: DefaultPreferences.SkipIncompleteLivePhotos,
+		UploadThreads:            DefaultPreferences.UploadThreads,
+	}
+	if err := k.Unmarshal("", &legacy); err != nil {
+		log.Printf("error migrating legacy app config: %v", err)
+		return DefaultConfig
+	}
+	c := legacy.toConfig()
+	if c.Preferences.UploadThreads < 1 {
+		c.Preferences.UploadThreads = DefaultPreferences.UploadThreads
+	}
+	previous := AppConfig
+	AppConfig = c
+	if err := saveAppConfigLocked(); err != nil {
+		log.Printf("error saving migrated app config: %v", err)
+	}
+	AppConfig = previous
 	return c
 }

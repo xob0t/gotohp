@@ -12,7 +12,7 @@ Unofficial Google Photos Desktop GUI Client
 - Individual files or directories uploads, with optional recursive scanning
 - Skips files already present in your account
 - CLI mode
-- Configurable, presistent upload settings (stored in "%system config path%/gotohp/gotohp.config")  
+- Configurable, persistent upload settings (stored in "%system config path%/gotohp/gotohp.config")  
    You can force local config by creating empty gotohp.config next to executable.
 
 ## [Download](https://github.com/xob0t/gotohp/releases/latest)
@@ -23,11 +23,17 @@ Download the `gotohp-cli` release artifact for your platform. It runs without th
 
 ```shell
 gotohp-cli upload /path/to/photos --recursive --threads 5
-gotohp-cli creds add "androidId=..."
+gotohp-cli creds add "<oauth_token cookie value>"   # Embedded Setup sign-in, see below
+gotohp-cli creds add "androidId=..."                 # or a raw credential string
+gotohp-cli creds add - < token.txt                   # or read either from stdin
 gotohp-cli creds set user@gmail.com
 ```
 
-Run `gotohp-cli help` for all commands and options.
+The CLI shares the config file with the GUI, but reads only the stored credentials from it. Everything else (proxy, quality, upload behaviour) is set by flags, so a scripted run is unaffected by preferences changed in the GUI. Pass `--config <path>` to use a different config file and `--account <email>` to upload with a specific stored account.
+
+Run `gotohp-cli help` or `gotohp-cli upload --help` for all commands and options.
+
+The GUI binary runs the same CLI when given a command, e.g. `gotohp upload ...`.
 
 ## Sign in
 
@@ -39,6 +45,8 @@ Run `gotohp-cli help` for all commands and options.
 4. Open the browser developer tools. Under Application or Storage, open Cookies for `accounts.google.com`.
 5. Copy only the value of the `oauth_token` cookie and paste it into gotohp.
 6. Click **Connect account**.
+
+From the CLI, open the same page yourself and run `gotohp-cli creds add "<oauth_token value>"`.
 
 ### Option 2 - ReVanced. No root required
 

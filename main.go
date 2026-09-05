@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"app/backend"
+	"app/internal/cli"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -21,25 +22,27 @@ var assets embed.FS
 var title = "gotohp v" + getAppVersion()
 
 func main() {
-	// Check if running in CLI mode based on recognized commands
-	// If unrecognized arguments are passed, default to GUI mode
-	if len(os.Args) > 1 && isCLICommand(os.Args[1]) {
-		runCLI()
-		return
+	// Run the CLI when the arguments name one of its commands; otherwise start the GUI.
+	if cli.IsCLIInvocation(os.Args[1:]) {
+		os.Exit(cli.Run(os.Args[1:], cli.Info{
+			ExecutableName: "gotohp",
+			HasGUI:         true,
+			Version:        getAppVersion(),
+		}))
 	}
 
-	// Run GUI mode (default when no arguments or unrecognized arguments)
 	runGUI()
 }
 
 func runGUI() {
 	normalizeFrontendDevServerURL()
 
+	configManager := &backend.ConfigManager{}
 	wailsApp := application.New(application.Options{
 		Name:        "com.xob0t.gotohp",
 		Description: "Google Photos unofficial client",
 		Services: []application.Service{
-			application.NewService(&backend.ConfigManager{}),
+			application.NewService(configManager),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
@@ -66,9 +69,7 @@ func runGUI() {
 		URL: "/",
 	})
 
-	// Wrap Wails app in AppInterface
-	app := backend.NewWailsApp(wailsApp)
-	uploadManager := backend.NewUploadManager(app)
+	uploadManager := backend.NewUploadManager(backend.NewWailsReporter(wailsApp), wailsApp.Logger)
 
 	// Listen for upload cancel event
 	wailsApp.Event.On("uploadCancel", func(e *application.CustomEvent) {
@@ -98,7 +99,7 @@ func runGUI() {
 	wailsApp.Event.On("startUpload", func(e *application.CustomEvent) {
 		if data, ok := e.Data.(backend.StartUploadEvent); ok {
 			wailsApp.Logger.Info("Starting upload", "fileCount", len(data.Files))
-			uploadManager.Upload(app, data.Files)
+			uploadManager.Upload(data.Files, configManager.SessionUploadOptions())
 		} else {
 			wailsApp.Logger.Error("startUpload: unexpected data type", "type", fmt.Sprintf("%T", e.Data))
 		}

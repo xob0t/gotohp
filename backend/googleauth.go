@@ -36,13 +36,23 @@ type googleAuthExchange struct {
 	MasterToken string
 }
 
+// AddGoogleAccount exchanges an Embedded Setup oauth_token for a Google Photos
+// credential using the GUI's proxy preference, saves it, and returns the email.
 func (g *ConfigManager) AddGoogleAccount(oauthToken string) (string, error) {
 	ensureConfigLoaded()
 
 	configMu.RLock()
-	proxy := AppConfig.Proxy
+	proxy := AppConfig.Preferences.Proxy
 	configMu.RUnlock()
 
+	return g.AddGoogleAccountWithProxy(oauthToken, proxy)
+}
+
+// AddGoogleAccountWithProxy is AddGoogleAccount with an explicit proxy, for
+// callers such as the CLI that do not use GUI preferences.
+//
+//wails:ignore
+func (g *ConfigManager) AddGoogleAccountWithProxy(oauthToken string, proxy string) (string, error) {
 	client, err := newGoogleAuthHTTPClient(proxy)
 	if err != nil {
 		return "", fmt.Errorf("prepare Google authentication: %w", err)
@@ -119,9 +129,17 @@ func newGoogleAuthHTTPClient(proxyURL string) (*http.Client, error) {
 	}
 
 	return &http.Client{
-		Transport: transport,
-		Timeout:   30 * time.Second,
+		Transport:     transport,
+		Timeout:       30 * time.Second,
+		CheckRedirect: rejectGoogleAuthRedirect,
 	}, nil
+}
+
+// These fixed endpoints must not forward token-bearing requests to a redirect
+// target. Return the original response instead of a url.Error containing the
+// untrusted redirect URL.
+func rejectGoogleAuthRedirect(_ *http.Request, _ []*http.Request) error {
+	return http.ErrUseLastResponse
 }
 
 func exchangeEmbeddedSetupToken(
@@ -277,6 +295,7 @@ func validateGooglePhotosCredential(credential string, proxy string) error {
 	if err != nil {
 		return err
 	}
+	api.client.CheckRedirect = rejectGoogleAuthRedirect
 	if _, err := api.BearerToken(); err != nil {
 		return err
 	}
@@ -301,25 +320,25 @@ func upsertCredential(credential string) error {
 	configMu.Lock()
 	defer configMu.Unlock()
 
-	previousCredentials := append([]string(nil), AppConfig.Credentials...)
-	previousSelected := AppConfig.Selected
+	previousCredentials := append([]string(nil), AppConfig.Account.Credentials...)
+	previousSelected := AppConfig.Account.Selected
 	replaced := false
-	for index, existing := range AppConfig.Credentials {
+	for index, existing := range AppConfig.Account.Credentials {
 		existingValues, parseErr := url.ParseQuery(existing)
 		if parseErr == nil && strings.EqualFold(existingValues.Get("Email"), email) {
-			AppConfig.Credentials[index] = credential
+			AppConfig.Account.Credentials[index] = credential
 			replaced = true
 			break
 		}
 	}
 	if !replaced {
-		AppConfig.Credentials = append(AppConfig.Credentials, credential)
+		AppConfig.Account.Credentials = append(AppConfig.Account.Credentials, credential)
 	}
-	AppConfig.Selected = email
+	AppConfig.Account.Selected = email
 
 	if err := saveAppConfigLocked(); err != nil {
-		AppConfig.Credentials = previousCredentials
-		AppConfig.Selected = previousSelected
+		AppConfig.Account.Credentials = previousCredentials
+		AppConfig.Account.Selected = previousSelected
 		return err
 	}
 	return nil

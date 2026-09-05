@@ -13,6 +13,10 @@ export function AddCredentials(newAuthString: string): $CancellablePromise<void>
     return $Call.ByID(4083250689, newAuthString);
 }
 
+/**
+ * AddGoogleAccount exchanges an Embedded Setup oauth_token for a Google Photos
+ * credential using the GUI's proxy preference, saves it, and returns the email.
+ */
 export function AddGoogleAccount(oauthToken: string): $CancellablePromise<string> {
     return $Call.ByID(733209449, oauthToken);
 }
@@ -43,7 +47,7 @@ export function GetExcludePattern(): $CancellablePromise<string> {
     return $Call.ByID(2942848526);
 }
 
-export function GetSettings(): $CancellablePromise<$models.Config> {
+export function GetSettings(): $CancellablePromise<$models.Preferences> {
     return $Call.ByID(4262641511).then(($result: any) => {
         return $$createType1($result);
     });
@@ -119,4 +123,4 @@ export function SetUseQuota(useQuota: boolean): $CancellablePromise<void> {
 
 // Private type creation functions
 const $$createType0 = $models.AccountsState.createFrom;
-const $$createType1 = $models.Config.createFrom;
+const $$createType1 = $models.Preferences.createFrom;
