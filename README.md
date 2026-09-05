@@ -23,7 +23,9 @@ Download the `gotohp-cli` release artifact for your platform. It runs without th
 
 ```shell
 gotohp-cli upload /path/to/photos --recursive --threads 5
-gotohp-cli creds add "androidId=..."
+gotohp-cli creds add "<oauth_token cookie value>"   # Embedded Setup sign-in, see below
+gotohp-cli creds add "androidId=..."                 # or a raw credential string
+gotohp-cli creds add - < token.txt                   # or read either from stdin
 gotohp-cli creds set user@gmail.com
 ```
 
@@ -43,6 +45,8 @@ The GUI binary runs the same CLI when given a command, e.g. `gotohp upload ...`.
 4. Open the browser developer tools. Under Application or Storage, open Cookies for `accounts.google.com`.
 5. Copy only the value of the `oauth_token` cookie and paste it into gotohp.
 6. Click **Connect account**.
+
+From the CLI, open the same page yourself and run `gotohp-cli creds add "<oauth_token value>"`.
 
 ### Option 2 - ReVanced. No root required
 

@@ -398,3 +398,19 @@ func restoreConfigGlobals(t *testing.T) {
 		configMu.Unlock()
 	})
 }
+
+func TestLooksLikeAuthString(t *testing.T) {
+	cases := map[string]bool{
+		"androidId=1&Email=a%40x.com&Token=t":            true,
+		"  Email=a%40x.com&Token=t  ":                    true,
+		"Email=a%40x.com":                                false,
+		"oauth_token=abcdefghijklmnopqrstuvwxyz":         false,
+		"4/0AbCdEfGhIjKlMnOpQrStUvWxYz-1234567890abcdef": false,
+		"": false,
+	}
+	for in, want := range cases {
+		if got := LooksLikeAuthString(in); got != want {
+			t.Errorf("LooksLikeAuthString(%q) = %v, want %v", in, got, want)
+		}
+	}
+}

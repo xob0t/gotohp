@@ -1,7 +1,10 @@
 package cli
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -23,19 +26,46 @@ func newCredentialsCommand() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.AddCommand(
-		&cobra.Command{
-			Use:   "add <auth-string>",
-			Short: "Add a new credential",
-			Args:  cobra.ExactArgs(1),
-			RunE: func(_ *cobra.Command, args []string) error {
-				if err := (&backend.ConfigManager{}).AddCredentials(args[0]); err != nil {
+
+	add := &cobra.Command{
+		Use:   "add <auth-string | oauth-token>",
+		Short: "Add an account from a raw auth string or an Embedded Setup oauth_token cookie",
+		Long: `Add an account.
+
+Pass either a raw credential string (androidId=...&Email=...&Token=...) or the
+oauth_token cookie value from https://accounts.google.com/EmbeddedSetup. A cookie
+is exchanged with Google for a credential, validated, and saved; the account
+becomes the selected one.
+
+Pass "-" to read the value from standard input instead, which keeps it out of
+shell history and process listings.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			value, err := readSecretArg(args[0], cmd.InOrStdin())
+			if err != nil {
+				return err
+			}
+			configManager := &backend.ConfigManager{}
+			if backend.LooksLikeAuthString(value) {
+				if err := configManager.AddCredentials(value); err != nil {
 					return fmt.Errorf("adding credentials: %w", err)
 				}
 				fmt.Println("✓ Credentials added successfully")
 				return nil
-			},
+			}
+			proxy, _ := cmd.Flags().GetString("proxy")
+			email, err := configManager.AddGoogleAccountWithProxy(value, proxy)
+			if err != nil {
+				return fmt.Errorf("signing in with oauth_token: %w", err)
+			}
+			fmt.Printf("✓ Account %s connected and selected\n", email)
+			return nil
 		},
+	}
+	add.Flags().String("proxy", "", "proxy URL for the sign-in exchange")
+
+	cmd.AddCommand(
+		add,
 		&cobra.Command{
 			Use:     "remove <email>",
 			Aliases: []string{"rm"},
@@ -70,6 +100,31 @@ func newCredentialsCommand() *cobra.Command {
 		},
 	)
 	return cmd
+}
+
+// maxSecretLen bounds a credential or oauth_token read from stdin.
+const maxSecretLen = 64 * 1024
+
+// readSecretArg returns arg, or the first line of in when arg is "-". It stops
+// at the newline so interactive use does not wait for EOF.
+func readSecretArg(arg string, in io.Reader) (string, error) {
+	if arg != "-" {
+		return arg, nil
+	}
+	// Allow the limit plus a line terminator, then measure the content alone.
+	line, err := bufio.NewReader(io.LimitReader(in, maxSecretLen+3)).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", fmt.Errorf("reading value from stdin: %w", err)
+	}
+	content := strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+	if len(content) > maxSecretLen {
+		return "", fmt.Errorf("value on stdin exceeds %d bytes", maxSecretLen)
+	}
+	value := strings.TrimSpace(content)
+	if value == "" {
+		return "", fmt.Errorf("no value received on stdin")
+	}
+	return value, nil
 }
 
 func credentialEmails(config backend.Config) []string {

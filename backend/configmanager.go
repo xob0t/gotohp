@@ -121,6 +121,20 @@ func ParseAuthString(authString string) (url.Values, error) {
 	return url.ParseQuery(authString)
 }
 
+// LooksLikeAuthString reports whether value is a raw credential (a query string
+// with Email and Token keys) rather than an Embedded Setup oauth_token.
+func LooksLikeAuthString(value string) bool {
+	value = strings.TrimSpace(value)
+	if !strings.Contains(value, "=") {
+		return false
+	}
+	params, err := url.ParseQuery(value)
+	if err != nil {
+		return false
+	}
+	return params.Get("Email") != "" && params.Get("Token") != ""
+}
+
 func (g *ConfigManager) SetProxy(proxy string) {
 	updateAppConfig(func(config *Config) {
 		config.Preferences.Proxy = proxy

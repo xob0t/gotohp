@@ -13,6 +13,10 @@ export function AddCredentials(newAuthString: string): $CancellablePromise<void>
     return $Call.ByID(4083250689, newAuthString);
 }
 
+/**
+ * AddGoogleAccount exchanges an Embedded Setup oauth_token for a Google Photos
+ * credential using the GUI's proxy preference, saves it, and returns the email.
+ */
 export function AddGoogleAccount(oauthToken: string): $CancellablePromise<string> {
     return $Call.ByID(733209449, oauthToken);
 }
