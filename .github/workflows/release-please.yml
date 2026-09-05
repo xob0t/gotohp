@@ -10,13 +10,13 @@ permissions:
   pull-requests: write
 
 env:
-  WAILS_VERSION: v3.0.0-beta.12
+  WAILS_VERSION: v3.0.0-beta.16
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         id: release-please
         with:
           # RELEASE_PLEASE_TOKEN must be a PAT (contents: write, pull-requests: write).
@@ -29,12 +29,12 @@ jobs:
       # Regenerate the Wails build assets (Info.plist, Windows version info,
       # nfpm configs) on the release PR branch so the version bump in
       # build/config.yml is reflected in the committed metadata.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: ${{ steps.release-please.outputs.prs_created == 'true' }}
         with:
           ref: ${{ fromJSON(steps.release-please.outputs.pr).headBranchName }}
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         if: ${{ steps.release-please.outputs.prs_created == 'true' }}
         with:
           go-version-file: go.mod
