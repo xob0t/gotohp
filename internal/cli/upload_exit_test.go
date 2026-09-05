@@ -38,8 +38,8 @@ func TestUploadRunReturnsFailureWithJSON(t *testing.T) {
 	os.Stdout = output
 	code := Run([]string{"upload", photo, "--config", configPath, "--no-tui"}, Info{ExecutableName: "gotohp-cli"})
 	os.Stdout = previousStdout
-	if code == 0 {
-		t.Error("upload returned success despite a failed file")
+	if code != 1 {
+		t.Errorf("failed upload exit code = %d, want 1", code)
 	}
 	if _, err := output.Seek(0, io.SeekStart); err != nil {
 		t.Fatal(err)
@@ -110,8 +110,8 @@ func TestFinishUploadExitStatusPreservesJSON(t *testing.T) {
 			err := finishUpload(model, &output)
 			if tc.fail {
 				var exit exitError
-				if !errors.As(err, &exit) || exit.code == 0 {
-					t.Errorf("failure status = %v, want nonzero CLI exitError", err)
+				if !errors.As(err, &exit) || exit.code != 1 {
+					t.Errorf("failure status = %v, want CLI exitError with code 1", err)
 				}
 			} else if err != nil {
 				t.Errorf("successful run returned an error: %v", err)
@@ -140,8 +140,8 @@ func TestFinishUploadRetainsEarlierAlbumFailure(t *testing.T) {
 	})
 	var output bytes.Buffer
 	var exit exitError
-	if err := finishUpload(model, &output); !errors.As(err, &exit) || exit.code == 0 {
-		t.Errorf("later album success erased the failed exit status: %v", err)
+	if err := finishUpload(model, &output); !errors.As(err, &exit) || exit.code != 1 {
+		t.Errorf("status after later album success = %v, want CLI exitError with code 1", err)
 	}
 	var summary uploadSummary
 	if err := json.Unmarshal(output.Bytes(), &summary); err != nil {
