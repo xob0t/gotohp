@@ -33,6 +33,8 @@ The CLI shares the config file with the GUI, but reads only the stored credentia
 
 Run `gotohp-cli help` or `gotohp-cli upload --help` for all commands and options.
 
+Uploads print a JSON summary to stdout and exit with code `1` if any file upload or album operation fails, or `0` for successful runs, including runs with only skipped files.
+
 The GUI binary runs the same CLI when given a command, e.g. `gotohp upload ...`.
 
 ## Sign in
