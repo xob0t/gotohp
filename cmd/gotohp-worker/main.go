@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 type reporter struct {
@@ -29,6 +30,13 @@ func (r reporter) AlbumProgress(v core.AlbumStatus)    { r.send("albumProgress",
 func (r reporter) AlbumComplete(v core.AlbumStatus)    { r.send("albumComplete", v) }
 func (r reporter) AlbumError(v core.AlbumError)        { r.send("albumError", v) }
 func main() {
+	configPath := ""
+	if executable, err := os.Executable(); err == nil {
+		configPath = filepath.Join(filepath.Dir(executable), "gotohp.config")
+	}
+	if err := core.LoadConfig(configPath); err != nil {
+		fmt.Fprintln(os.Stderr, "failed to load config:", err)
+	}
 	enc := json.NewEncoder(os.Stdout)
 	scan := bufio.NewScanner(os.Stdin)
 	scan.Buffer(make([]byte, 64*1024), 16*1024*1024)
