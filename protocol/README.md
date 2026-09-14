@@ -16,7 +16,7 @@ The first supported method is `upload`.
 
 ## Notifications
 
-Upload progress is sent as JSON-RPC notifications associated with the request ID:
+Upload progress is sent as JSON-RPC notifications. Notifications omit the JSON-RPC `id`; clients associate them with the single upload request currently in progress:
 
 - `uploadStart`
 - `totalBytes`

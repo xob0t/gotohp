@@ -52,8 +52,9 @@ class Client:
                 raise WorkerError("worker returned invalid JSON") from exc
             messages.append(msg)
             if msg.get("method") and on_event: on_event(msg)
-            if msg.get("id")==request_id and ("result" in msg or "error" in msg):
-                if "error" in msg: raise WorkerError(msg["error"]["message"])
+            if "error" in msg and msg.get("id") in (None, request_id):
+                raise WorkerError(msg["error"].get("message", "worker request failed"))
+            if msg.get("id")==request_id and "result" in msg:
                 return messages
         raise WorkerError("worker exited before responding")
     def accounts(self) -> list[Account]:
