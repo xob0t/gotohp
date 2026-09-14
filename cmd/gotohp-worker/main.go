@@ -69,7 +69,7 @@ func main() {
 			case "credentials.remove":
 				err = manager.RemoveCredentials(req.Params.Email)
 			case "credentials.select":
-				err = manager.SetSelected(req.Params.Email)
+				manager.SetSelected(req.Params.Email)
 			default:
 				err = fmt.Errorf("unknown method %q", req.Method)
 			}
