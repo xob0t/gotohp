@@ -10,7 +10,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 export function AddCredentials(newAuthString: string): $CancellablePromise<void> {
-    return $Call.ByID(4083250689, newAuthString);
+    return $Call.ByID(3761332626, newAuthString);
 }
 
 /**
@@ -18,107 +18,107 @@ export function AddCredentials(newAuthString: string): $CancellablePromise<void>
  * credential using the GUI's proxy preference, saves it, and returns the email.
  */
 export function AddGoogleAccount(oauthToken: string): $CancellablePromise<string> {
-    return $Call.ByID(733209449, oauthToken);
+    return $Call.ByID(1193706598, oauthToken);
 }
 
 export function AddTokenBindingAliasFromADB(email: string): $CancellablePromise<void> {
-    return $Call.ByID(3252041498, email);
+    return $Call.ByID(3043740547, email);
 }
 
 export function CredentialNeedsTokenBinding(authString: string): $CancellablePromise<boolean> {
-    return $Call.ByID(920629710, authString);
+    return $Call.ByID(3401558551, authString);
 }
 
 export function GetAccounts(): $CancellablePromise<$models.AccountsState> {
-    return $Call.ByID(562122970).then(($result: any) => {
+    return $Call.ByID(1187873763).then(($result: any) => {
         return $$createType0($result);
     });
 }
 
 export function GetAlbumAutoMode(): $CancellablePromise<boolean> {
-    return $Call.ByID(492228705);
+    return $Call.ByID(3034243646);
 }
 
 export function GetAlbumName(): $CancellablePromise<string> {
-    return $Call.ByID(3590690922);
+    return $Call.ByID(1570265661);
 }
 
 export function GetExcludePattern(): $CancellablePromise<string> {
-    return $Call.ByID(2942848526);
+    return $Call.ByID(913035763);
 }
 
 export function GetSettings(): $CancellablePromise<$models.Preferences> {
-    return $Call.ByID(4262641511).then(($result: any) => {
+    return $Call.ByID(4032120730).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 export function RemoveCredentials(email: string): $CancellablePromise<void> {
-    return $Call.ByID(4243930372, email);
+    return $Call.ByID(741429753, email);
 }
 
 export function SetAlbumAutoMode(autoMode: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1935381765, autoMode);
+    return $Call.ByID(1875085042, autoMode);
 }
 
 export function SetAlbumName(albumName: string): $CancellablePromise<void> {
-    return $Call.ByID(841849854, albumName);
+    return $Call.ByID(1670821521, albumName);
 }
 
 export function SetDeleteFromHost(deleteFromHost: boolean): $CancellablePromise<void> {
-    return $Call.ByID(377345147, deleteFromHost);
+    return $Call.ByID(3351995250, deleteFromHost);
 }
 
 export function SetDisableUnsupportedFilesFilter(disableUnsupportedFilesFilter: boolean): $CancellablePromise<void> {
-    return $Call.ByID(821557574, disableUnsupportedFilesFilter);
+    return $Call.ByID(523767289, disableUnsupportedFilesFilter);
 }
 
 export function SetExcludePattern(pattern: string): $CancellablePromise<void> {
-    return $Call.ByID(4021766002, pattern);
+    return $Call.ByID(3232766647, pattern);
 }
 
 export function SetForceUpload(forceUpload: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2189240988, forceUpload);
+    return $Call.ByID(700800787, forceUpload);
 }
 
 export function SetPairLivePhotos(pairLivePhotos: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3927958009, pairLivePhotos);
+    return $Call.ByID(3112837812, pairLivePhotos);
 }
 
 export function SetProxy(proxy: string): $CancellablePromise<void> {
-    return $Call.ByID(2532528442, proxy);
+    return $Call.ByID(3453012749, proxy);
 }
 
 export function SetRecursive(recursive: boolean): $CancellablePromise<void> {
-    return $Call.ByID(455302378, recursive);
+    return $Call.ByID(2974596005, recursive);
 }
 
 export function SetSaver(saver: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3030960747, saver);
+    return $Call.ByID(602728276, saver);
 }
 
 export function SetSelected(email: string): $CancellablePromise<void> {
-    return $Call.ByID(2816040807, email);
+    return $Call.ByID(2909725762, email);
 }
 
 export function SetSetDateFromFilename(v: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1731635347, v);
+    return $Call.ByID(2128354752, v);
 }
 
 export function SetSkipIncompleteLivePhotos(skipIncompleteLivePhotos: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2521603022, skipIncompleteLivePhotos);
+    return $Call.ByID(424242511, skipIncompleteLivePhotos);
 }
 
 export function SetUpdateExistingPhotosToLive(updateExistingPhotosToLive: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3038371812, updateExistingPhotosToLive);
+    return $Call.ByID(3924507429, updateExistingPhotosToLive);
 }
 
 export function SetUploadThreads(uploadThreads: number): $CancellablePromise<void> {
-    return $Call.ByID(1692245880, uploadThreads);
+    return $Call.ByID(783059171, uploadThreads);
 }
 
 export function SetUseQuota(useQuota: boolean): $CancellablePromise<void> {
-    return $Call.ByID(778544527, useQuota);
+    return $Call.ByID(1540354890, useQuota);
 }
 
 // Private type creation functions

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"app/backend"
+	"app/core"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -67,28 +67,28 @@ func assertReporterJSON(t *testing.T, model uploadModel, expected string) {
 
 func TestTeaReporterPreservesFileResultsAndWarnings(t *testing.T) {
 	model := runReporterProgram(t, func(r teaReporter) {
-		r.UploadStart(backend.UploadBatchStart{}) // Preflight begins before the total is known.
-		r.UploadStart(backend.UploadBatchStart{Total: 3, TotalBytes: 4096})
-		r.ThreadStatus(backend.ThreadStatus{WorkerID: 2, Status: "uploading", FileName: "pair.heic"})
-		r.FileResult(backend.FileUploadResult{
+		r.UploadStart(core.UploadBatchStart{}) // Preflight begins before the total is known.
+		r.UploadStart(core.UploadBatchStart{Total: 3, TotalBytes: 4096})
+		r.ThreadStatus(core.ThreadStatus{WorkerID: 2, Status: "uploading", FileName: "pair.heic"})
+		r.FileResult(core.FileUploadResult{
 			Path: "photos/pair.heic", Paths: []string{"photos/pair.heic", "photos/pair.mov"},
 			IsLivePhoto: true, MediaKey: "uploaded-pair-key",
 		})
-		r.FileResult(backend.FileUploadResult{
+		r.FileResult(core.FileUploadResult{
 			Path: "photos/broken.jpg", Paths: []string{"photos/broken.jpg"},
 			IsError: true, Error: errors.New("upload rejected"), ErrorMessage: "upload rejected",
 		})
-		r.FileResult(backend.FileUploadResult{
+		r.FileResult(core.FileUploadResult{
 			Path: "photos/duplicate.jpg", Paths: []string{"photos/duplicate.jpg"},
 			Skipped: true, MediaKey: "existing-key", SkipCode: "remote-duplicate",
 			SkipReason: "Already in the library",
 		})
-		r.Warning(backend.PreflightWarning{
+		r.Warning(core.PreflightWarning{
 			Paths: []string{"photos/orphan.mov"}, Code: "metadata-unreadable", Message: "Could not read the content identifier",
 		})
 		// These warnings duplicate skip results and are intentionally omitted from JSON.
 		for _, code := range []string{"incomplete-live-photo-skipped", "ambiguous-filename-stem"} {
-			r.Warning(backend.PreflightWarning{Paths: []string{"photos/orphan.mov"}, Code: code, Message: "Skipped during preflight"})
+			r.Warning(core.PreflightWarning{Paths: []string{"photos/orphan.mov"}, Code: code, Message: "Skipped during preflight"})
 		}
 	})
 	if model.currentFiles[2] != "pair.heic" || model.workers[2] != "[2] uploading: pair.heic" {
@@ -123,22 +123,22 @@ func TestTeaReporterPreservesAlbumEvents(t *testing.T) {
 		{
 			name: "complete", complete: true, added: 5,
 			finish: func(r teaReporter) {
-				r.AlbumComplete(backend.AlbumStatus{AlbumName: "Trip", ItemsAdded: 5, TotalItems: 5, AlbumKeys: []string{"album-one", "album-two"}, IsComplete: true})
+				r.AlbumComplete(core.AlbumStatus{AlbumName: "Trip", ItemsAdded: 5, TotalItems: 5, AlbumKeys: []string{"album-one", "album-two"}, IsComplete: true})
 			},
 			json: `{"total":0,"succeeded":0,"failed":0,"skipped":0,"results":[],"album":{"name":"Trip","itemsAdded":5,"albumKeys":["album-one","album-two"]}}`,
 		},
 		{
 			name: "error", added: 2,
 			finish: func(r teaReporter) {
-				r.AlbumError(backend.AlbumError{AlbumName: "Trip", Error: "album access denied"})
+				r.AlbumError(core.AlbumError{AlbumName: "Trip", Error: "album access denied"})
 			},
 			json: `{"total":0,"succeeded":0,"failed":0,"skipped":0,"results":[],"album":{"name":"Trip","itemsAdded":2,"error":"album access denied"}}`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			model := runReporterProgram(t, func(r teaReporter) {
-				r.UploadStart(backend.UploadBatchStart{})
-				r.AlbumProgress(backend.AlbumStatus{AlbumName: "Trip", ItemsAdded: 2, TotalItems: 5})
+				r.UploadStart(core.UploadBatchStart{})
+				r.AlbumProgress(core.AlbumStatus{AlbumName: "Trip", ItemsAdded: 2, TotalItems: 5})
 				tc.finish(r)
 			})
 			if model.albumTotalItems != 5 || model.albumItemsAdded != tc.added || model.albumComplete != tc.complete {

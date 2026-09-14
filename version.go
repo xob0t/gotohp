@@ -3,7 +3,7 @@ package main
 import (
 	"embed"
 
-	"app/backend"
+	"app/core"
 )
 
 //go:embed build/windows/info.json
@@ -11,5 +11,5 @@ var versionInfo embed.FS
 
 // getAppVersion returns the version from the embedded info.json.
 func getAppVersion() string {
-	return backend.GetVersion(versionInfo)
+	return core.GetVersion(versionInfo)
 }

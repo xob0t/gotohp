@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"app/backend"
+	"app/core"
 
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
@@ -234,7 +234,7 @@ func (m uploadModel) View() string {
 		percent := float64(m.completed+m.failed+m.skipped) / float64(m.totalFiles)
 		b.WriteString(m.progress.ViewAs(percent))
 		fmt.Fprintf(&b, "\n%d/%d items", m.completed+m.failed+m.skipped, m.totalFiles)
-		fmt.Fprintf(&b, " (✓ %d success, ↷ %d skipped, ✗ %d failed)\n\n", m.completed, m.skipped, m.failed)
+		fmt.Fprintf(&b, " (? %d success, ? %d skipped, ? %d failed)\n\n", m.completed, m.skipped, m.failed)
 	}
 
 	// Worker status
@@ -265,11 +265,11 @@ func (m uploadModel) View() string {
 		albumStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
 		if m.albumError != "" {
 			errorStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("196"))
-			b.WriteString(errorStyle.Render("✗ Album error: "))
+			b.WriteString(errorStyle.Render("? Album error: "))
 			b.WriteString(m.albumError)
 			b.WriteString("\n")
 		} else if m.albumComplete {
-			b.WriteString(albumStyle.Render("✓ Added to album: "))
+			b.WriteString(albumStyle.Render("? Added to album: "))
 			b.WriteString(m.albumName)
 			fmt.Fprintf(&b, " (%d items)\n", m.albumItemsAdded)
 		} else if m.albumTotalItems > 0 {
@@ -312,7 +312,7 @@ type teaReporter struct {
 	p *tea.Program
 }
 
-func (r teaReporter) UploadStart(start backend.UploadBatchStart) {
+func (r teaReporter) UploadStart(start core.UploadBatchStart) {
 	r.p.Send(uploadStartMsg{total: start.Total})
 }
 
@@ -323,7 +323,7 @@ func (r teaReporter) UploadStop() {
 func (r teaReporter) TotalBytes(int64)      {}
 func (r teaReporter) TotalBytesDelta(int64) {}
 
-func (r teaReporter) Warning(warning backend.PreflightWarning) {
+func (r teaReporter) Warning(warning core.PreflightWarning) {
 	r.p.Send(preflightWarningMsg{
 		paths:   warning.Paths,
 		code:    warning.Code,
@@ -331,7 +331,7 @@ func (r teaReporter) Warning(warning backend.PreflightWarning) {
 	})
 }
 
-func (r teaReporter) ThreadStatus(status backend.ThreadStatus) {
+func (r teaReporter) ThreadStatus(status core.ThreadStatus) {
 	r.p.Send(fileProgressMsg{
 		workerID: status.WorkerID,
 		status:   status.Status,
@@ -340,7 +340,7 @@ func (r teaReporter) ThreadStatus(status backend.ThreadStatus) {
 	})
 }
 
-func (r teaReporter) FileResult(result backend.FileUploadResult) {
+func (r teaReporter) FileResult(result core.FileUploadResult) {
 	r.p.Send(fileCompleteMsg{
 		success:    !result.IsError && !result.Skipped,
 		skipped:    result.Skipped,
@@ -353,7 +353,7 @@ func (r teaReporter) FileResult(result backend.FileUploadResult) {
 	})
 }
 
-func (r teaReporter) AlbumProgress(status backend.AlbumStatus) {
+func (r teaReporter) AlbumProgress(status core.AlbumStatus) {
 	r.p.Send(albumProgressMsg{
 		albumName:  status.AlbumName,
 		itemsAdded: status.ItemsAdded,
@@ -361,7 +361,7 @@ func (r teaReporter) AlbumProgress(status backend.AlbumStatus) {
 	})
 }
 
-func (r teaReporter) AlbumComplete(status backend.AlbumStatus) {
+func (r teaReporter) AlbumComplete(status core.AlbumStatus) {
 	r.p.Send(albumCompleteMsg{
 		albumName:  status.AlbumName,
 		itemsAdded: status.ItemsAdded,
@@ -369,7 +369,7 @@ func (r teaReporter) AlbumComplete(status backend.AlbumStatus) {
 	})
 }
 
-func (r teaReporter) AlbumError(albumErr backend.AlbumError) {
+func (r teaReporter) AlbumError(albumErr core.AlbumError) {
 	r.p.Send(albumErrorMsg{
 		albumName: albumErr.AlbumName,
 		error:     albumErr.Error,
@@ -387,7 +387,7 @@ func newLogger(level slog.Level) *slog.Logger {
 
 // runUpload runs the upload with already-resolved options and prints a JSON
 // summary when it completes.
-func runUpload(paths []string, opts backend.UploadOptions, settings uploadRunSettings) error {
+func runUpload(paths []string, opts core.UploadOptions, settings uploadRunSettings) error {
 	model := initialModel()
 	programOptions := []tea.ProgramOption{}
 	if !shouldUseTUI(settings) {
@@ -399,7 +399,7 @@ func runUpload(paths []string, opts backend.UploadOptions, settings uploadRunSet
 	}
 	p := tea.NewProgram(model, programOptions...)
 
-	uploadManager := backend.NewUploadManager(teaReporter{p: p}, newLogger(parseLogLevel(settings.logLevel)))
+	uploadManager := core.NewUploadManager(teaReporter{p: p}, newLogger(parseLogLevel(settings.logLevel)))
 	go uploadManager.Upload(paths, opts)
 
 	// Run until the upload manager reports UploadStop.

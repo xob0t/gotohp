@@ -10,14 +10,14 @@ import (
 	"reflect"
 	"testing"
 
-	"app/backend"
+	"app/core"
 )
 
 func TestUploadRunReturnsFailureWithJSON(t *testing.T) {
-	previousConfig, previousPath := backend.AppConfig, backend.ConfigPath
+	previousConfig, previousPath := core.AppConfig, core.ConfigPath
 	previousStdout := os.Stdout
 	t.Cleanup(func() {
-		backend.AppConfig, backend.ConfigPath = previousConfig, previousPath
+		core.AppConfig, core.ConfigPath = previousConfig, previousPath
 		os.Stdout = previousStdout
 	})
 	dir := t.TempDir()
@@ -72,35 +72,35 @@ func TestFinishUploadExitStatusPreservesJSON(t *testing.T) {
 		{
 			name: "mixed success and failure", fail: true,
 			emit: func(r teaReporter) {
-				r.UploadStart(backend.UploadBatchStart{Total: 2})
-				r.FileResult(backend.FileUploadResult{Path: "ok.jpg", MediaKey: "saved-key"})
-				r.FileResult(backend.FileUploadResult{Path: "failed.jpg", IsError: true, Error: errors.New("upload refused")})
+				r.UploadStart(core.UploadBatchStart{Total: 2})
+				r.FileResult(core.FileUploadResult{Path: "ok.jpg", MediaKey: "saved-key"})
+				r.FileResult(core.FileUploadResult{Path: "failed.jpg", IsError: true, Error: errors.New("upload refused")})
 			},
 			json: `{"total":2,"succeeded":1,"failed":1,"skipped":0,"results":[{"path":"ok.jpg","success":true,"mediaKey":"saved-key"},{"path":"failed.jpg","success":false,"error":"upload refused"}]}`,
 		},
 		{
 			name: "album failure after successful upload", fail: true,
 			emit: func(r teaReporter) {
-				r.UploadStart(backend.UploadBatchStart{Total: 1})
-				r.FileResult(backend.FileUploadResult{Path: "ok.jpg", MediaKey: "saved-key"})
-				r.AlbumError(backend.AlbumError{AlbumName: "Trip", Error: "album access denied"})
+				r.UploadStart(core.UploadBatchStart{Total: 1})
+				r.FileResult(core.FileUploadResult{Path: "ok.jpg", MediaKey: "saved-key"})
+				r.AlbumError(core.AlbumError{AlbumName: "Trip", Error: "album access denied"})
 			},
 			json: `{"total":1,"succeeded":1,"failed":0,"skipped":0,"results":[{"path":"ok.jpg","success":true,"mediaKey":"saved-key"}],"album":{"name":"Trip","error":"album access denied"}}`,
 		},
 		{
 			name: "success with skip and warning",
 			emit: func(r teaReporter) {
-				r.UploadStart(backend.UploadBatchStart{Total: 2})
-				r.FileResult(backend.FileUploadResult{Path: "ok.jpg", MediaKey: "saved-key"})
-				r.FileResult(backend.FileUploadResult{Path: "duplicate.jpg", Skipped: true, SkipCode: "remote-duplicate", SkipReason: "Already uploaded"})
-				r.Warning(backend.PreflightWarning{Code: "metadata-unreadable", Message: "Could not read metadata", Paths: []string{"ok.jpg"}})
-				r.AlbumComplete(backend.AlbumStatus{AlbumName: "Trip", ItemsAdded: 1, AlbumKeys: []string{"album-key"}, IsComplete: true})
+				r.UploadStart(core.UploadBatchStart{Total: 2})
+				r.FileResult(core.FileUploadResult{Path: "ok.jpg", MediaKey: "saved-key"})
+				r.FileResult(core.FileUploadResult{Path: "duplicate.jpg", Skipped: true, SkipCode: "remote-duplicate", SkipReason: "Already uploaded"})
+				r.Warning(core.PreflightWarning{Code: "metadata-unreadable", Message: "Could not read metadata", Paths: []string{"ok.jpg"}})
+				r.AlbumComplete(core.AlbumStatus{AlbumName: "Trip", ItemsAdded: 1, AlbumKeys: []string{"album-key"}, IsComplete: true})
 			},
 			json: `{"total":2,"succeeded":1,"failed":0,"skipped":1,"results":[{"path":"ok.jpg","success":true,"mediaKey":"saved-key"},{"path":"duplicate.jpg","success":false,"skipped":true,"skipCode":"remote-duplicate","skipReason":"Already uploaded"}],"warnings":[{"paths":["ok.jpg"],"code":"metadata-unreadable","message":"Could not read metadata"}],"album":{"name":"Trip","itemsAdded":1,"albumKeys":["album-key"]}}`,
 		},
 		{
 			name: "empty batch",
-			emit: func(r teaReporter) { r.UploadStart(backend.UploadBatchStart{}) },
+			emit: func(r teaReporter) { r.UploadStart(core.UploadBatchStart{}) },
 			json: `{"total":0,"succeeded":0,"failed":0,"skipped":0,"results":[]}`,
 		},
 	} {
@@ -132,11 +132,11 @@ func TestFinishUploadExitStatusPreservesJSON(t *testing.T) {
 
 func TestFinishUploadRetainsEarlierAlbumFailure(t *testing.T) {
 	model := runReporterProgram(t, func(r teaReporter) {
-		r.UploadStart(backend.UploadBatchStart{Total: 1})
-		r.FileResult(backend.FileUploadResult{Path: "ok.jpg", MediaKey: "saved-key"})
-		r.AlbumError(backend.AlbumError{AlbumName: "First folder", Error: "album access denied"})
-		r.AlbumProgress(backend.AlbumStatus{AlbumName: "Second folder", ItemsAdded: 0, TotalItems: 1})
-		r.AlbumComplete(backend.AlbumStatus{AlbumName: "Second folder", ItemsAdded: 1, AlbumKeys: []string{"second-album"}, IsComplete: true})
+		r.UploadStart(core.UploadBatchStart{Total: 1})
+		r.FileResult(core.FileUploadResult{Path: "ok.jpg", MediaKey: "saved-key"})
+		r.AlbumError(core.AlbumError{AlbumName: "First folder", Error: "album access denied"})
+		r.AlbumProgress(core.AlbumStatus{AlbumName: "Second folder", ItemsAdded: 0, TotalItems: 1})
+		r.AlbumComplete(core.AlbumStatus{AlbumName: "Second folder", ItemsAdded: 1, AlbumKeys: []string{"second-album"}, IsComplete: true})
 	})
 	var output bytes.Buffer
 	var exit exitError

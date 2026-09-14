@@ -9,16 +9,16 @@ import (
 	"slices"
 	"testing"
 
-	"app/backend"
+	"app/core"
 
 	"github.com/spf13/cobra"
 )
 
 func TestUploadRunIgnoresGUIPreferences(t *testing.T) {
-	previousConfig, previousPath := backend.AppConfig, backend.ConfigPath
+	previousConfig, previousPath := core.AppConfig, core.ConfigPath
 	previousStdout := os.Stdout
 	t.Cleanup(func() {
-		backend.AppConfig, backend.ConfigPath = previousConfig, previousPath
+		core.AppConfig, core.ConfigPath = previousConfig, previousPath
 		os.Stdout = previousStdout
 	})
 	dir := t.TempDir()
@@ -60,7 +60,7 @@ func TestUploadRunIgnoresGUIPreferences(t *testing.T) {
 	if summary.Total != 0 || len(summary.Results) != 0 || summary.Failed != 0 {
 		t.Fatalf("GUI preferences changed CLI file selection: %+v", summary)
 	}
-	if !backend.AppConfig.Preferences.Recursive || !backend.AppConfig.Preferences.DisableUnsupportedFilesFilter {
+	if !core.AppConfig.Preferences.Recursive || !core.AppConfig.Preferences.DisableUnsupportedFilesFilter {
 		t.Fatal("actual upload command did not load the GUI fixture")
 	}
 	after, err := os.ReadFile(configPath)
@@ -74,14 +74,14 @@ func TestUploadRunIgnoresGUIPreferences(t *testing.T) {
 
 // Parse through the real command tree, stopping before the upload starts so
 // these tests never contact Google or delete files.
-func parsedUploadOptions(t *testing.T, args ...string) (backend.UploadOptions, []string) {
+func parsedUploadOptions(t *testing.T, args ...string) (core.UploadOptions, []string) {
 	t.Helper()
 	root := newRootCommand(Info{ExecutableName: "gotohp-cli"})
 	upload, _, err := root.Find([]string{"upload"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	var opts backend.UploadOptions
+	var opts core.UploadOptions
 	var paths []string
 	called := false
 	upload.RunE = func(cmd *cobra.Command, args []string) error {
@@ -103,9 +103,9 @@ func parsedUploadOptions(t *testing.T, args ...string) (backend.UploadOptions, [
 func TestUploadDefaultsIgnoreLoadedGUIPreferences(t *testing.T) {
 	// Config is global. Keep this test serial and restore the original state
 	// without loading or writing the user's real config file.
-	previousConfig, previousPath := backend.AppConfig, backend.ConfigPath
+	previousConfig, previousPath := core.AppConfig, core.ConfigPath
 	t.Cleanup(func() {
-		backend.AppConfig, backend.ConfigPath = previousConfig, previousPath
+		core.AppConfig, core.ConfigPath = previousConfig, previousPath
 	})
 	configPath := filepath.Join(t.TempDir(), "gui.config")
 	config := `account:
@@ -128,21 +128,21 @@ preferences:
 	if err := os.WriteFile(configPath, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := backend.LoadConfig(configPath); err != nil {
+	if err := core.LoadConfig(configPath); err != nil {
 		t.Fatal(err)
 	}
-	loaded := backend.AppConfig
+	loaded := core.AppConfig
 	if !loaded.Preferences.Recursive || !loaded.Preferences.DeleteFromHost || loaded.Preferences.UploadThreads != 17 || loaded.Account.Selected != "gui@example.test" {
 		t.Fatalf("GUI fixture was not loaded: %+v", loaded)
 	}
 	dir := uploadFilterFixture(t)
 	opts, paths := parsedUploadOptions(t, dir)
-	want := backend.UploadOptions{Threads: 3, SkipIncompleteLivePhotos: true}
+	want := core.UploadOptions{Threads: 3, SkipIncompleteLivePhotos: true}
 	if !reflect.DeepEqual(opts, want) {
 		t.Fatalf("CLI defaults inherited GUI settings: got %+v, want %+v", opts, want)
 	}
 	assertUploadFiles(t, paths, opts, filepath.Join(dir, "root.jpg"))
-	if !reflect.DeepEqual(backend.AppConfig, loaded) || backend.ConfigPath != configPath {
+	if !reflect.DeepEqual(core.AppConfig, loaded) || core.ConfigPath != configPath {
 		t.Fatal("parsing CLI options changed the loaded GUI config")
 	}
 }
@@ -154,8 +154,8 @@ func TestUploadFlagsPropagateToRunOptions(t *testing.T) {
 		"--disable-filter", "--date-from-filename", "-e", "excluded",
 		"--pair-live-photos", "--upload-incomplete-live-photos",
 		"--update-existing-photos-to-live", "--ignore-apple-metadata", "-a", "Trip")
-	want := backend.UploadOptions{
-		Api: backend.ApiOptions{
+	want := core.UploadOptions{
+		Api: core.ApiOptions{
 			Account: "cli@example.test", Proxy: "http://cli.invalid:8080", Saver: true, UseQuota: true,
 		},
 		Recursive: true, Threads: 7, ForceUpload: true, DeleteFromHost: true,
@@ -212,9 +212,9 @@ func uploadFilterFixture(t *testing.T) string {
 	return dir
 }
 
-func assertUploadFiles(t *testing.T, paths []string, opts backend.UploadOptions, want ...string) {
+func assertUploadFiles(t *testing.T, paths []string, opts core.UploadOptions, want ...string) {
 	t.Helper()
-	got, err := backend.FilterGooglePhotosFiles(paths, opts)
+	got, err := core.FilterGooglePhotosFiles(paths, opts)
 	if err != nil {
 		t.Fatal(err)
 	}

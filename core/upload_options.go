@@ -1,4 +1,4 @@
-package backend
+package core
 
 // UploadOptions fully describes how a single upload run behaves. The GUI
 // derives them from its Preferences; the CLI builds them from flags.

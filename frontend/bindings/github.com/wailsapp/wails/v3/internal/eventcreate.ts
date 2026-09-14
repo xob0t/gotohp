@@ -8,7 +8,7 @@ import { Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as backend$0 from "../../../../../app/backend/models.js";
+import * as core$0 from "../../../../../app/core/models.js";
 
 function configure() {
     Object.freeze(Object.assign($Create.Events, {
@@ -25,13 +25,13 @@ function configure() {
 }
 
 // Private type creation functions
-const $$createType0 = backend$0.FileUploadResult.createFrom;
-const $$createType1 = backend$0.ThreadStatus.createFrom;
-const $$createType2 = backend$0.AlbumStatus.createFrom;
-const $$createType3 = backend$0.AlbumError.createFrom;
-const $$createType4 = backend$0.FilesDroppedEvent.createFrom;
-const $$createType5 = backend$0.StartUploadEvent.createFrom;
-const $$createType6 = backend$0.UploadBatchStart.createFrom;
-const $$createType7 = backend$0.PreflightWarning.createFrom;
+const $$createType0 = core$0.FileUploadResult.createFrom;
+const $$createType1 = core$0.ThreadStatus.createFrom;
+const $$createType2 = core$0.AlbumStatus.createFrom;
+const $$createType3 = core$0.AlbumError.createFrom;
+const $$createType4 = core$0.FilesDroppedEvent.createFrom;
+const $$createType5 = core$0.StartUploadEvent.createFrom;
+const $$createType6 = core$0.UploadBatchStart.createFrom;
+const $$createType7 = core$0.PreflightWarning.createFrom;
 
 configure();

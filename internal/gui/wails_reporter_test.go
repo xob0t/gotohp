@@ -1,6 +1,6 @@
 //go:build !cli
 
-package backend
+package gui
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"app/core"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -36,14 +37,14 @@ func TestWailsReporterFrontendEvents(t *testing.T) {
 		Logger: slog.New(slog.DiscardHandler),
 	})
 	reporter := NewWailsReporter(app)
-	file := FileUploadResult{
+	file := core.FileUploadResult{
 		IsError: true, IsLivePhoto: true, Path: "photo.heic",
 		Paths: []string{"photo.heic", "photo.mov"},
 		Error: errors.New("upload failed"), ErrorMessage: "upload failed",
 	}
-	progress := AlbumStatus{AlbumName: "Holiday", ItemsAdded: 1, TotalItems: 2, AlbumKeys: []string{"album-key"}}
-	complete := AlbumStatus{AlbumName: "Holiday", ItemsAdded: 2, TotalItems: 2, AlbumKeys: []string{"album-key"}, IsComplete: true}
-	albumError := AlbumError{AlbumName: "Holiday", Error: "album unavailable"}
+	progress := core.AlbumStatus{AlbumName: "Holiday", ItemsAdded: 1, TotalItems: 2, AlbumKeys: []string{"album-key"}}
+	complete := core.AlbumStatus{AlbumName: "Holiday", ItemsAdded: 2, TotalItems: 2, AlbumKeys: []string{"album-key"}, IsComplete: true}
+	albumError := core.AlbumError{AlbumName: "Holiday", Error: "album unavailable"}
 
 	for _, test := range []struct {
 		name       string

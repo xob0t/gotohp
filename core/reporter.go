@@ -1,4 +1,4 @@
-package backend
+package core
 
 // UploadReporter receives progress from an upload run. Each frontend renders
 // these however it likes: the GUI forwards them as Wails events, the CLI feeds

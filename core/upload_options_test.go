@@ -1,4 +1,4 @@
-package backend
+package core
 
 import (
 	"path/filepath"
