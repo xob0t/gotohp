@@ -80,6 +80,12 @@ jobs:
           # Build the app package
           wails3 task darwin:package:universal
 
+          # Package the universal .app into a styled DMG installer.
+          # create:dmg runs the packaging tool on the existing bundle without
+          # rebuilding (so it keeps the universal binary produced above).
+          wails3 task darwin:create:dmg
+          mv bin/gotohp.dmg release/gotohp-macos-universal.dmg
+
           # Build standalone CLI binary without Wails/WebView dependencies
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -tags cli -trimpath -buildvcs=false -ldflags="-w -s" -o bin/gotohp-cli-amd64
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -tags cli -trimpath -buildvcs=false -ldflags="-w -s" -o bin/gotohp-cli-arm64
@@ -109,6 +115,7 @@ jobs:
         with:
           name: macos-release
           path: |
+            release/gotohp-macos-universal.dmg
             release/gotohp-macos-universal.zip
             release/gotohp-cli-macos-universal
 
