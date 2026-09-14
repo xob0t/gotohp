@@ -9,7 +9,6 @@ import (
 	"os"
 )
 
-type reporter struct {\n done chan struct{}
 	done chan struct{}
 	enc *json.Encoder
 	id  string
