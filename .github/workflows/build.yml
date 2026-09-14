@@ -35,7 +35,7 @@ permissions:
   contents: write
 
 env:
-  WAILS_VERSION: v3.0.0-beta.16
+  WAILS_VERSION: v3.0.0-beta.21
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
