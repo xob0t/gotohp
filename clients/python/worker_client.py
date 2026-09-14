@@ -36,8 +36,14 @@ class Client:
         self._next_id = 0
     def _request(self, method: str, params: dict[str, Any] | None = None, on_event: Callable[[dict[str, Any]], None] | None = None) -> list[dict[str, Any]]:
         if self.process.stdin is None or self.process.stdout is None: raise WorkerError("worker pipes are unavailable")
+        if self.process.poll() is not None:
+            raise WorkerError(f"worker exited with status {self.process.returncode}")
         self._next_id += 1; request_id = str(self._next_id)
-        self.process.stdin.write(json.dumps({"jsonrpc":"2.0","id":request_id,"method":method,"params": (params or {})})+"\n"); self.process.stdin.flush()
+        try:
+            self.process.stdin.write(json.dumps({"jsonrpc":"2.0","id":request_id,"method":method,"params": (params or {})})+"\n")
+            self.process.stdin.flush()
+        except (BrokenPipeError, OSError) as exc:
+            raise WorkerError("worker input pipe is closed") from exc
         messages=[]
         for line in self.process.stdout:
             try:
