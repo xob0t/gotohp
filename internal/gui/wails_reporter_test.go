@@ -37,14 +37,14 @@ func TestWailsReporterFrontendEvents(t *testing.T) {
 		Logger: slog.New(slog.DiscardHandler),
 	})
 	reporter := NewWailsReporter(app)
-	file := FileUploadResult{
+	file := core.FileUploadResult{
 		IsError: true, IsLivePhoto: true, Path: "photo.heic",
 		Paths: []string{"photo.heic", "photo.mov"},
 		Error: errors.New("upload failed"), ErrorMessage: "upload failed",
 	}
-	progress := AlbumStatus{AlbumName: "Holiday", ItemsAdded: 1, TotalItems: 2, AlbumKeys: []string{"album-key"}}
-	complete := AlbumStatus{AlbumName: "Holiday", ItemsAdded: 2, TotalItems: 2, AlbumKeys: []string{"album-key"}, IsComplete: true}
-	albumError := AlbumError{AlbumName: "Holiday", Error: "album unavailable"}
+	progress := core.AlbumStatus{AlbumName: "Holiday", ItemsAdded: 1, TotalItems: 2, AlbumKeys: []string{"album-key"}}
+	complete := core.AlbumStatus{AlbumName: "Holiday", ItemsAdded: 2, TotalItems: 2, AlbumKeys: []string{"album-key"}, IsComplete: true}
+	albumError := core.AlbumError{AlbumName: "Holiday", Error: "album unavailable"}
 
 	for _, test := range []struct {
 		name       string
@@ -55,7 +55,7 @@ func TestWailsReporterFrontendEvents(t *testing.T) {
 		{"FileStatus", file, `{"IsError":true,"IsLivePhoto":true,"Path":"photo.heic","Paths":["photo.heic","photo.mov"],"ErrorMessage":"upload failed"}`, func() { reporter.FileResult(file) }},
 		{"albumProgress", progress, `{"AlbumName":"Holiday","ItemsAdded":1,"TotalItems":2,"AlbumKeys":["album-key"],"IsComplete":false}`, func() { reporter.AlbumProgress(progress) }},
 		{"albumComplete", complete, `{"AlbumName":"Holiday","ItemsAdded":2,"TotalItems":2,"AlbumKeys":["album-key"],"IsComplete":true}`, func() { reporter.AlbumComplete(complete) }},
-		{"albumError", albumError, `{"AlbumName":"Holiday","Error":"album unavailable"}`, func() { reporter.AlbumError(albumError) }},
+		{"albumError", albumError, `{"AlbumName":"Holiday","Error":"album unavailable"}`, func() { reporter.core.AlbumError(albumError) }},
 		{"uploadStop", nil, `null`, reporter.UploadStop},
 	} {
 		t.Run(test.name, func(t *testing.T) {
