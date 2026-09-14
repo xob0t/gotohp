@@ -11,6 +11,7 @@ class WorkerError(RuntimeError):
 class Account:
     email: str
     selected: bool = False
+    needs_token_binding: bool = False
 @dataclass
 class UploadFile:
     path: str
@@ -59,7 +60,7 @@ class Client:
         raise WorkerError("worker exited before responding")
     def accounts(self) -> list[Account]:
         result=self._request("accounts.list")[0]["result"]
-        return [Account(a["email"], a["email"] == result.get("selected", "")) for a in result.get("accounts",[])]
+        return [Account(a["email"], a["email"] == result.get("selected", ""), a.get("needsTokenBinding", False)) for a in result.get("accounts",[])]
     def add_credentials(self, auth: str) -> None:
         self._request("credentials.add", {"auth": auth})
 
@@ -69,10 +70,13 @@ class Client:
     def select_account(self, email: str) -> None:
         self._request("credentials.select", {"email": email})
 
-    def upload(self, path: str | Path, *, account: str = "", proxy: str = "", saver: bool = False, use_quota: bool = False, recursive: bool = False, threads: int = 3, force: bool = False, delete: bool = False, disable_filter: bool = False, date_from_filename: bool = False, exclude: str = "", album: str = "", pair_live_photos: bool = False, upload_incomplete_live_photos: bool = False, update_existing_photos_to_live: bool = False, ignore_apple_metadata: bool = False, on_progress: Callable[[dict[str, Any]], None] | None = None) -> UploadResult:
+    def upload(self, path: str | Path | list[str | Path], *, account: str = "", proxy: str = "", saver: bool = False, use_quota: bool = False, recursive: bool = False, threads: int = 3, force: bool = False, delete: bool = False, disable_filter: bool = False, date_from_filename: bool = False, exclude: str = "", album: str = "", pair_live_photos: bool = False, upload_incomplete_live_photos: bool = False, update_existing_photos_to_live: bool = False, ignore_apple_metadata: bool = False, on_progress: Callable[[dict[str, Any]], None] | None = None) -> UploadResult:
         files = []
         options = {"Api": {"Account": account, "Proxy": proxy, "Saver": saver, "UseQuota": use_quota}, "Recursive": recursive, "Threads": threads, "ForceUpload": force, "DeleteFromHost": delete, "DisableUnsupportedFilesFilter": disable_filter, "SetDateFromFilename": date_from_filename, "ExcludePattern": exclude, "AlbumName": "" if album.upper() == "AUTO" else album, "AlbumAutoMode": album.upper() == "AUTO", "PairLivePhotos": pair_live_photos, "SkipIncompleteLivePhotos": not upload_incomplete_live_photos, "UpdateExistingPhotosToLive": update_existing_photos_to_live, "IgnoreAppleMetadata": ignore_apple_metadata}
-        messages = self._request("upload", {"paths": [str(path)], "options": options}, on_progress)
+        paths = [str(item) for item in path] if isinstance(path, (list, tuple)) else [str(path)]
+        if threads < 1:
+            raise ValueError("threads must be positive")
+        messages = self._request("upload", {"paths": paths, "options": options}, on_progress)
         for msg in messages:
             if msg.get("method") == "fileResult":
                 result = msg["params"]
