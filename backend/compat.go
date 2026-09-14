@@ -1,8 +1,8 @@
-package backend
+﻿package backend
 
 import (
 	"app/core"
-	"embed"
+	"embed"`n`t"net/url"
 )
 
 type UploadBatchStart = core.UploadBatchStart
@@ -31,9 +31,11 @@ var DefaultPreferences = core.DefaultPreferences
 
 func NewApi(o core.ApiOptions) (*core.Api, error) { return core.NewApi(o) }
 func LoadConfig(p string) error                   { return core.LoadConfig(p) }
-func ParseAuthString(s string) (string, error)    { return core.ParseAuthString(s) }
+func ParseAuthString(s string) (url.Values, error)    { return core.ParseAuthString(s) }
 func LooksLikeAuthString(s string) bool           { return core.LooksLikeAuthString(s) }
 func FilterGooglePhotosFiles(p []string, o core.UploadOptions) ([]string, error) {
 	return core.FilterGooglePhotosFiles(p, o)
 }
 func GetVersion(f embed.FS) string { return core.GetVersion(f) }
+
+
