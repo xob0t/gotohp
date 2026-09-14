@@ -457,7 +457,7 @@ func extractTokenBindingAliasFromADB(email string) (string, error) {
 // readTokenBindingAliasFromDevice pulls the AccountManager database from a single
 // device and runs the lookup against the local copy. The pulled database is
 // sensitive (it holds auth material for every account on the device), so the
-// temporary copy is always removed via defer вЂ” including on a panic. The rooted
+// temporary copy is always removed via defer - including on a panic. The rooted
 // return reports whether the device was reachable with root, used to produce an
 // accurate error message.
 func readTokenBindingAliasFromDevice(device, query string) (alias string, rooted bool, err error) {

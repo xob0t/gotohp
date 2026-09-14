@@ -15,13 +15,13 @@ type filenamePattern struct {
 }
 
 var filenameTimestampPatterns = []filenamePattern{
-	// YYYYMMDD[_-]HHMMSS вЂ” e.g. 20240709_182027.mp4, PXL_20231123_182518628.jpg
+	// YYYYMMDD[_-]HHMMSS - e.g. 20240709_182027.mp4, PXL_20231123_182518628.jpg
 	{regexp.MustCompile(`(\d{4})(\d{2})(\d{2})[_-](\d{2})(\d{2})(\d{2})\d*`), true, false},
-	// YYYY-MM-DD[sep HHMMSS] вЂ” e.g. 2022-10-24-150226287.mp4, Screenshot 2026-02-13 093505.png
+	// YYYY-MM-DD[sep HHMMSS] - e.g. 2022-10-24-150226287.mp4, Screenshot 2026-02-13 093505.png
 	{regexp.MustCompile(`(\d{4})-(\d{1,2})-(\d{1,2})(?:[ _-](\d{2})(\d{2})(\d{2})\d*)?`), false, false},
-	// [non-digit]YYYYMMDDHHMMSS[non-digit] вЂ” e.g. lv_7324034615860006160_20240617193045.mp4
+	// [non-digit]YYYYMMDDHHMMSS[non-digit] - e.g. lv_7324034615860006160_20240617193045.mp4
 	{regexp.MustCompile(`(?:^|[^0-9])(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:[^0-9]|$)`), true, false},
-	// Unix milliseconds вЂ” e.g. FaceApp_1658848332262.jpg (covers 2001вЂ“2033)
+	// Unix milliseconds - e.g. FaceApp_1658848332262.jpg (covers 2001-2033)
 	{regexp.MustCompile(`(?:^|[^0-9])(1\d{12})(?:[^0-9]|$)`), true, true},
 }
 
