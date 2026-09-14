@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"app/core"
@@ -9,9 +9,10 @@ import (
 	"os"
 )
 
+type reporter struct {
 	done chan struct{}
-	enc *json.Encoder
-	id  string
+	enc  *json.Encoder
+	id   string
 }
 
 func (r reporter) send(method string, params any) {
@@ -50,4 +51,3 @@ func main() {
 	}
 }
 func reqEncoder(e *json.Encoder) *json.Encoder { return e }
-
