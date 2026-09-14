@@ -37,7 +37,7 @@ class Client:
         raise WorkerError("worker exited before responding")
     def accounts(self) -> list[Account]:
         result=self._request("accounts.list")[0]["result"]
-        return [Account(a["email"], a["email"] == result.get("selected", "")) for a in result.get("Accounts",[])]
+        return [Account(a["email"], a["email"] == result.get("selected", "")) for a in result.get("accounts",[])]
     def upload(self, path: str | Path, *, account: str = "", recursive: bool = False, threads: int = 3, on_progress: Callable[[dict[str, Any]], None] | None = None) -> UploadResult:
         files=[]
         for msg in self._request("upload", {"paths":[str(path)],"account":account,"recursive":recursive,"threads":threads}, on_progress):
@@ -49,5 +49,6 @@ class Client:
         self.process.wait(timeout=5)
     def __enter__(self): return self
     def __exit__(self, *_): self.close()
+
 
 
