@@ -13,7 +13,7 @@ class WorkerError(RuntimeError):
 class WorkerClient:
     def __init__(self, executable: str | Path):
         self.process = subprocess.Popen(
-            [str(executable)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            [str(Path(executable).resolve())], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, text=True, bufsize=1,
         )
 
