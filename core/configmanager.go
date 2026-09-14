@@ -752,7 +752,7 @@ func saveAppConfigLocked() error {
 
 	err := k.Load(structs.Provider(AppConfig, "koanf"), nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("error encoding app config: %v", err)
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(ConfigPath), 0o700); err != nil {
@@ -760,7 +760,7 @@ func saveAppConfigLocked() error {
 	}
 	b, err := k.Marshal(yaml.Parser())
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("error saving app config: %v", err)
 		return err
 	}
 
