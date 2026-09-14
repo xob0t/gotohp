@@ -234,7 +234,7 @@ func (m uploadModel) View() string {
 		percent := float64(m.completed+m.failed+m.skipped) / float64(m.totalFiles)
 		b.WriteString(m.progress.ViewAs(percent))
 		fmt.Fprintf(&b, "\n%d/%d items", m.completed+m.failed+m.skipped, m.totalFiles)
-		fmt.Fprintf(&b, " (РІСљвЂњ %d success, РІвЂ В· %d skipped, РІСљвЂ” %d failed)\n\n", m.completed, m.skipped, m.failed)
+		fmt.Fprintf(&b, " (? %d success, ? %d skipped, ? %d failed)\n\n", m.completed, m.skipped, m.failed)
 	}
 
 	// Worker status
@@ -265,11 +265,11 @@ func (m uploadModel) View() string {
 		albumStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
 		if m.albumError != "" {
 			errorStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("196"))
-			b.WriteString(errorStyle.Render("РІСљвЂ” Album error: "))
+			b.WriteString(errorStyle.Render("? Album error: "))
 			b.WriteString(m.albumError)
 			b.WriteString("\n")
 		} else if m.albumComplete {
-			b.WriteString(albumStyle.Render("РІСљвЂњ Added to album: "))
+			b.WriteString(albumStyle.Render("? Added to album: "))
 			b.WriteString(m.albumName)
 			fmt.Fprintf(&b, " (%d items)\n", m.albumItemsAdded)
 		} else if m.albumTotalItems > 0 {

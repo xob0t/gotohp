@@ -50,7 +50,7 @@ shell history and process listings.`,
 				if err := configManager.AddCredentials(value); err != nil {
 					return fmt.Errorf("adding credentials: %w", err)
 				}
-				fmt.Println("РІСљвЂњ Credentials added successfully")
+				fmt.Println("? Credentials added successfully")
 				return nil
 			}
 			proxy, _ := cmd.Flags().GetString("proxy")
@@ -58,7 +58,7 @@ shell history and process listings.`,
 			if err != nil {
 				return fmt.Errorf("signing in with oauth_token: %w", err)
 			}
-			fmt.Printf("РІСљвЂњ Account %s connected and selected\n", email)
+			fmt.Printf("? Account %s connected and selected\n", email)
 			return nil
 		},
 	}
@@ -75,7 +75,7 @@ shell history and process listings.`,
 				if err := (&core.ConfigManager{}).RemoveCredentials(args[0]); err != nil {
 					return fmt.Errorf("removing credentials: %w", err)
 				}
-				fmt.Printf("РІСљвЂњ Credentials for %s removed successfully\n", args[0])
+				fmt.Printf("? Credentials for %s removed successfully\n", args[0])
 				return nil
 			},
 		},
@@ -199,6 +199,6 @@ func selectCredential(query string) error {
 	}
 
 	configManager.SetSelected(matched)
-	fmt.Printf("РІСљвЂњ Active credential set to %s\n", matched)
+	fmt.Printf("? Active credential set to %s\n", matched)
 	return nil
 }
