@@ -76,7 +76,19 @@ class Client:
         paths = [str(item) for item in path] if isinstance(path, (list, tuple)) else [str(path)]
         if threads < 1:
             raise ValueError("threads must be positive")
-        messages = self._request("upload", {"paths": paths, "options": options}, on_progress)
+        # The worker treats these as request-level controls (and applies them
+        # after decoding options), so send them at the protocol boundary too.
+        messages = self._request(
+            "upload",
+            {
+                "paths": paths,
+                "options": options,
+                "account": account,
+                "recursive": recursive,
+                "threads": threads,
+            },
+            on_progress,
+        )
         for msg in messages:
             if msg.get("method") == "fileResult":
                 result = msg["params"]
