@@ -10,7 +10,7 @@ permissions:
   pull-requests: write
 
 env:
-  WAILS_VERSION: v3.0.0-beta.16
+  WAILS_VERSION: v3.0.0-beta.21
 
 jobs:
   release-please:
