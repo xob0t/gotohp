@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"app/backend"
+	"app/core"
 )
 
 func errorsAs(err error, target *exitError) bool { return errors.As(err, target) }
@@ -31,7 +31,7 @@ func newUploadCommand() *cobra.Command {
 	f.Bool("use-quota", false, "count uploads against the account's storage quota")
 	f.Bool("saver", false, "upload in storage saver quality")
 	f.BoolP("recursive", "r", false, "include subdirectories")
-	f.IntP("threads", "t", backend.DefaultPreferences.UploadThreads, "number of upload threads")
+	f.IntP("threads", "t", core.DefaultPreferences.UploadThreads, "number of upload threads")
 	f.BoolP("force", "f", false, "upload even if the file already exists in the library")
 	f.BoolP("delete", "d", false, "delete from host after upload")
 	f.Bool("disable-filter", false, "disable file type filtering")
@@ -72,7 +72,7 @@ func runUploadCommand(cmd *cobra.Command, paths []string) error {
 	// Like rclone, the config file holds only the account; every upload option
 	// is per-invocation so a scripted run behaves the same regardless of GUI state.
 	configPath, _ := f.GetString("config")
-	if err := backend.LoadConfig(configPath); err != nil {
+	if err := core.LoadConfig(configPath); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	opts := uploadOptionsFromFlags(f)
@@ -86,8 +86,8 @@ func runUploadCommand(cmd *cobra.Command, paths []string) error {
 }
 
 // uploadOptionsFromFlags builds run options from defaults plus the parsed flags.
-func uploadOptionsFromFlags(f *pflag.FlagSet) backend.UploadOptions {
-	opts := backend.DefaultPreferences.UploadOptions()
+func uploadOptionsFromFlags(f *pflag.FlagSet) core.UploadOptions {
+	opts := core.DefaultPreferences.UploadOptions()
 	getBool := func(name string) bool { v, _ := f.GetBool(name); return v }
 
 	opts.Api.Account, _ = f.GetString("account")
@@ -120,7 +120,7 @@ func uploadOptionsFromFlags(f *pflag.FlagSet) backend.UploadOptions {
 
 // validateUploadOptions rejects flags that only make sense with Live Photo
 // pairing enabled.
-func validateUploadOptions(f *pflag.FlagSet, opts backend.UploadOptions) error {
+func validateUploadOptions(f *pflag.FlagSet, opts core.UploadOptions) error {
 	if opts.PairLivePhotos {
 		return nil
 	}

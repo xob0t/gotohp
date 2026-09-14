@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"app/backend"
+	"app/core"
 )
 
 func newCredentialsCommand() *cobra.Command {
@@ -20,7 +20,7 @@ func newCredentialsCommand() *cobra.Command {
 		Short:   "Manage Google Photos credentials",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
-			if err := backend.LoadConfig(configPath); err != nil {
+			if err := core.LoadConfig(configPath); err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 			return nil
@@ -45,12 +45,12 @@ shell history and process listings.`,
 			if err != nil {
 				return err
 			}
-			configManager := &backend.ConfigManager{}
-			if backend.LooksLikeAuthString(value) {
+			configManager := &core.ConfigManager{}
+			if core.LooksLikeAuthString(value) {
 				if err := configManager.AddCredentials(value); err != nil {
 					return fmt.Errorf("adding credentials: %w", err)
 				}
-				fmt.Println("✓ Credentials added successfully")
+				fmt.Println("РІСљвЂњ Credentials added successfully")
 				return nil
 			}
 			proxy, _ := cmd.Flags().GetString("proxy")
@@ -58,7 +58,7 @@ shell history and process listings.`,
 			if err != nil {
 				return fmt.Errorf("signing in with oauth_token: %w", err)
 			}
-			fmt.Printf("✓ Account %s connected and selected\n", email)
+			fmt.Printf("РІСљвЂњ Account %s connected and selected\n", email)
 			return nil
 		},
 	}
@@ -72,10 +72,10 @@ shell history and process listings.`,
 			Short:   "Remove a credential by email",
 			Args:    cobra.ExactArgs(1),
 			RunE: func(_ *cobra.Command, args []string) error {
-				if err := (&backend.ConfigManager{}).RemoveCredentials(args[0]); err != nil {
+				if err := (&core.ConfigManager{}).RemoveCredentials(args[0]); err != nil {
 					return fmt.Errorf("removing credentials: %w", err)
 				}
-				fmt.Printf("✓ Credentials for %s removed successfully\n", args[0])
+				fmt.Printf("РІСљвЂњ Credentials for %s removed successfully\n", args[0])
 				return nil
 			},
 		},
@@ -127,10 +127,10 @@ func readSecretArg(arg string, in io.Reader) (string, error) {
 	return value, nil
 }
 
-func credentialEmails(config backend.Config) []string {
+func credentialEmails(config core.Config) []string {
 	emails := make([]string, 0, len(config.Account.Credentials))
 	for _, cred := range config.Account.Credentials {
-		params, err := backend.ParseAuthString(cred)
+		params, err := core.ParseAuthString(cred)
 		if err != nil {
 			emails = append(emails, "")
 			continue
@@ -141,7 +141,7 @@ func credentialEmails(config backend.Config) []string {
 }
 
 func listCredentials(executableName string) {
-	config := (&backend.ConfigManager{}).GetConfig()
+	config := (&core.ConfigManager{}).GetConfig()
 	if len(config.Account.Credentials) == 0 {
 		fmt.Println("No credentials found")
 		return
@@ -165,7 +165,7 @@ func listCredentials(executableName string) {
 }
 
 func selectCredential(query string) error {
-	configManager := &backend.ConfigManager{}
+	configManager := &core.ConfigManager{}
 	emails := credentialEmails(configManager.GetConfig())
 
 	var matched string
@@ -199,6 +199,6 @@ func selectCredential(query string) error {
 	}
 
 	configManager.SetSelected(matched)
-	fmt.Printf("✓ Active credential set to %s\n", matched)
+	fmt.Printf("РІСљвЂњ Active credential set to %s\n", matched)
 	return nil
 }

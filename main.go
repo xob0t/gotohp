@@ -9,7 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"app/backend"
+	"app/core"
+	"app/internal"
 	"app/internal/cli"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -37,7 +38,7 @@ func main() {
 func runGUI() {
 	normalizeFrontendDevServerURL()
 
-	configManager := &backend.ConfigManager{}
+	configManager := &core.ConfigManager{}
 	wailsApp := application.New(application.Options{
 		Name:        "com.xob0t.gotohp",
 		Description: "Google Photos unofficial client",
@@ -69,7 +70,7 @@ func runGUI() {
 		URL: "/",
 	})
 
-	uploadManager := backend.NewUploadManager(backend.NewWailsReporter(wailsApp), wailsApp.Logger)
+	uploadManager := core.NewUploadManager(internal.NewWailsReporter(wailsApp), wailsApp.Logger)
 
 	// Listen for upload cancel event
 	wailsApp.Event.On("uploadCancel", func(e *application.CustomEvent) {
@@ -89,7 +90,7 @@ func runGUI() {
 		}
 
 		// Emit event to frontend with drop details
-		wailsApp.Event.Emit("files-dropped", backend.FilesDroppedEvent{
+		wailsApp.Event.Emit("files-dropped", core.FilesDroppedEvent{
 			Files:    paths,
 			DropZone: dropZone,
 		})
@@ -97,7 +98,7 @@ func runGUI() {
 
 	// Listen for upload request from frontend (after drop zone is determined)
 	wailsApp.Event.On("startUpload", func(e *application.CustomEvent) {
-		if data, ok := e.Data.(backend.StartUploadEvent); ok {
+		if data, ok := e.Data.(core.StartUploadEvent); ok {
 			wailsApp.Logger.Info("Starting upload", "fileCount", len(data.Files))
 			uploadManager.Upload(data.Files, configManager.SessionUploadOptions())
 		} else {
