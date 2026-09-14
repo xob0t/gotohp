@@ -45,9 +45,14 @@ type ProgressReader = core.ProgressReader
 type RetryConfig = core.RetryConfig
 type ScottyFinalizeToken = core.ScottyFinalizeToken
 
-// Deprecated: use core.AppConfig. This snapshot is retained for source compatibility.`nvar AppConfig = core.AppConfig
-// Deprecated: use core.ConfigPath. This snapshot is retained for source compatibility.`nvar ConfigPath = core.ConfigPath
-// Deprecated: use core.DefaultPreferences. This snapshot is retained for source compatibility.`nvar DefaultPreferences = core.DefaultPreferences
+// Deprecated: use core.AppConfig. This snapshot is retained for source compatibility.
+var AppConfig = core.AppConfig
+
+// Deprecated: use core.ConfigPath. This snapshot is retained for source compatibility.
+var ConfigPath = core.ConfigPath
+
+// Deprecated: use core.DefaultPreferences. This snapshot is retained for source compatibility.
+var DefaultPreferences = core.DefaultPreferences
 
 func NewApi(o core.ApiOptions) (*core.Api, error) { return core.NewApi(o) }
 func NewUploadManager(r core.UploadReporter, l *slog.Logger) *core.UploadManager {
