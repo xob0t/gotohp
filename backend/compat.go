@@ -3,6 +3,9 @@ package backend
 import (
 	"app/core"
 	"embed"
+	"io"
+	"log/slog"
+	"net/http"
 	"net/url"
 )
 
@@ -20,17 +23,43 @@ type ApiOptions = core.ApiOptions
 type AuthResponse = core.AuthResponse
 type Config = core.Config
 type Preferences = core.Preferences
+type AccountConfig = core.AccountConfig
+type AccountSummary = core.AccountSummary
+type AccountsState = core.AccountsState
 type ConfigManager = core.ConfigManager
 type UploadOptions = core.UploadOptions
+type UploadManager = core.UploadManager
 type AlbumManager = core.AlbumManager
 type UploadWorkItem = core.UploadWorkItem
+type UploadWorkKind = core.UploadWorkKind
+type SingleMedia = core.SingleMedia
 type LivePhotoPair = core.LivePhotoPair
+type LivePhotoCreateRequest = core.LivePhotoCreateRequest
+type LivePhotoReconcileRequest = core.LivePhotoReconcileRequest
+type UploadDeviceInfo = core.UploadDeviceInfo
+type LivePhotoCommitPolicy = core.LivePhotoCommitPolicy
+type LivePhotoUploadOptions = core.LivePhotoUploadOptions
+type LivePhotoMetadata = core.LivePhotoMetadata
+type UploadProgressCallback = core.UploadProgressCallback
+type ProgressReader = core.ProgressReader
+type RetryConfig = core.RetryConfig
+type ScottyFinalizeToken = core.ScottyFinalizeToken
 
 var AppConfig = core.AppConfig
 var ConfigPath = core.ConfigPath
 var DefaultPreferences = core.DefaultPreferences
 
-func NewApi(o core.ApiOptions) (*core.Api, error)  { return core.NewApi(o) }
+func NewApi(o core.ApiOptions) (*core.Api, error) { return core.NewApi(o) }
+func NewUploadManager(r core.UploadReporter, l *slog.Logger) *core.UploadManager {
+	return core.NewUploadManager(r, l)
+}
+func NewAlbumManager(a *core.Api, r core.UploadReporter, l *slog.Logger, c <-chan struct{}) *core.AlbumManager {
+	return core.NewAlbumManager(a, r, l, c)
+}
+func NewHTTPClientWithProxy(p string) (*http.Client, error) { return core.NewHTTPClientWithProxy(p) }
+func NewProgressReader(r io.Reader, t int64, p func(int64, int64)) *core.ProgressReader {
+	return core.NewProgressReader(r, t, p)
+}
 func LoadConfig(p string) error                    { return core.LoadConfig(p) }
 func ParseAuthString(s string) (url.Values, error) { return core.ParseAuthString(s) }
 func LooksLikeAuthString(s string) bool            { return core.LooksLikeAuthString(s) }
