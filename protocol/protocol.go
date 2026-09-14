@@ -6,10 +6,14 @@ type Request struct {
 	JSONRPC string `json:"jsonrpc"`
 	ID      string `json:"id"`
 	Method  string `json:"method"`
-	Params  struct {
-		Paths   []string           `json:"paths"`
-		Options core.UploadOptions `json:"options"`
-	} `json:"params"`
+	Params  Params `json:"params"`
+}
+type Params struct {
+	Paths     []string           `json:"paths"`
+	Options   core.UploadOptions `json:"options"`
+	Account   string             `json:"account"`
+	Recursive *bool              `json:"recursive"`
+	Threads   int                `json:"threads"`
 }
 type Message struct {
 	JSONRPC string `json:"jsonrpc"`

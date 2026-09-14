@@ -51,12 +51,24 @@ func main() {
 			continue
 		}
 		if req.Method != "upload" {
+			if req.Method == "accounts.list" {
+				_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Result: (&core.ConfigManager{}).GetAccounts()})
+				continue
+			}
 			_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Error: &protocol.Error{Code: "method_not_found", Message: fmt.Sprintf("unknown method %q", req.Method)}})
 			continue
 		}
+		opts := req.Params.Options
+		opts.Api.Account = req.Params.Account
+		if req.Params.Recursive != nil {
+			opts.Recursive = *req.Params.Recursive
+		}
+		if req.Params.Threads > 0 {
+			opts.Threads = req.Params.Threads
+		}
 		rep := reporter{enc: reqEncoder(enc), id: req.ID, done: make(chan struct{})}
 		m := core.NewUploadManager(rep, nil)
-		m.Upload(req.Params.Paths, req.Params.Options)
+		m.Upload(req.Params.Paths, opts)
 		<-rep.done
 		_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"ok": true}})
 	}
