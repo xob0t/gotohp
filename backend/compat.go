@@ -45,9 +45,9 @@ type ProgressReader = core.ProgressReader
 type RetryConfig = core.RetryConfig
 type ScottyFinalizeToken = core.ScottyFinalizeToken
 
-var AppConfig = core.AppConfig
-var ConfigPath = core.ConfigPath
-var DefaultPreferences = core.DefaultPreferences
+// Deprecated: use core.AppConfig. This snapshot is retained for source compatibility.\nvar AppConfig = core.AppConfig
+// Deprecated: use core.ConfigPath. This snapshot is retained for source compatibility.\nvar ConfigPath = core.ConfigPath
+// Deprecated: use core.DefaultPreferences. This snapshot is retained for source compatibility.\nvar DefaultPreferences = core.DefaultPreferences
 
 func NewApi(o core.ApiOptions) (*core.Api, error) { return core.NewApi(o) }
 func NewUploadManager(r core.UploadReporter, l *slog.Logger) *core.UploadManager {
@@ -67,3 +67,6 @@ func FilterGooglePhotosFiles(p []string, o core.UploadOptions) ([]string, error)
 	return core.FilterGooglePhotosFiles(p, o)
 }
 func GetVersion(f embed.FS) string { return core.GetVersion(f) }
+
+// CurrentConfig returns the canonical core configuration.
+func CurrentConfig() core.Config { return core.AppConfig }
