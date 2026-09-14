@@ -1,6 +1,6 @@
 //go:build !cli
 
-package backend
+package gui
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"app/core"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 

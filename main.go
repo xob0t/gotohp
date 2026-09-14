@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"app/core"
-	"app/internal"
 	"app/internal/cli"
+	"app/internal/gui"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -70,7 +70,7 @@ func runGUI() {
 		URL: "/",
 	})
 
-	uploadManager := core.NewUploadManager(internal.NewWailsReporter(wailsApp), wailsApp.Logger)
+	uploadManager := core.NewUploadManager(gui.NewWailsReporter(wailsApp), wailsApp.Logger)
 
 	// Listen for upload cancel event
 	wailsApp.Event.On("uploadCancel", func(e *application.CustomEvent) {
