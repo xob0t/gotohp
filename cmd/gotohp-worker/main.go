@@ -81,7 +81,11 @@ func main() {
 			continue
 		}
 		opts := req.Params.Options
-		opts.Api.Account = req.Params.Account
+		// Accept the account in either the top-level convenience field or the
+		// options object so clients can evolve without silently losing selection.
+		if req.Params.Account != "" {
+			opts.Api.Account = req.Params.Account
+		}
 		if req.Params.Recursive != nil {
 			opts.Recursive = *req.Params.Recursive
 		}
