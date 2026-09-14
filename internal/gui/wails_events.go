@@ -14,7 +14,7 @@ func init() {
 	application.RegisterEvent[core.UploadBatchStart]("uploadStart")
 	application.RegisterEvent[application.Void]("uploadStop")
 	application.RegisterEvent[core.FileUploadResult]("FileStatus")
-	application.RegisterEvent[core.ThreadStatus]("core.ThreadStatus")
+	application.RegisterEvent[core.ThreadStatus]("ThreadStatus")
 	application.RegisterEvent[core.PreflightWarning]("uploadWarning")
 	application.RegisterEvent[application.Void]("uploadCancel")
 	application.RegisterEvent[int64]("uploadTotalBytes")

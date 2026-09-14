@@ -21,7 +21,7 @@ func (w *WailsReporter) UploadStop()                         { w.app.Event.Emit(
 func (w *WailsReporter) TotalBytes(n int64)                  { w.app.Event.Emit("uploadTotalBytes", n) }
 func (w *WailsReporter) TotalBytesDelta(n int64)             { w.app.Event.Emit("uploadTotalBytesDelta", n) }
 func (w *WailsReporter) Warning(p core.PreflightWarning)     { w.app.Event.Emit("uploadWarning", p) }
-func (w *WailsReporter) ThreadStatus(s core.ThreadStatus)    { w.app.Event.Emit("core.ThreadStatus", s) }
+func (w *WailsReporter) ThreadStatus(s core.ThreadStatus)    { w.app.Event.Emit("ThreadStatus", s) }
 func (w *WailsReporter) FileResult(r core.FileUploadResult)  { w.app.Event.Emit("FileStatus", r) }
 func (w *WailsReporter) AlbumProgress(s core.AlbumStatus)    { w.app.Event.Emit("albumProgress", s) }
 func (w *WailsReporter) AlbumComplete(s core.AlbumStatus)    { w.app.Event.Emit("albumComplete", s) }
