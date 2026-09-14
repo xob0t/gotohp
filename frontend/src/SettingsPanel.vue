@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, onMounted, watch } from 'vue'
-import { ConfigManager } from '../bindings/app/backend'
+import { ConfigManager } from '../bindings/app/core'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'

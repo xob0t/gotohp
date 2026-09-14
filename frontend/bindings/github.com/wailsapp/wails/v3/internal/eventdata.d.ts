@@ -7,24 +7,24 @@ import type { Events } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as backend$0 from "../../../../../app/backend/models.js";
+import type * as core$0 from "../../../../../app/core/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
-            "FileStatus": backend$0.FileUploadResult;
-            "ThreadStatus": backend$0.ThreadStatus;
-            "albumComplete": backend$0.AlbumStatus;
-            "albumError": backend$0.AlbumError;
-            "albumProgress": backend$0.AlbumStatus;
-            "files-dropped": backend$0.FilesDroppedEvent;
-            "startUpload": backend$0.StartUploadEvent;
+            "FileStatus": core$0.FileUploadResult;
+            "ThreadStatus": core$0.ThreadStatus;
+            "albumComplete": core$0.AlbumStatus;
+            "albumError": core$0.AlbumError;
+            "albumProgress": core$0.AlbumStatus;
+            "files-dropped": core$0.FilesDroppedEvent;
+            "startUpload": core$0.StartUploadEvent;
             "uploadCancel": void;
-            "uploadStart": backend$0.UploadBatchStart;
+            "uploadStart": core$0.UploadBatchStart;
             "uploadStop": void;
             "uploadTotalBytes": number;
             "uploadTotalBytesDelta": number;
-            "uploadWarning": backend$0.PreflightWarning;
+            "uploadWarning": core$0.PreflightWarning;
         }
     }
 }

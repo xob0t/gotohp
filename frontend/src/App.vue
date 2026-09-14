@@ -10,7 +10,7 @@ import {
 import { useColorMode } from '@vueuse/core'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { UserPlus } from '@lucide/vue'
-import { ConfigManager } from '../bindings/app/backend'
+import { ConfigManager } from '../bindings/app/core'
 import { Events } from '@wailsio/runtime'
 import Button from "./components/ui/button/Button.vue"
 import GoogleAccountSelect from './components/GoogleAccountSelect.vue'
