@@ -2,8 +2,8 @@
 
 import (
 	"app/core"
-	"embed"`n`t"net/url"
-)
+`t"embed"
+`t"net/url"
 
 type UploadBatchStart = core.UploadBatchStart
 type PreflightWarning = core.PreflightWarning
