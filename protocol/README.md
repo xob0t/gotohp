@@ -12,7 +12,8 @@ Each request uses JSON-RPC 2.0 fields:
 {"jsonrpc":"2.0","id":"1","method":"upload","params":{"paths":["/photos/a.jpg"],"options":{"Threads":2}}}
 ```
 
-The first supported method is `upload`.
+Supported methods are `accounts.list`, `credentials.add`, `credentials.remove`,
+`credentials.select`, and `upload`.
 
 ## Notifications
 
