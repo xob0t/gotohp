@@ -606,17 +606,21 @@ func cleanADBError(out string) string {
 }
 
 // determineConfigPath picks the config location when none was given explicitly:
-// a portable gotohp.config next to the executable wins over the user config dir.
+// a portable gotohp.config next to the executable or in the working directory
+// wins over the user config dir.
 func determineConfigPath() {
-	// First try portable config in executable directory
 	exePath, err := os.Executable()
 	if err == nil {
 		exeDir := filepath.Dir(exePath)
-		portableConfigPath := filepath.Join(exeDir, "gotohp.config")
+		if path, ok := existingLocalConfig(exeDir); ok {
+			ConfigPath = path
+			return
+		}
+	}
 
-		// If config exists in executable directory, use it
-		if _, err := os.Stat(portableConfigPath); err == nil {
-			ConfigPath = portableConfigPath
+	if workingDir, err := os.Getwd(); err == nil {
+		if path, ok := existingLocalConfig(workingDir); ok {
+			ConfigPath = path
 			return
 		}
 	}
@@ -624,6 +628,14 @@ func determineConfigPath() {
 	// Fall back to default location
 	userConfigDir := filepath.Join(getUserConfigDir(), "/gotohp")
 	ConfigPath = filepath.Join(userConfigDir, "gotohp.config")
+}
+
+func existingLocalConfig(dir string) (string, bool) {
+	path := filepath.Join(dir, "gotohp.config")
+	if _, err := os.Stat(path); err == nil {
+		return path, true
+	}
+	return "", false
 }
 
 func getUserConfigDir() string {

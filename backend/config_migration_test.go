@@ -71,3 +71,17 @@ func TestLoadConfigMissingFileUsesDefaults(t *testing.T) {
 		t.Fatalf("config = %+v, want defaults", got)
 	}
 }
+
+func TestExistingLocalConfig(t *testing.T) {
+	dir := t.TempDir()
+	if path, ok := existingLocalConfig(dir); ok || path != "" {
+		t.Fatalf("found config in empty directory: %q", path)
+	}
+	want := filepath.Join(dir, "gotohp.config")
+	if err := os.WriteFile(want, []byte{}, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if path, ok := existingLocalConfig(dir); !ok || path != want {
+		t.Fatalf("existingLocalConfig() = %q, %v; want %q, true", path, ok, want)
+	}
+}
