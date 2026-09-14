@@ -34,7 +34,7 @@ func TestUploadRunReturnsFailureWithJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer output.Close()
+	defer func() { _ = output.Close() }()
 	os.Stdout = output
 	code := Run([]string{"upload", photo, "--config", configPath, "--no-tui"}, Info{ExecutableName: "gotohp-cli"})
 	os.Stdout = previousStdout

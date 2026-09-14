@@ -40,7 +40,7 @@ func TestUploadRunIgnoresGUIPreferences(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer output.Close()
+	defer func() { _ = output.Close() }()
 	os.Stdout = output
 	// Run the actual command, including config loading and the upload manager.
 	// Defaults select neither file. Even if GUI settings leak, the empty

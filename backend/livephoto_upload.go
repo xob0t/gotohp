@@ -274,6 +274,7 @@ func uploadLivePhotoComponent(
 	}
 	return api.UploadFileWithProgress(ctx, componentPath, uploadSession, progress)
 }
+
 func removeLivePhotoFiles(pair LivePhotoPair) error {
 	for _, path := range []string{pair.VideoPath, pair.PhotoPath} {
 		if err := os.Remove(path); err != nil {
