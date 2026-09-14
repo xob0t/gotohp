@@ -71,7 +71,8 @@ func main() {
 			case "credentials.select":
 				manager.SetSelected(req.Params.Email)
 			default:
-				err = fmt.Errorf("unknown method %q", req.Method)
+				_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Error: &protocol.Error{Code: "method_not_found", Message: fmt.Sprintf("unknown method %q", req.Method)}})
+				continue
 			}
 			if err != nil {
 				_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Error: &protocol.Error{Code: "request_failed", Message: err.Error()}})
