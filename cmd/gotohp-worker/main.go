@@ -8,16 +8,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type reporter struct {
 	done chan struct{}
 	enc  *json.Encoder
-	id   string
+	mu   *sync.Mutex
 }
 
 func (r reporter) send(method string, params any) {
-	_ = r.enc.Encode(protocol.Message{JSONRPC: "2.0", ID: r.id, Method: method, Params: params})
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	// Notifications intentionally omit an ID per JSON-RPC 2.0. The request
+	// ID is retained by the final response, which terminates the operation.
+	_ = r.enc.Encode(protocol.Message{JSONRPC: "2.0", Method: method, Params: params})
 }
 func (r reporter) UploadStart(v core.UploadBatchStart) { r.send("uploadStart", v) }
 func (r reporter) UploadStop()                         { r.send("uploadStop", nil); close(r.done) }
@@ -66,11 +71,10 @@ func main() {
 		if req.Params.Threads > 0 {
 			opts.Threads = req.Params.Threads
 		}
-		rep := reporter{enc: reqEncoder(enc), id: req.ID, done: make(chan struct{})}
+		rep := reporter{enc: enc, done: make(chan struct{}), mu: &sync.Mutex{}}
 		m := core.NewUploadManager(rep, nil)
 		m.Upload(req.Params.Paths, opts)
 		<-rep.done
 		_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"ok": true}})
 	}
 }
-func reqEncoder(e *json.Encoder) *json.Encoder { return e }
