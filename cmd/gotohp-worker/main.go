@@ -10,6 +10,7 @@ import (
 )
 
 type reporter struct {\n done chan struct{}
+	done chan struct{}
 	enc *json.Encoder
 	id  string
 }
@@ -18,7 +19,7 @@ func (r reporter) send(method string, params any) {
 	_ = r.enc.Encode(protocol.Message{JSONRPC: "2.0", ID: r.id, Method: method, Params: params})
 }
 func (r reporter) UploadStart(v core.UploadBatchStart) { r.send("uploadStart", v) }
-func (r reporter) UploadStop()                         { r.send("uploadStop", nil) }
+func (r reporter) UploadStop()                         { r.send("uploadStop", nil); close(r.done) }
 func (r reporter) TotalBytes(v int64)                  { r.send("totalBytes", v) }
 func (r reporter) TotalBytesDelta(v int64)             { r.send("totalBytesDelta", v) }
 func (r reporter) Warning(v core.PreflightWarning)     { r.send("warning", v) }
@@ -40,9 +41,10 @@ func main() {
 			_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Error: &protocol.Error{Code: "method_not_found", Message: fmt.Sprintf("unknown method %q", req.Method)}})
 			continue
 		}
-		rep := reporter{enc: reqEncoder(enc), id: req.ID}
+		rep := reporter{enc: reqEncoder(enc), id: req.ID, done: make(chan struct{})}
 		m := core.NewUploadManager(rep, nil)
 		m.Upload(req.Params.Paths, req.Params.Options)
+		<-rep.done
 		for m.IsRunning() {
 		}
 		_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"ok": true}})
