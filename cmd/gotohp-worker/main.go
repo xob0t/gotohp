@@ -31,10 +31,15 @@ func (r reporter) AlbumError(v core.AlbumError)        { r.send("albumError", v)
 func main() {
 	enc := json.NewEncoder(os.Stdout)
 	scan := bufio.NewScanner(os.Stdin)
+	scan.Buffer(make([]byte, 64*1024), 16*1024*1024)
 	for scan.Scan() {
 		var req protocol.Request
 		if err := json.Unmarshal(scan.Bytes(), &req); err != nil {
 			_ = enc.Encode(protocol.Message{JSONRPC: "2.0", Error: &protocol.Error{Code: "invalid_request", Message: err.Error()}})
+			continue
+		}
+		if req.JSONRPC != "2.0" || req.ID == "" || req.Method == "" {
+			_ = enc.Encode(protocol.Message{JSONRPC: "2.0", Error: &protocol.Error{Code: "invalid_request", Message: "jsonrpc, id, and method are required"}})
 			continue
 		}
 		if req.Method != "upload" {
@@ -45,8 +50,6 @@ func main() {
 		m := core.NewUploadManager(rep, nil)
 		m.Upload(req.Params.Paths, req.Params.Options)
 		<-rep.done
-		for m.IsRunning() {
-		}
 		_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Result: map[string]any{"ok": true}})
 	}
 }
