@@ -60,7 +60,24 @@ func main() {
 				_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Result: (&core.ConfigManager{}).GetAccounts()})
 				continue
 			}
-			_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Error: &protocol.Error{Code: "method_not_found", Message: fmt.Sprintf("unknown method %q", req.Method)}})
+			manager := &core.ConfigManager{}
+			var result any
+			var err error
+			switch req.Method {
+			case "credentials.add":
+				err = manager.AddCredentials(req.Params.Auth)
+			case "credentials.remove":
+				err = manager.RemoveCredentials(req.Params.Email)
+			case "credentials.select":
+				err = manager.SetSelected(req.Params.Email)
+			default:
+				err = fmt.Errorf("unknown method %q", req.Method)
+			}
+			if err != nil {
+				_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Error: &protocol.Error{Code: "request_failed", Message: err.Error()}})
+			} else {
+				_ = enc.Encode(protocol.Message{JSONRPC: "2.0", ID: req.ID, Result: result})
+			}
 			continue
 		}
 		opts := req.Params.Options

@@ -14,6 +14,8 @@ type Params struct {
 	Account   string             `json:"account"`
 	Recursive *bool              `json:"recursive"`
 	Threads   int                `json:"threads"`
+	Email     string             `json:"email"`
+	Auth      string             `json:"auth"`
 }
 type Message struct {
 	JSONRPC string `json:"jsonrpc"`
