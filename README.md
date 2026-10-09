@@ -12,10 +12,46 @@ Unofficial Google Photos Desktop GUI Client
 - Individual files or directories uploads, with optional recursive scanning
 - Skips files already present in your account
 - CLI mode
-- Configurable, persistent upload settings (stored in "%system config path%/gotohp/gotohp.config")  
-   You can force local config by creating empty gotohp.config next to executable.
+- Configurable, persistent upload settings (stored in "%system config path%/gotohp/gotohp.config")
+  You can force local config by creating empty gotohp.config next to executable.
 
 ## [Download](https://github.com/xob0t/gotohp/releases/latest)
+
+## Install with Nix
+
+The repository ships a flake (Linux, `x86_64` and `aarch64`) with these packages:
+
+- `gotohp`: the GUI. It also accepts the CLI commands.
+- `gotohp-cli`: the standalone CLI, with no GUI dependencies.
+
+Try it without installing:
+
+```shell
+nix run github:xob0t/gotohp#gotohp                    # GUI
+nix run github:xob0t/gotohp#gotohp-cli -- --help      # CLI
+```
+
+Install into your profile:
+
+```shell
+nix profile install github:xob0t/gotohp#gotohp github:xob0t/gotohp#gotohp-cli
+```
+
+Or on NixOS, add it as a flake input:
+
+```nix
+# flake.nix
+inputs.gotohp = {
+  url = "github:xob0t/gotohp";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+
+# in your configuration
+environment.systemPackages = [
+  inputs.gotohp.packages.${pkgs.stdenv.hostPlatform.system}.gotohp
+  inputs.gotohp.packages.${pkgs.stdenv.hostPlatform.system}.gotohp-cli
+];
+```
 
 ## CLI usage
 
@@ -54,6 +90,7 @@ From the CLI, open the same page yourself and run `gotohp-cli creds add "<oauth_
   <summary><strong>Click to expand</strong></summary>
 
 1. Install Google Photos ReVanced on your android device/emulator.
+
    - Install GmsCore [https://github.com/ReVanced/GmsCore/releases](https://github.com/ReVanced/GmsCore/releases)
    - Install patched apk [https://github.com/RookieEnough/Morphe-AutoBuilds/releases](https://github.com/RookieEnough/Morphe-AutoBuilds/releases) or patch it yourself
 2. Connect the device to your PC via ADB.
@@ -70,7 +107,6 @@ From the CLI, open the same page yourself and run `gotohp-cli creds add "<oauth_
    ```shell
    adb logcat | grep "auth%2Fphotos.native"
    ```
-
 4. If you are already using ReVanced - remove Google Account from GmsCore.
 5. Open Google Photos ReVanced on your device and log into your account.
 6. One or more identical GmsCore logs should appear in the terminal.
@@ -98,10 +134,8 @@ From the CLI, open the same page yourself and run `gotohp-cli creds add "<oauth_
    ```text
    contains(www.googleapis.com%2Fauth%2Fplus.photos.readwrite)
    ```
-
 5. Open Google Photos app and login with your account.
-6. A single request should appear.  
-   Copy request body as text.
+6. A single request should appear.Copy request body as text.
 7. Add that credential string in gotohp.
 8. If gotohp asks for a token binding key, keep the rooted device connected and click `Read from ADB`. gotohp will read the account's `lstBindingKeyAlias` from Android AccountManager and save it into the credential.
 
