@@ -1,0 +1,52 @@
+name: Nix
+
+on:
+  pull_request:
+    paths:
+      - flake.nix
+      - flake.lock
+      - nix/**
+      - go.mod
+      - go.sum
+      - "**/*.go"
+      - frontend/**
+      - build/windows/info.json
+      - .github/workflows/nix.yml
+  push:
+    branches:
+      - main
+    paths:
+      - flake.nix
+      - flake.lock
+      - nix/**
+      - go.mod
+      - go.sum
+      - "**/*.go"
+      - frontend/**
+      - build/windows/info.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build flake outputs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Flake check
+        run: nix flake check --print-build-logs
+
+      - name: Build CLI and GUI
+        run: nix build .#gotohp-cli .#gotohp --print-build-logs
+
+      - name: Smoke test CLI
+        run: nix run .#gotohp-cli -- --help

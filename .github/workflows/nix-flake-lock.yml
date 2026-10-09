@@ -1,0 +1,24 @@
+name: Update flake.lock
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+
+      - uses: DeterminateSystems/update-flake-lock@v24
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          pr-title: "chore(nix): update flake.lock"
+          commit-msg: "chore(nix): update flake.lock"
