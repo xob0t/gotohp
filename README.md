@@ -93,6 +93,7 @@ From the CLI, open the same page yourself and run `gotohp-cli creds add "<oauth_
 
    - Install GmsCore [https://github.com/ReVanced/GmsCore/releases](https://github.com/ReVanced/GmsCore/releases)
    - Install patched apk [https://github.com/RookieEnough/Morphe-AutoBuilds/releases](https://github.com/RookieEnough/Morphe-AutoBuilds/releases) or patch it yourself
+
 2. Connect the device to your PC via ADB.
 3. Open the terminal on your PC and execute
 
@@ -107,6 +108,7 @@ From the CLI, open the same page yourself and run `gotohp-cli creds add "<oauth_
    ```shell
    adb logcat | grep "auth%2Fphotos.native"
    ```
+
 4. If you are already using ReVanced - remove Google Account from GmsCore.
 5. Open Google Photos ReVanced on your device and log into your account.
 6. One or more identical GmsCore logs should appear in the terminal.
@@ -134,8 +136,9 @@ From the CLI, open the same page yourself and run `gotohp-cli creds add "<oauth_
    ```text
    contains(www.googleapis.com%2Fauth%2Fplus.photos.readwrite)
    ```
+
 5. Open Google Photos app and login with your account.
-6. A single request should appear.Copy request body as text.
+6. A single request should appear. Copy request body as text.
 7. Add that credential string in gotohp.
 8. If gotohp asks for a token binding key, keep the rooted device connected and click `Read from ADB`. gotohp will read the account's `lstBindingKeyAlias` from Android AccountManager and save it into the credential.
 
