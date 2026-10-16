@@ -1,4 +1,4 @@
-# gotohp (GoogleUnlimited)
+# gotohp
 
 ![demo](readme_assets/app_demo.webp)
 
@@ -24,17 +24,7 @@ Unofficial Google Photos Desktop Client with automatic background backup, folder
 
 ## 🚀 Windows Setup & Usage
 
-### 1. Download or Clone
-Clone the repository:
-```bash
-git clone https://github.com/shishir0x/GoogleUnlimited.git
-cd GoogleUnlimited
-```
-Or download the latest executable (`gotohp-x64.exe` / `gotohp.exe`) from the repository releases or `bin/` directory.
-
----
-
-### 2. Sign In to Google Photos (One-Time)
+### 1. Sign In to Google Photos (One-Time)
 
 1. Double-click `gotohp-x64.exe` (or `gotohp.exe`) and click **Add Google account**.
 2. Click **Open Google sign-in** and sign in with your Google account.
@@ -48,7 +38,7 @@ Or download the latest executable (`gotohp-x64.exe` / `gotohp.exe`) from the rep
 
 ---
 
-### 3. Setting Up Auto-Backup
+### 2. Setting Up Auto-Backup
 
 1. Click the **⚙️ Settings** icon in the top-right corner.
 2. Toggle **Auto-Backup** to **Enabled**.
@@ -58,7 +48,7 @@ Or download the latest executable (`gotohp-x64.exe` / `gotohp.exe`) from the rep
 
 ---
 
-### 4. Running in the Background & Auto-Start on Windows
+### 3. Running in the Background & Auto-Start on Windows
 
 #### Background System Tray
 - When you click the **`✕`** close button, gotohp minimizes to the **Windows System Tray** (notification area near the clock).
