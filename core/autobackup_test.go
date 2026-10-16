@@ -46,3 +46,44 @@ func TestAddAndRemoveAutoBackupFolder(t *testing.T) {
 		t.Fatalf("after reload: expected 2 folders, got %d: %+v", len(loaded.Folders), loaded.Folders)
 	}
 }
+
+func TestAutoBackupHistoryTracking(t *testing.T) {
+	dir := t.TempDir()
+	historyPath := filepath.Join(dir, "autobackup_history.json")
+
+	h := NewAutoBackupHistory(historyPath)
+	testFile := filepath.Join(dir, "photo.jpg")
+
+	// Initially not uploaded
+	if h.IsUploaded(testFile, 1024, 5000) {
+		t.Fatalf("expected not uploaded")
+	}
+
+	// Mark uploaded
+	h.MarkUploaded(testFile, 1024, 5000)
+	if !h.IsUploaded(testFile, 1024, 5000) {
+		t.Fatalf("expected uploaded")
+	}
+
+	// File modified (new size or mtime)
+	if h.IsUploaded(testFile, 2048, 5000) {
+		t.Fatalf("expected false for changed size")
+	}
+	if h.IsUploaded(testFile, 1024, 6000) {
+		t.Fatalf("expected false for changed mtime")
+	}
+
+	// Persist to disk
+	if err := h.Save(); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	// Reload in fresh instance
+	h2 := NewAutoBackupHistory(historyPath)
+	if !h2.IsUploaded(testFile, 1024, 5000) {
+		t.Fatalf("expected reloaded instance to have record")
+	}
+	if h2.Count() != 1 {
+		t.Fatalf("expected count 1, got %d", h2.Count())
+	}
+}
