@@ -7,6 +7,13 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// AutoBackupStatus is emitted to the frontend whenever auto-backup is toggled
+// or its folder list changes.
+type AutoBackupStatus struct {
+	Enabled bool     `json:"enabled"`
+	Folders []string `json:"folders"`
+}
+
 func init() {
 	application.RegisterEvent[core.AlbumStatus]("albumProgress")
 	application.RegisterEvent[core.AlbumStatus]("albumComplete")
@@ -21,4 +28,5 @@ func init() {
 	application.RegisterEvent[int64]("uploadTotalBytesDelta")
 	application.RegisterEvent[core.FilesDroppedEvent]("files-dropped")
 	application.RegisterEvent[core.StartUploadEvent]("startUpload")
+	application.RegisterEvent[AutoBackupStatus]("autoBackupStatus")
 }

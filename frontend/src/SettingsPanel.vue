@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { nextTick, ref, onMounted, watch } from 'vue'
 import { ConfigManager } from '../bindings/app/core'
+import { Dialogs, Events } from "@wailsio/runtime"
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/ui/button'
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Info } from '@lucide/vue'
+import { Info, FolderPlus, Trash2 } from '@lucide/vue'
 
 import {
     NumberField,
@@ -52,6 +54,12 @@ const settings = ref<Settings>({
 })
 const isHydrating = ref(true)
 
+// ── Auto Backup ──────────────────────────────────────────────────────────────
+const autoBackupEnabled = ref(false)
+const autoBackupFolders = ref<string[]>([])
+const autoBackupHydrating = ref(true)
+const addFolderError = ref('')
+
 const toggleSetting = (setting: BooleanSetting, enabled = true) => {
     if (!enabled) return
     settings.value[setting] = !settings.value[setting]
@@ -78,7 +86,51 @@ onMounted(async () => {
         await nextTick()
         isHydrating.value = false
     }
+
+    // Load auto-backup config
+    try {
+        const abCfg = await ConfigManager.GetAutoBackup()
+        autoBackupEnabled.value = abCfg.enabled || false
+        autoBackupFolders.value = [...(abCfg.folders || [])]
+    } finally {
+        await nextTick()
+        autoBackupHydrating.value = false
+    }
 })
+
+async function addFolder() {
+    addFolderError.value = ''
+    try {
+        const chosen = await Dialogs.OpenFile({
+            CanChooseDirectories: true,
+            CanChooseFiles: false,
+            Title: 'Select backup folder'
+        })
+        if (!chosen) return
+        const folderPath = Array.isArray(chosen) ? chosen[0] : chosen
+        if (!folderPath || typeof folderPath !== 'string') return
+
+        const updated = await ConfigManager.AddAutoBackupFolder(folderPath)
+        autoBackupFolders.value = [...(updated || [])]
+        if (autoBackupEnabled.value) {
+            Events.Emit('restartAutoBackup', null)
+        }
+    } catch (e: any) {
+        addFolderError.value = e?.message || String(e)
+    }
+}
+
+async function removeFolder(path: string) {
+    try {
+        const updated = await ConfigManager.RemoveAutoBackupFolder(path)
+        autoBackupFolders.value = [...(updated || [])]
+        if (autoBackupEnabled.value) {
+            Events.Emit('restartAutoBackup', null)
+        }
+    } catch (e: any) {
+        console.error('Failed to remove backup folder:', e)
+    }
+}
 
 // Watch for changes to proxy value and update backend
 watch(() => settings.value.proxy, async (newValue) => {
@@ -149,10 +201,17 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
         await ConfigManager.SetUploadThreads(newValue)
     }
 })
+
+watch(autoBackupEnabled, async (newValue) => {
+    if (autoBackupHydrating.value) return
+    Events.Emit('setAutoBackupEnabled', newValue)
+})
 </script>
 
+
+
 <template>
-  <div class="flex flex-col gap-2.5 m-4">
+  <div class="flex flex-col gap-2.5 p-4 max-h-[500px] overflow-y-auto">
     <NumberField
       v-model="settings.uploadThreads"
       class="flex items-center justify-between"
@@ -364,6 +423,49 @@ watch(() => settings.value.uploadThreads, async (newValue) => {
         type="text"
         placeholder="Proxy URL (optional)"
       />
+    </div>
+    <!-- ── Auto Backup section ─────────────────────────────────────────── -->
+    <div class="mt-3 border-t pt-3">
+      <div class="flex items-center justify-between mb-2">
+        <Label for="auto-backup-toggle" class="size-full cursor-pointer font-semibold">Auto Backup</Label>
+        <Switch
+          id="auto-backup-toggle"
+          v-model="autoBackupEnabled"
+        />
+      </div>
+
+      <!-- Folder list -->
+      <div v-if="autoBackupFolders.length" class="mb-2 flex flex-col gap-1 max-h-40 overflow-y-auto">
+        <div
+          v-for="folder in autoBackupFolders"
+          :key="folder"
+          class="flex items-center justify-between gap-2 rounded-md bg-muted px-2 py-1 text-sm"
+        >
+          <span class="truncate text-muted-foreground" :title="folder">{{ folder }}</span>
+          <button
+            type="button"
+            class="shrink-0 text-destructive hover:text-destructive/80 cursor-pointer"
+            aria-label="Remove folder"
+            @click="removeFolder(folder)"
+          >
+            <Trash2 class="size-3.5" />
+          </button>
+        </div>
+      </div>
+      <p v-else class="mb-2 text-sm text-muted-foreground">No backup folders added yet.</p>
+
+      <!-- Add folder button -->
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        class="w-full gap-1.5 cursor-pointer"
+        @click="addFolder"
+      >
+        <FolderPlus class="size-4" />
+        Add Backup Folder
+      </Button>
+      <p v-if="addFolderError" class="mt-1 text-xs text-destructive">{{ addFolderError }}</p>
     </div>
   </div>
 </template>

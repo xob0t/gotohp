@@ -496,6 +496,9 @@ func filterGooglePhotosFilesWithCancel(paths []string, opts UploadOptions, cance
 		}
 		fileInfo, err := os.Stat(path)
 		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
 			return nil, fmt.Errorf("error accessing path %s: %w", path, err)
 		}
 

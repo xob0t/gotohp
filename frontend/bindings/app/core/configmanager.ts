@@ -121,6 +121,25 @@ export function SetUseQuota(useQuota: boolean): $CancellablePromise<void> {
     return $Call.ByID(1540354890, useQuota);
 }
 
+export function GetAutoBackup(): $CancellablePromise<$models.AutoBackupConfig> {
+    return $Call.ByName("app/core.ConfigManager.GetAutoBackup").then(($result: any) => {
+        return $$createType2($result);
+    });
+}
+
+export function SetAutoBackupEnabled(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByName("app/core.ConfigManager.SetAutoBackupEnabled", enabled);
+}
+
+export function AddAutoBackupFolder(path: string): $CancellablePromise<string[]> {
+    return $Call.ByName("app/core.ConfigManager.AddAutoBackupFolder", path);
+}
+
+export function RemoveAutoBackupFolder(path: string): $CancellablePromise<string[]> {
+    return $Call.ByName("app/core.ConfigManager.RemoveAutoBackupFolder", path);
+}
+
 // Private type creation functions
 const $$createType0 = $models.AccountsState.createFrom;
 const $$createType1 = $models.Preferences.createFrom;
+const $$createType2 = $models.AutoBackupConfig.createFrom;

@@ -453,7 +453,7 @@ onUnmounted(() => {
                 Settings
               </Button>
             </SheetTrigger>
-            <SheetContent side="bottom">
+            <SheetContent side="bottom" class="max-h-[560px] p-0 overflow-hidden">
               <TooltipProvider disable-hoverable-content>
                 <SettingsPanel />
               </TooltipProvider>

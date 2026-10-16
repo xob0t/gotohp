@@ -47,10 +47,17 @@ type Preferences struct {
 	AlbumAutoMode bool   `json:"albumAutoMode" koanf:"-"`
 }
 
+// AutoBackupConfig holds the persistent auto-backup settings.
+type AutoBackupConfig struct {
+	Enabled bool     `json:"enabled" koanf:"enabled"`
+	Folders []string `json:"folders" koanf:"folders"`
+}
+
 // Config is the on-disk layout of gotohp.config.
 type Config struct {
-	Account     AccountConfig `json:"account" koanf:"account"`
-	Preferences Preferences   `json:"preferences" koanf:"preferences"`
+	Account     AccountConfig    `json:"account" koanf:"account"`
+	Preferences Preferences      `json:"preferences" koanf:"preferences"`
+	AutoBackup  AutoBackupConfig `json:"autoBackup" koanf:"auto_backup"`
 }
 
 // legacyConfig is the pre-sectioned flat layout, kept only for migration.
@@ -90,6 +97,7 @@ func (l legacyConfig) toConfig() Config {
 			SetDateFromFilename:           l.SetDateFromFilename,
 			ExcludePattern:                l.ExcludePattern,
 		},
+		AutoBackup: AutoBackupConfig{Folders: []string{}},
 	}
 }
 
@@ -113,7 +121,13 @@ var (
 		SkipIncompleteLivePhotos: true,
 		UploadThreads:            3,
 	}
-	DefaultConfig = Config{Preferences: DefaultPreferences}
+	DefaultAutoBackup = AutoBackupConfig{
+		Folders: []string{},
+	}
+	DefaultConfig = Config{
+		Preferences: DefaultPreferences,
+		AutoBackup:  DefaultAutoBackup,
+	}
 )
 
 // ParseAuthString parses an auth string and returns url.Values (exported for CLI use)
@@ -251,6 +265,68 @@ func (g *ConfigManager) GetExcludePattern() string {
 	configMu.RLock()
 	defer configMu.RUnlock()
 	return AppConfig.Preferences.ExcludePattern
+}
+
+// GetAutoBackup returns the current auto-backup configuration.
+func (g *ConfigManager) GetAutoBackup() AutoBackupConfig {
+	ensureConfigLoaded()
+	configMu.RLock()
+	defer configMu.RUnlock()
+	return AppConfig.AutoBackup
+}
+
+// SetAutoBackupEnabled enables or disables auto-backup and persists the setting.
+func (g *ConfigManager) SetAutoBackupEnabled(enabled bool) {
+	updateAppConfig(func(config *Config) {
+		config.AutoBackup.Enabled = enabled
+	})
+}
+
+// AddAutoBackupFolder adds path to the backup folders list if it is not already
+// present.  Returns the updated folder list.
+func (g *ConfigManager) AddAutoBackupFolder(path string) ([]string, error) {
+	ensureConfigLoaded()
+	path = filepath.Clean(path)
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("folder does not exist or is inaccessible: %w", err)
+	}
+
+	configMu.Lock()
+	defer configMu.Unlock()
+
+	for _, existing := range AppConfig.AutoBackup.Folders {
+		if filepath.Clean(existing) == path {
+			result := make([]string, len(AppConfig.AutoBackup.Folders))
+			copy(result, AppConfig.AutoBackup.Folders)
+			return result, nil // already in list
+		}
+	}
+	AppConfig.AutoBackup.Folders = append(AppConfig.AutoBackup.Folders, path)
+	_ = saveAppConfigLocked()
+	result := make([]string, len(AppConfig.AutoBackup.Folders))
+	copy(result, AppConfig.AutoBackup.Folders)
+	return result, nil
+}
+
+// RemoveAutoBackupFolder removes path from the backup folders list.
+// Returns the updated folder list.
+func (g *ConfigManager) RemoveAutoBackupFolder(path string) []string {
+	ensureConfigLoaded()
+	path = filepath.Clean(path)
+	updateAppConfig(func(config *Config) {
+		var updated []string
+		for _, f := range config.AutoBackup.Folders {
+			if filepath.Clean(f) != path {
+				updated = append(updated, f)
+			}
+		}
+		config.AutoBackup.Folders = updated
+	})
+	configMu.RLock()
+	defer configMu.RUnlock()
+	result := make([]string, len(AppConfig.AutoBackup.Folders))
+	copy(result, AppConfig.AutoBackup.Folders)
+	return result
 }
 
 func (g *ConfigManager) AddCredentials(newAuthString string) error {
@@ -659,6 +735,15 @@ func currentConfig() Config {
 	return AppConfig
 }
 
+// CurrentAutoBackupConfig returns a snapshot of the auto-backup config.
+// Exported so main.go can read it without a ConfigManager value receiver.
+func CurrentAutoBackupConfig() AutoBackupConfig {
+	ensureConfigLoaded()
+	configMu.RLock()
+	defer configMu.RUnlock()
+	return AppConfig.AutoBackup
+}
+
 func (g *ConfigManager) GetSettings() Preferences {
 	ensureConfigLoaded()
 	configMu.RLock()
@@ -819,6 +904,10 @@ func loadAppConfig() Config {
 
 	if c.Preferences.UploadThreads < 1 {
 		c.Preferences.UploadThreads = DefaultPreferences.UploadThreads
+	}
+
+	if c.AutoBackup.Folders == nil {
+		c.AutoBackup.Folders = []string{}
 	}
 
 	return c
