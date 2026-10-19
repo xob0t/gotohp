@@ -35,7 +35,9 @@ func newUploadCommand() *cobra.Command {
 	f.BoolP("force", "f", false, "upload even if the file already exists in the library")
 	f.BoolP("delete", "d", false, "delete from host after upload")
 	f.Bool("disable-filter", false, "disable file type filtering")
+	f.String("filename", "", "override the uploaded filename (also used by --date-from-filename)")
 	f.Bool("date-from-filename", false, "set media date from filename (e.g. 20240709_182027.jpg)")
+	f.Bool("date-from-supplemental-metadata-file", false, "set media date from <file>.supplemental-metadata.json when present")
 	f.StringP("exclude", "e", "", "exclude directories whose name matches pattern (e.g. @eaDir)")
 	f.StringP("album", "a", "", "add uploads to album (creates if needed); 'AUTO' creates albums from folder names")
 	f.Bool("pair-live-photos", false, "pair Apple Live Photo files; incomplete pairs are skipped")
@@ -49,6 +51,7 @@ func newUploadCommand() *cobra.Command {
 	f.Bool("skip-incomplete-live-photos", false, "")
 	_ = f.MarkHidden("skip-incomplete-live-photos")
 	cmd.MarkFlagsMutuallyExclusive("skip-incomplete-live-photos", "upload-incomplete-live-photos")
+	cmd.MarkFlagsMutuallyExclusive("date-from-filename", "date-from-supplemental-metadata-file")
 	return cmd
 }
 
@@ -99,7 +102,9 @@ func uploadOptionsFromFlags(f *pflag.FlagSet) core.UploadOptions {
 	opts.ForceUpload = getBool("force")
 	opts.DeleteFromHost = getBool("delete")
 	opts.DisableUnsupportedFilesFilter = getBool("disable-filter")
+	opts.Filename, _ = f.GetString("filename")
 	opts.SetDateFromFilename = getBool("date-from-filename")
+	opts.SetDateFromSupplementalMetadataFile = getBool("date-from-supplemental-metadata-file")
 	opts.PairLivePhotos = getBool("pair-live-photos")
 	opts.SkipIncompleteLivePhotos = !getBool("upload-incomplete-live-photos")
 	opts.UpdateExistingPhotosToLive = getBool("update-existing-photos-to-live")
@@ -118,9 +123,12 @@ func uploadOptionsFromFlags(f *pflag.FlagSet) core.UploadOptions {
 	return opts
 }
 
-// validateUploadOptions rejects flags that only make sense with Live Photo
-// pairing enabled.
+// validateUploadOptions rejects invalid values and flags that only make sense
+// with Live Photo pairing enabled.
 func validateUploadOptions(f *pflag.FlagSet, opts core.UploadOptions) error {
+	if f.Changed("filename") && strings.TrimSpace(opts.Filename) == "" {
+		return fmt.Errorf("--filename must not be empty")
+	}
 	if opts.PairLivePhotos {
 		return nil
 	}

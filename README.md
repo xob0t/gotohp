@@ -23,6 +23,8 @@ Download the `gotohp-cli` release artifact for your platform. It runs without th
 
 ```shell
 gotohp-cli upload /path/to/photos --recursive --threads 5
+gotohp-cli upload photo.jpg --filename 20240709_182027.jpg --date-from-filename
+gotohp-cli upload /path/to/takeout --recursive --date-from-supplemental-metadata-file
 gotohp-cli creds add "<oauth_token cookie value>"   # Embedded Setup sign-in, see below
 gotohp-cli creds add "androidId=..."                 # or a raw credential string
 gotohp-cli creds add - < token.txt                   # or read either from stdin

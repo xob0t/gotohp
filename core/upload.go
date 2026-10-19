@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 // FilesDroppedEvent is emitted when files are dropped on any drop zone
@@ -539,20 +540,22 @@ func UploadFile(ctx context.Context, api *Api, filePath string, opts UploadOptio
 }
 
 func uploadSingleFile(ctx context.Context, api *Api, filePath string, opts UploadOptions, workerID int, reporter UploadReporter) (string, error) {
-	fileName := filepath.Base(filePath)
+	fileName := opts.Filename
+	if fileName == "" {
+		fileName = filepath.Base(filePath)
+	}
 	mediakey := ""
 
-	// Determine the timestamp to use for the upload.
-	// Default to file mtime, but allow filename-based timestamp to take precedence if enabled.
-	var uploadTimestamp int64
+	// Default to file mtime, but allow the selected metadata source to take precedence.
+	var uploadTime time.Time
 	if info, err := os.Stat(filePath); err == nil {
-		uploadTimestamp = info.ModTime().Unix()
+		uploadTime = info.ModTime()
 	}
-	if opts.SetDateFromFilename {
-		if t, ok := parseTimestampFromFilename(filePath); ok {
-			uploadTimestamp = t.Unix()
-		}
+	uploadTime, err := resolveUploadTime(filePath, fileName, uploadTime, opts.SetDateFromFilename, opts.SetDateFromSupplementalMetadataFile)
+	if err != nil {
+		return "", fmt.Errorf("determine upload date: %w", err)
 	}
+	uploadTimestamp := uploadTime.Unix()
 
 	// Stage 1: Hashing
 	reporter.ThreadStatus(ThreadStatus{
@@ -666,7 +669,7 @@ func uploadSingleFile(ctx context.Context, api *Api, filePath string, opts Uploa
 		Message:  "Committing upload...",
 	})
 
-	mediaKey, err := api.CommitUpload(commitToken, fileInfo.Name(), sha1_hash_bytes, uploadTimestamp)
+	mediaKey, err := api.CommitUpload(commitToken, fileName, sha1_hash_bytes, uploadTimestamp)
 	if err != nil {
 		return "", fmt.Errorf("error committing file: %w", err)
 	}
@@ -810,10 +813,12 @@ func uploadWorkItem(ctx context.Context, api *Api, item UploadWorkItem, opts Upl
 			return "", false, fmt.Errorf("invalid Live Photo work item")
 		}
 		return uploadLivePhotoWithCallback(ctx, api, *item.LivePhoto, LivePhotoUploadOptions{
-			Policy:                     buildLivePhotoCommitPolicy(api),
-			DeleteFromHost:             opts.DeleteFromHost,
-			SetDateFromFilename:        opts.SetDateFromFilename,
-			UpdateExistingPhotosToLive: opts.UpdateExistingPhotosToLive,
+			Policy:                              buildLivePhotoCommitPolicy(api),
+			DeleteFromHost:                      opts.DeleteFromHost,
+			SetDateFromFilename:                 opts.SetDateFromFilename,
+			SetDateFromSupplementalMetadataFile: opts.SetDateFromSupplementalMetadataFile,
+			Filename:                            opts.Filename,
+			UpdateExistingPhotosToLive:          opts.UpdateExistingPhotosToLive,
 		}, workerID, reporter)
 	default:
 		return "", false, fmt.Errorf("unsupported upload work kind %q", item.Kind)

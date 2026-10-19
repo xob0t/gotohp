@@ -17,10 +17,12 @@ type livePhotoUploadAPI interface {
 }
 
 type LivePhotoUploadOptions struct {
-	Policy                     LivePhotoCommitPolicy
-	DeleteFromHost             bool
-	SetDateFromFilename        bool
-	UpdateExistingPhotosToLive bool
+	Policy                              LivePhotoCommitPolicy
+	DeleteFromHost                      bool
+	SetDateFromFilename                 bool
+	SetDateFromSupplementalMetadataFile bool
+	Filename                            string
+	UpdateExistingPhotosToLive          bool
 }
 
 func uploadLivePhotoWithCallback(
@@ -40,6 +42,20 @@ func uploadLivePhotoWithCallback(
 		return "", false, fmt.Errorf("stat Live Photo video: %w", err)
 	}
 	totalBytes := photoInfo.Size() + videoInfo.Size()
+	fileName := options.Filename
+	if fileName == "" {
+		fileName = photoInfo.Name()
+	}
+	uploadTime, err := resolveUploadTime(
+		pair.PhotoPath,
+		fileName,
+		photoInfo.ModTime(),
+		options.SetDateFromFilename,
+		options.SetDateFromSupplementalMetadataFile,
+	)
+	if err != nil {
+		return "", false, fmt.Errorf("determine Live Photo upload date: %w", err)
+	}
 	displayName := filepath.Base(pair.PhotoPath) + " + " + filepath.Base(pair.VideoPath)
 	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
@@ -124,12 +140,6 @@ func uploadLivePhotoWithCallback(
 		return "", false, fmt.Errorf("upload Live Photo video: %w", err)
 	}
 
-	uploadTime := photoInfo.ModTime()
-	if options.SetDateFromFilename {
-		if parsed, ok := parseTimestampFromFilename(pair.PhotoPath); ok {
-			uploadTime = parsed
-		}
-	}
 	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
 		Status:   "finalizing",
@@ -140,7 +150,7 @@ func uploadLivePhotoWithCallback(
 	mediaKey, err = api.CommitLivePhoto(LivePhotoCreateRequest{
 		PhotoToken:       photoToken,
 		VideoToken:       videoToken,
-		FileName:         photoInfo.Name(),
+		FileName:         fileName,
 		PhotoSHA1:        photoSHA1,
 		VideoSHA1:        videoSHA1,
 		CreatedAt:        uploadTime,
@@ -177,6 +187,20 @@ func reconcileExistingLivePhoto(
 	displayName string,
 	reporter UploadReporter,
 ) (string, error) {
+	dateFilename := options.Filename
+	if dateFilename == "" {
+		dateFilename = pair.PhotoPath
+	}
+	uploadTime, err := resolveUploadTime(
+		pair.PhotoPath,
+		dateFilename,
+		photoInfo.ModTime(),
+		options.SetDateFromFilename,
+		options.SetDateFromSupplementalMetadataFile,
+	)
+	if err != nil {
+		return "", fmt.Errorf("determine Live Photo upload date: %w", err)
+	}
 	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
 		Status:   "uploading",
@@ -201,11 +225,9 @@ func reconcileExistingLivePhoto(
 		return "", fmt.Errorf("upload Live Photo video for existing photo: %w", err)
 	}
 
-	uploadTime := photoInfo.ModTime()
-	if options.SetDateFromFilename {
-		if parsed, ok := parseTimestampFromFilename(pair.PhotoPath); ok {
-			uploadTime = parsed
-		}
+	fileName := options.Filename
+	if fileName == "" {
+		fileName = videoInfo.Name()
 	}
 	reporter.ThreadStatus(ThreadStatus{
 		WorkerID: workerID,
@@ -216,7 +238,7 @@ func reconcileExistingLivePhoto(
 	})
 	mediaKey, err := api.ReconcileLivePhoto(LivePhotoReconcileRequest{
 		VideoToken:       videoToken,
-		FileName:         videoInfo.Name(),
+		FileName:         fileName,
 		PhotoSHA1:        photoSHA1,
 		VideoSHA1:        videoSHA1,
 		CreatedAt:        uploadTime,
