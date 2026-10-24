@@ -14,8 +14,8 @@
       ];
       forAllSystems = f: lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
-      # vendorHash / npmDepsHash live in nix/hashes.json and are refreshed by
-      # nix/update-hashes.sh (also run by .github/workflows/nix-update.yml).
+      # vendorHash / npmDepsHash live in nix/hashes.json and are refreshed with
+      # nix/update-hashes.sh (see nix/README.md).
       hashes = builtins.fromJSON (builtins.readFile ./nix/hashes.json);
 
       # Same file the binary embeds (core.GetVersion), so the package version
@@ -115,7 +115,7 @@
                   name = "org.wails.com_xob0t_gotohp";
                   desktopName = "gotohp";
                   comment = "Google Photos Unofficial Client";
-                  exec = "gotohp %u";
+                  exec = "gotohp";
                   icon = "gotohp";
                   categories = [ "Utility" ];
                   startupWMClass = "org.wails.com_xob0t_gotohp";
