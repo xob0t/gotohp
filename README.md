@@ -17,6 +17,8 @@ Unofficial Google Photos Desktop GUI Client
 
 ## [Download](https://github.com/xob0t/gotohp/releases/latest)
 
+Nix users on Linux, see [nix/README.md](nix/README.md).
+
 ## CLI usage
 
 Download the `gotohp-cli` release artifact for your platform. It runs without the GUI.

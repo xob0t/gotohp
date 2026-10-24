@@ -12,3 +12,7 @@ build/android/gen/
 config.yaml
 wails_windows_amd64.syso
 .claude/settings.local.json
+# Nix
+/result
+/result-*
+/.direnv
