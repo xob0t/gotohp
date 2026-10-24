@@ -6,13 +6,15 @@ type UploadOptions struct {
 	// Api selects the account and upload policy used for every request.
 	Api ApiOptions
 
-	Recursive                     bool
-	ExcludePattern                string
-	Threads                       int
-	ForceUpload                   bool
-	DeleteFromHost                bool
-	DisableUnsupportedFilesFilter bool
-	SetDateFromFilename           bool
+	Recursive                           bool
+	ExcludePattern                      string
+	Threads                             int
+	ForceUpload                         bool
+	DeleteFromHost                      bool
+	DisableUnsupportedFilesFilter       bool
+	SetDateFromFilename                 bool
+	SetDateFromSupplementalMetadataFile bool
+	Filename                            string
 
 	PairLivePhotos             bool
 	SkipIncompleteLivePhotos   bool

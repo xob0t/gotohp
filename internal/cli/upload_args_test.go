@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"app/core"
@@ -151,7 +152,7 @@ func TestUploadFlagsPropagateToRunOptions(t *testing.T) {
 	opts, paths := parsedUploadOptions(t, "photo.jpg",
 		"--account", "cli@example.test", "--proxy", "http://cli.invalid:8080",
 		"--saver", "--use-quota", "-r", "-t", "7", "-f", "-d",
-		"--disable-filter", "--date-from-filename", "-e", "excluded",
+		"--disable-filter", "--filename", "20240709_182027-custom.jpg", "--date-from-filename", "-e", "excluded",
 		"--pair-live-photos", "--upload-incomplete-live-photos",
 		"--update-existing-photos-to-live", "--ignore-apple-metadata", "-a", "Trip")
 	want := core.UploadOptions{
@@ -159,7 +160,7 @@ func TestUploadFlagsPropagateToRunOptions(t *testing.T) {
 			Account: "cli@example.test", Proxy: "http://cli.invalid:8080", Saver: true, UseQuota: true,
 		},
 		Recursive: true, Threads: 7, ForceUpload: true, DeleteFromHost: true,
-		DisableUnsupportedFilesFilter: true, SetDateFromFilename: true, ExcludePattern: "excluded",
+		DisableUnsupportedFilesFilter: true, Filename: "20240709_182027-custom.jpg", SetDateFromFilename: true, ExcludePattern: "excluded",
 		PairLivePhotos: true, SkipIncompleteLivePhotos: false,
 		UpdateExistingPhotosToLive: true, IgnoreAppleMetadata: true, AlbumName: "Trip",
 	}
@@ -169,6 +170,42 @@ func TestUploadFlagsPropagateToRunOptions(t *testing.T) {
 	auto, _ := parsedUploadOptions(t, "photo.jpg", "--album", "AuTo", "--pair-live-photos")
 	if !auto.AlbumAutoMode || auto.AlbumName != "" || !auto.SkipIncompleteLivePhotos {
 		t.Fatalf("AUTO album or default incomplete-pair policy lost: %+v", auto)
+	}
+}
+
+func TestUploadRejectsEmptyFilename(t *testing.T) {
+	root := newRootCommand(Info{ExecutableName: "gotohp-cli"})
+	upload, _, err := root.Find([]string{"upload"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	upload.RunE = func(cmd *cobra.Command, _ []string) error {
+		opts := uploadOptionsFromFlags(cmd.Flags())
+		return validateUploadOptions(cmd.Flags(), opts)
+	}
+	root.SetArgs([]string{"upload", "photo.jpg", "--filename="})
+	if err := root.Execute(); err == nil || !strings.Contains(err.Error(), "--filename must not be empty") {
+		t.Fatalf("empty --filename error = %v", err)
+	}
+}
+
+func TestUploadSupplementalMetadataDateFlag(t *testing.T) {
+	opts, _ := parsedUploadOptions(t, "photo.jpg", "--date-from-supplemental-metadata-file")
+	if !opts.SetDateFromSupplementalMetadataFile || opts.SetDateFromFilename {
+		t.Fatalf("supplemental metadata date options = %+v", opts)
+	}
+}
+
+func TestUploadDateFlagsAreMutuallyExclusive(t *testing.T) {
+	root := newRootCommand(Info{ExecutableName: "gotohp-cli"})
+	upload, _, err := root.Find([]string{"upload"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	upload.RunE = func(_ *cobra.Command, _ []string) error { return nil }
+	root.SetArgs([]string{"upload", "photo.jpg", "--date-from-filename", "--date-from-supplemental-metadata-file"})
+	if err := root.Execute(); err == nil || !strings.Contains(err.Error(), "none of the others can be") {
+		t.Fatalf("date flag conflict error = %v", err)
 	}
 }
 
