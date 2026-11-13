@@ -54,11 +54,22 @@ watch(selectedValue, (newValue) => {
     v-model="selectedValue"
     v-model:open="isOpen"
   >
-    <SelectTrigger class="max-w-60 select-none">
-      <SelectValue placeholder="Select account" />
+    <SelectTrigger
+      size="sm"
+      class="max-w-64 cursor-pointer gap-1.5 border-transparent bg-transparent pr-2 pl-1 shadow-none select-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent"
+      style="--wails-draggable: none"
+      aria-label="Google account"
+    >
+      <span
+        class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-semibold text-primary uppercase"
+        aria-hidden="true"
+      >{{ selectedValue ? selectedValue[0] : '?' }}</span>
+      <span class="min-w-0 truncate">
+        <SelectValue placeholder="Select account" />
+      </span>
     </SelectTrigger>
     <SelectContent
-      align="center"
+      align="start"
       class="w-max min-w-[var(--reka-select-trigger-width)] max-w-[min(15rem,calc(100vw-3rem))]"
     >
       <SelectGroup>
