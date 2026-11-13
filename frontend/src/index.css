@@ -192,7 +192,35 @@
 }
 
 * {
-  scrollbar-color: #454a4d #202324;
+  scrollbar-color: #454a4d transparent;
+  scrollbar-width: thin;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background-image:
+    radial-gradient(60rem 22rem at 50% -8rem, oklch(0.696 0.17 162.48 / 9%), transparent 70%);
+  background-repeat: no-repeat;
+}
+
+/* Small pills describing the active upload options on the home screen */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background-color: color-mix(in oklab, var(--muted) 60%, transparent);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  color: var(--muted-foreground);
+}
+
+.chip-danger {
+  border-color: color-mix(in oklab, var(--destructive) 45%, transparent);
+  background-color: color-mix(in oklab, var(--destructive) 14%, transparent);
+  color: var(--destructive);
 }
 
 /* Drop zone styles - activated by Wails runtime when dragging over */
@@ -204,4 +232,9 @@
 .drop-zone.file-drop-target-active h2,
 .drop-zone.file-drop-target-active p {
   color: oklch(0.985 0 0) !important;
+}
+
+.drop-zone.file-drop-target-active .drop-zone-icon {
+  background-color: oklch(0.696 0.17 162.48 / 25%);
+  color: oklch(0.696 0.17 162.48);
 }

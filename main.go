@@ -12,6 +12,7 @@ import (
 	"app/core"
 	"app/internal/cli"
 	"app/internal/gui"
+	"app/internal/preview"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -39,6 +40,7 @@ func runGUI() {
 	normalizeFrontendDevServerURL()
 
 	configManager := &core.ConfigManager{}
+	previews := preview.New()
 	wailsApp := application.New(application.Options{
 		Name:        "com.xob0t.gotohp",
 		Description: "Google Photos unofficial client",
@@ -47,6 +49,8 @@ func runGUI() {
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
+			// Serves the files of the running upload so the UI can draw thumbnails.
+			Middleware: previews.Middleware,
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
@@ -54,14 +58,14 @@ func runGUI() {
 	})
 
 	window := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:               title,
-		Frameless:           false,
-		Width:               400,
-		Height:              600,
-		EnableFileDrop:      true,
-		DisableResize:       true,
-		MaximiseButtonState: application.ButtonDisabled,
-		BackgroundType:      application.BackgroundTypeTranslucent,
+		Title:          title,
+		Frameless:      false,
+		Width:          480,
+		Height:         720,
+		MinWidth:       400,
+		MinHeight:      560,
+		EnableFileDrop: true,
+		BackgroundType: application.BackgroundTypeTranslucent,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 0,
 			Backdrop:                application.MacBackdropTranslucent,
@@ -70,7 +74,8 @@ func runGUI() {
 		URL: "/",
 	})
 
-	uploadManager := core.NewUploadManager(gui.NewWailsReporter(wailsApp), wailsApp.Logger)
+	reporter := previewReporter{UploadReporter: gui.NewWailsReporter(wailsApp), previews: previews}
+	uploadManager := core.NewUploadManager(reporter, wailsApp.Logger)
 
 	// Listen for upload cancel event
 	wailsApp.Event.On("uploadCancel", func(e *application.CustomEvent) {
@@ -110,6 +115,17 @@ func runGUI() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// previewReporter lets the UI preview each file an upload worker picks up.
+type previewReporter struct {
+	core.UploadReporter
+	previews *preview.Server
+}
+
+func (r previewReporter) ThreadStatus(s core.ThreadStatus) {
+	r.previews.Allow(s.FilePath)
+	r.UploadReporter.ThreadStatus(s)
 }
 
 func normalizeFrontendDevServerURL() {
